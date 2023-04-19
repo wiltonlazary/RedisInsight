@@ -13,7 +13,7 @@ fixture `Autocomplete for entered commands`
     .beforeEach(async t => {
         await acceptLicenseTermsAndAddDatabaseApi(ossStandaloneConfig, ossStandaloneConfig.databaseName);
         // Go to Workbench page
-        await t.click(myRedisDatabasePage.workbenchButton);
+        await t.click(myRedisDatabasePage.NavigationPanel.workbenchButton);
     })
     .afterEach(async() => {
         // Delete database
@@ -22,11 +22,12 @@ fixture `Autocomplete for entered commands`
 test('Verify that user can open the "read more" about the command by clicking on the ">" icon or "ctrl+space"', async t => {
     const command = 'HSET';
     const commandDetails = [
-        'HSET key field_value [field_value ...]',
-        'Set the string value of a hash field',
+        'HSET key field value [field value ...]',
+        'Creates or modifies the value of a field in a hash.',
+        'Read more',
         'Arguments:',
         'required key',
-        'multiple field_value'
+        'multiple field value'
     ];
 
     // Type command
@@ -71,7 +72,7 @@ test('Verify that user can see the static list of arguments when he uses “Ctrl
     await t.pressKey('enter');
     // Check that the command is displayed in Editing area after selecting
     const script = await workbenchPage.queryInputScriptArea.textContent;
-    await t.expect(script.replace(/\s/g, ' ')).eql('JSON.ARRAPPEND key value ', 'Result of sent command not exists');
+    await t.expect(script.replace(/\s/g, ' ')).eql('JSON.ARRAPPEND key value [value ...] ', 'Result of sent command not exists');
     // Check that hint with arguments are displayed
     await t.expect(workbenchPage.monacoHintWithArguments.visible).ok('Hints with arguments are not displayed');
     // Remove hints with arguments

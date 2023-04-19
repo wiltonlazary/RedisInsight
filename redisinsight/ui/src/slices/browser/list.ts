@@ -26,7 +26,7 @@ import {
   refreshKeyInfoAction,
   fetchKeyInfo,
   deleteKeyFromList,
-  deleteKeySuccess,
+  deleteSelectedKeySuccess,
   updateSelectedKeyRefreshTime,
 } from './keys'
 import { StateList } from '../interfaces/list'
@@ -99,8 +99,10 @@ const listSlice = createSlice({
       { payload: { elements } }: PayloadAction<GetListElementsResponse>
     ) => {
       state.loading = false
+      const listIndex = state.data?.elements?.length
 
-      state.data.elements = state.data?.elements?.concat(elements.map((element, i) => ({ index: i, element })))
+      state.data.elements = state.data?.elements?.concat(elements.map((element, i) =>
+        ({ index: listIndex + i, element })))
     },
     loadMoreListElementsFailure: (state, { payload }) => {
       state.loading = false
@@ -459,7 +461,7 @@ export function deleteListElementsAction(
             )
           ))
         } else {
-          dispatch(deleteKeySuccess())
+          dispatch(deleteSelectedKeySuccess())
           dispatch(deleteKeyFromList(data.keyName))
           dispatch(addMessageNotification(successMessages.DELETED_KEY(data.keyName)))
         }

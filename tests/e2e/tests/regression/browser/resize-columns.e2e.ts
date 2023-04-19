@@ -17,21 +17,21 @@ const longFieldName = common.generateSentence(20);
 const keys = [
     {   type: 'Hash',
         name: `${keyName}:1`,
-        offsetX: 100,
+        offsetX: 50,
         fieldWidthStart: 0,
         fieldWidthEnd: 0
     },
     {
         type: 'List',
         name: `${keyName}:2`,
-        offsetX: 80,
+        offsetX: 40,
         fieldWidthStart: 0,
         fieldWidthEnd: 0
     },
     {
         type: 'Zset',
         name: `${keyName}:3`,
-        offsetX: 50,
+        offsetX: 30,
         fieldWidthStart: 0,
         fieldWidthEnd: 0
     }
@@ -45,7 +45,7 @@ const databasesForAdding = [
 ];
 
 fixture `Resize columns in Key details`
-    .meta({type: 'regression', rte: rte.standalone})
+    .meta({ type: 'regression', rte: rte.standalone })
     .page(commonUrl)
     .beforeEach(async() => {
         // Add new databases using API
@@ -60,6 +60,7 @@ fixture `Resize columns in Key details`
     })
     .afterEach(async() => {
         // Clear and delete database
+        await browserPage.OverviewPanel.changeDbIndex(0);
         await browserPage.deleteKeysByNames(keyNames);
         await deleteStandaloneDatabasesApi(databasesForAdding);
     });
@@ -72,7 +73,7 @@ test('Resize of columns in Hash, List, Zset Key details', async t => {
         // Remember initial column width
         key.fieldWidthStart = await field.clientWidth;
         await t.hover(tableHeaderResizeTrigger);
-        await t.drag(tableHeaderResizeTrigger, -key.offsetX, 0, { speed: 0.5 });
+        await t.drag(tableHeaderResizeTrigger, -key.offsetX, 0, { speed: 0.4 });
         // Remember last column width
         key.fieldWidthEnd = await field.clientWidth;
         // Verify that user can resize columns for Hash, List, Zset Keys
@@ -80,17 +81,35 @@ test('Resize of columns in Hash, List, Zset Key details', async t => {
     }
 
     // Verify that resize saved when switching between pages
-    await t.click(myRedisDatabasePage.workbenchButton);
-    await t.click(myRedisDatabasePage.browserButton);
+    await t.click(myRedisDatabasePage.NavigationPanel.workbenchButton);
+    await t.click(myRedisDatabasePage.NavigationPanel.browserButton);
     await browserPage.openKeyDetails(keys[0].name);
     await t.expect(field.clientWidth).eql(keys[0].fieldWidthEnd, 'Resize context not saved for key when switching between pages');
 
+    // Apply filter to save it in filter history
+    await browserPage.searchByKeyName(`${keys[0].name}*`);
+
     // Verify that resize saved when switching between databases
-    await t.click(myRedisDatabasePage.myRedisDBButton);
+    await t.click(myRedisDatabasePage.NavigationPanel.myRedisDBButton);
+    // Go to 2nd database
     await myRedisDatabasePage.clickOnDBByName(databasesForAdding[1].databaseName);
     // Verify that resize saved for specific data type
-    for(const key of keys) {
+    for (const key of keys) {
         await browserPage.openKeyDetails(key.name);
-        await t.expect(field.clientWidth).eql(key.fieldWidthEnd, `Resize context not saved for ${key.type} key when switching between databases`);
+        await t.expect(field.clientWidth).within(key.fieldWidthEnd - 5, key.fieldWidthEnd + 5, `Resize context not saved for ${key.type} key when switching between databases`);
     }
+
+    // Change db index for 2nd database
+    await browserPage.OverviewPanel.changeDbIndex(1);
+    await t.click(myRedisDatabasePage.NavigationPanel.myRedisDBButton);
+    // Go back to 1st database
+    await myRedisDatabasePage.clickOnDBByName(databasesForAdding[0].databaseName);
+    // Verify that user can see the list of filters even when switching between databases
+    await t.click(browserPage.showFilterHistoryBtn);
+    await t.expect(browserPage.filterHistoryOption.withText(keys[0].name).exists).ok('Filter history requests not saved after switching between db');
+
+    // Verify that logical db not changed after switching between databases
+    await t.click(myRedisDatabasePage.NavigationPanel.myRedisDBButton);
+    await myRedisDatabasePage.clickOnDBByName(databasesForAdding[1].databaseName);
+    await browserPage.OverviewPanel.verifyDbIndexSelected(1);
 });

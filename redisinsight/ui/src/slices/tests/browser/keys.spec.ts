@@ -6,7 +6,8 @@ import { parseKeysListResponse, stringToBuffer, UTF8ToBuffer } from 'uiSrc/utils
 import { cleanup, initialStateDefault, mockedStore } from 'uiSrc/utils/test-utils'
 import { addErrorNotification, addMessageNotification } from 'uiSrc/slices/app/notifications'
 import successMessages from 'uiSrc/components/notifications/success-messages'
-import { SearchMode } from 'uiSrc/slices/interfaces/keys'
+import { SearchHistoryItem, SearchMode } from 'uiSrc/slices/interfaces/keys'
+import { resetBrowserTree } from 'uiSrc/slices/app/context'
 import {
   CreateHashWithExpireDto,
   CreateListWithExpireDto,
@@ -17,49 +18,65 @@ import {
   SetStringWithExpireDto,
 } from 'apiSrc/modules/browser/dto'
 import reducer, {
-  initialState,
-  loadKeys,
-  loadKeysSuccess,
-  loadKeysFailure,
-  loadMoreKeys,
-  loadMoreKeysSuccess,
-  loadMoreKeysFailure,
-  keysSelector,
-  fetchKeys,
-  fetchMoreKeys,
-  defaultSelectedKeyAction,
-  loadKeyInfoSuccess,
-  fetchKeyInfo,
-  refreshKeyInfo,
-  refreshKeyInfoSuccess,
-  refreshKeyInfoFail,
-  refreshKeyInfoAction,
+  addHashKey,
   addKey,
-  addKeySuccess,
   addKeyFailure,
-  resetAddKey,
-  deleteKeyAction,
+  addKeySuccess,
+  addListKey,
+  addReJSONKey,
+  addSetKey,
+  addStringKey,
+  addZsetKey,
+  defaultSelectedKeyAction,
+  defaultSelectedKeyActionFailure,
+  defaultSelectedKeyActionSuccess,
+  deleteSelectedKey,
+  deleteSelectedKeyAction,
+  deleteSelectedKeyFailure,
+  deleteSelectedKeySuccess,
   deleteKey,
   deleteKeySuccess,
   deleteKeyFailure,
+  deleteKeyAction,
+  deletePatternHistoryAction,
   deletePatternKeyFromList,
-  editPatternKeyFromList,
-  defaultSelectedKeyActionSuccess,
+  deleteSearchHistory,
+  deleteSearchHistoryAction,
+  deleteSearchHistoryFailure,
+  deleteSearchHistorySuccess,
   editKey,
-  defaultSelectedKeyActionFailure,
   editKeyTTL,
-  addHashKey,
-  addSetKey,
-  addReJSONKey,
-  addListKey,
-  addStringKey,
-  addZsetKey,
-  setLastBatchPatternKeys,
-  updateSelectedKeyRefreshTime,
+  editPatternKeyFromList,
+  editPatternKeyTTLFromList,
+  fetchKeyInfo,
+  fetchKeys,
+  fetchKeysMetadata,
+  fetchMoreKeys,
+  fetchPatternHistoryAction,
+  fetchSearchHistoryAction,
+  initialState,
+  keysSelector,
+  loadKeyInfoSuccess,
+  loadKeys,
+  loadKeysFailure,
+  loadKeysSuccess,
+  loadMoreKeys,
+  loadMoreKeysFailure,
+  loadMoreKeysSuccess,
+  loadSearchHistory,
+  loadSearchHistoryFailure,
+  loadSearchHistorySuccess,
+  refreshKeyInfo,
+  refreshKeyInfoAction,
+  updateKeyList,
+  addKeyIntoList,
+  refreshKeyInfoFail,
+  refreshKeyInfoSuccess,
+  resetAddKey,
   resetKeyInfo,
   resetKeys,
-  fetchKeysMetadata,
-  editPatternKeyTTLFromList,
+  setLastBatchPatternKeys,
+  updateSelectedKeyRefreshTime,
 } from '../../browser/keys'
 import { getString } from '../../browser/string'
 
@@ -510,19 +527,21 @@ describe('keys slice', () => {
     })
   })
 
-  describe('addKeySuccess', () => {
+  describe('updateKeyList', () => {
     it('should properly set the state after successfully added key', () => {
       // Arrange
       const state = {
         ...initialState,
-        addKey: {
-          ...initialState.addKey,
-          loading: false,
-        },
+        data: {
+          ...initialState.data,
+          keys: [{ name: 'name' }],
+          scanned: 1,
+          total: 1,
+        }
       }
 
       // Act
-      const nextState = reducer(initialState, addKeySuccess())
+      const nextState = reducer(initialState, updateKeyList({ keyName: 'name', keyType: 'hash' }))
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -579,7 +598,7 @@ describe('keys slice', () => {
     })
   })
 
-  describe('deleteKey', () => {
+  describe('deleteSelectedKey', () => {
     it('should properly set the state before the delete key', () => {
       // Arrange
       const state = {
@@ -589,6 +608,72 @@ describe('keys slice', () => {
           loading: true,
           data: null,
         },
+      }
+
+      // Act
+      const nextState = reducer(initialState, deleteSelectedKey())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteSelectedKeySuccess', () => {
+    it('should properly set the state before the delete key', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        selectedKey: {
+          ...initialState.selectedKey,
+          loading: false,
+          data: null,
+        },
+      }
+
+      // Act
+      const nextState = reducer(initialState, deleteSelectedKeySuccess())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteSelectedKeyFailure', () => {
+    it('should properly set the state before the delete key', () => {
+      // Arrange
+      const data = 'some error'
+      const state = {
+        ...initialState,
+        selectedKey: {
+          ...initialState.selectedKey,
+          loading: false,
+          error: data,
+        },
+      }
+
+      // Act
+      const nextState = reducer(initialState, deleteSelectedKeyFailure(data))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteKey', () => {
+    it('should properly set the state before the delete key', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        deleting: true
       }
 
       // Act
@@ -603,19 +688,19 @@ describe('keys slice', () => {
   })
 
   describe('deleteKeySuccess', () => {
-    it('should properly set the state before the delete key', () => {
+    it('should properly set the state after the delete key', () => {
       // Arrange
+      const currentState = {
+        ...initialState,
+        deleting: true
+      }
       const state = {
         ...initialState,
-        selectedKey: {
-          ...initialState.selectedKey,
-          loading: false,
-          data: null,
-        },
+        deleting: false
       }
 
       // Act
-      const nextState = reducer(initialState, deleteKeySuccess())
+      const nextState = reducer(currentState, deleteKeySuccess())
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -626,20 +711,19 @@ describe('keys slice', () => {
   })
 
   describe('deleteKeyFailure', () => {
-    it('should properly set the state before the delete key', () => {
+    it('should properly set the state after the delete key', () => {
       // Arrange
-      const data = 'some error'
+      const currentState = {
+        ...initialState,
+        deleting: true
+      }
       const state = {
         ...initialState,
-        selectedKey: {
-          ...initialState.selectedKey,
-          loading: false,
-          error: data,
-        },
+        deleting: false
       }
 
       // Act
-      const nextState = reducer(initialState, deleteKeyFailure(data))
+      const nextState = reducer(currentState, deleteKeyFailure())
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -828,6 +912,158 @@ describe('keys slice', () => {
     })
   })
 
+  describe('loadSearchHistory', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: true
+        }
+      }
+
+      // Act
+      const nextState = reducer(state, loadSearchHistory())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('loadSearchHistorySuccess', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const data: SearchHistoryItem[] = [
+        { id: '1', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } }
+      ]
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: false,
+          data
+        }
+      }
+
+      // Act
+      const nextState = reducer(state, loadSearchHistorySuccess(data))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('loadSearchHistoryFailure', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: false
+        }
+      }
+
+      // Act
+      const nextState = reducer(state, loadSearchHistoryFailure())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteSearchHistory', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: true
+        }
+      }
+
+      // Act
+      const nextState = reducer(state, deleteSearchHistory())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteSearchHistorySuccess', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const data: SearchHistoryItem[] = [
+        { id: '1', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+        { id: '2', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+      ]
+      const currentState = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: false,
+          data
+        }
+      }
+
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: false,
+          data: [
+            { id: '1', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+          ]
+        }
+      }
+
+      // Act
+      const nextState = reducer(currentState, deleteSearchHistorySuccess(['2']))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('deleteSearchHistoryFailure', () => {
+    it('should properly set state', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        searchHistory: {
+          ...initialState.searchHistory,
+          loading: false
+        }
+      }
+
+      // Act
+      const nextState = reducer(state, deleteSearchHistoryFailure())
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        browser: { keys: nextState },
+      })
+      expect(keysSelector(rootState)).toEqual(state)
+    })
+  })
+
   describe('thunks', () => {
     describe('fetchKeys', () => {
       it('call both loadKeys and loadKeysSuccess when fetch is successed', async () => {
@@ -867,7 +1103,7 @@ describe('keys slice', () => {
         apiService.post = jest.fn().mockResolvedValue(responsePayload)
 
         // Act
-        await store.dispatch<any>(fetchKeys(SearchMode.Pattern, 0, 20))
+        await store.dispatch<any>(fetchKeys({ searchMode: SearchMode.Pattern, cursor: '0', count: 20 }))
 
         // Assert
         const expectedActions = [
@@ -894,7 +1130,7 @@ describe('keys slice', () => {
         apiService.post = jest.fn().mockRejectedValue(responsePayload)
 
         // Act
-        await store.dispatch<any>(fetchKeys(SearchMode.Pattern, '0', 20))
+        await store.dispatch<any>(fetchKeys({ searchMode: SearchMode.Pattern, cursor: '0', count: 20 }))
 
         // Assert
         const expectedActions = [
@@ -1100,6 +1336,8 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'hash' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
@@ -1124,6 +1362,8 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'zset' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
@@ -1148,6 +1388,8 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'set' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
@@ -1172,6 +1414,8 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'string' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
@@ -1197,6 +1441,8 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'list' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
@@ -1221,17 +1467,46 @@ describe('keys slice', () => {
         const expectedActions = [
           addKey(),
           addKeySuccess(),
+          resetBrowserTree(),
+          updateKeyList({ keyName: data.keyName, keyType: 'ReJSON-RL' }),
           addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
         ]
         expect(store.getActions()).toEqual(expectedActions)
       })
     })
 
-    describe('deleteKey', () => {
-      it('call both deleteKey, deleteKeySuccess and deletePatternKeyFromList when delete is successed', async () => {
+    describe('deleteSelectedKey', () => {
+      it('should call proper actions on success', async () => {
         // Arrange
         const data = {
-          name: 'string',
+          name: stringToBuffer('string'),
+          type: KeyTypes.String,
+          ttl: -1,
+          size: 10,
+        }
+        const responsePayload = { data, status: 200 }
+
+        apiService.delete = jest.fn().mockResolvedValue(responsePayload)
+
+        // Act
+        await store.dispatch<any>(deleteSelectedKeyAction(data.name))
+
+        // Assert
+        const expectedActions = [
+          deleteSelectedKey(),
+          deleteSelectedKeySuccess(),
+          deletePatternKeyFromList(data.name),
+          addMessageNotification(successMessages.DELETED_KEY(data.name)),
+        ]
+        expect(store.getActions()).toEqual(expectedActions)
+      })
+    })
+
+    describe('deleteKey', () => {
+      it('should call proper actions on success', async () => {
+        // Arrange
+        const data = {
+          name: stringToBuffer('string'),
           type: KeyTypes.String,
           ttl: -1,
           size: 10,
@@ -1309,7 +1584,7 @@ describe('keys slice', () => {
         // Assert
         const expectedActions = [
           defaultSelectedKeyAction(),
-          deleteKeySuccess(),
+          deleteSelectedKeySuccess(),
           deletePatternKeyFromList(key),
           defaultSelectedKeyActionSuccess(),
         ]
@@ -1367,6 +1642,196 @@ describe('keys slice', () => {
         )
 
         expect(onSuccessMock).toBeCalledWith(data)
+      })
+    })
+
+    describe('addKeyIntoList', () => {
+      it('updateKeyList should be called', async () => {
+        // Act
+        await store.dispatch<any>(
+          addKeyIntoList({ key: 'key', keyType: 'hash' })
+        )
+
+        // Assert
+        const expectedActions = [
+          resetBrowserTree(),
+          updateKeyList({ keyName: 'key', keyType: 'hash' })
+        ]
+        expect(store.getActions()).toEqual(expectedActions)
+      })
+
+      describe('fetchPatternHistoryAction', () => {
+        it('success fetch history', async () => {
+          // Arrange
+          const data: SearchHistoryItem[] = [
+            { id: '1', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+            { id: '2', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+          ]
+          const responsePayload = { data, status: 200 }
+
+          apiService.get = jest.fn().mockResolvedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(fetchPatternHistoryAction())
+
+          // Assert
+          const expectedActions = [
+            loadSearchHistory(),
+            loadSearchHistorySuccess(data),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+        it('failed to load history', async () => {
+          // Arrange
+          const errorMessage = 'some error'
+          const responsePayload = {
+            response: {
+              status: 500,
+              data: { message: errorMessage },
+            },
+          }
+
+          apiService.get = jest.fn().mockRejectedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(fetchPatternHistoryAction())
+
+          // Assert
+          const expectedActions = [
+            loadSearchHistory(),
+            loadSearchHistoryFailure(),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+      })
+
+      describe('fetchSearchHistoryAction', () => {
+        it('success fetch history', async () => {
+          // Arrange
+          const data: SearchHistoryItem[] = [
+            { id: '1', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+            { id: '2', mode: SearchMode.Pattern, filter: { type: 'list', match: '*' } },
+          ]
+          const responsePayload = { data, status: 200 }
+
+          apiService.get = jest.fn().mockResolvedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(fetchSearchHistoryAction(SearchMode.Pattern))
+
+          // Assert
+          const expectedActions = [
+            loadSearchHistory(),
+            loadSearchHistorySuccess(data),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+        it('failed to load history', async () => {
+          // Arrange
+          const errorMessage = 'some error'
+          const responsePayload = {
+            response: {
+              status: 500,
+              data: { message: errorMessage },
+            },
+          }
+
+          apiService.get = jest.fn().mockRejectedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(fetchSearchHistoryAction(SearchMode.Pattern))
+
+          // Assert
+          const expectedActions = [
+            loadSearchHistory(),
+            loadSearchHistoryFailure(),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+      })
+
+      describe('deletePatternHistoryAction', () => {
+        it('success delete history', async () => {
+          // Arrange
+          const responsePayload = { status: 200 }
+
+          apiService.delete = jest.fn().mockResolvedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(deletePatternHistoryAction(['1']))
+
+          // Assert
+          const expectedActions = [
+            deleteSearchHistory(),
+            deleteSearchHistorySuccess(['1']),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+
+        it('failed to delete history', async () => {
+          // Arrange
+          const errorMessage = 'some error'
+          const responsePayload = {
+            response: {
+              status: 500,
+              data: { message: errorMessage },
+            },
+          }
+
+          apiService.delete = jest.fn().mockRejectedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(deletePatternHistoryAction(['1']))
+
+          // Assert
+          const expectedActions = [
+            deleteSearchHistory(),
+            deleteSearchHistoryFailure(),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+      })
+
+      describe('deleteSearchHistoryAction', () => {
+        it('success delete history', async () => {
+          // Arrange
+          const responsePayload = { status: 200 }
+
+          apiService.delete = jest.fn().mockResolvedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(deleteSearchHistoryAction(SearchMode.Pattern, ['1']))
+
+          // Assert
+          const expectedActions = [
+            deleteSearchHistory(),
+            deleteSearchHistorySuccess(['1']),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
+
+        it('failed to delete history', async () => {
+          // Arrange
+          const errorMessage = 'some error'
+          const responsePayload = {
+            response: {
+              status: 500,
+              data: { message: errorMessage },
+            },
+          }
+
+          apiService.delete = jest.fn().mockRejectedValue(responsePayload)
+
+          // Act
+          await store.dispatch<any>(deleteSearchHistoryAction(SearchMode.Pattern, ['1']))
+
+          // Assert
+          const expectedActions = [
+            deleteSearchHistory(),
+            deleteSearchHistoryFailure(),
+          ]
+          expect(store.getActions()).toEqual(expectedActions)
+        })
       })
     })
   })

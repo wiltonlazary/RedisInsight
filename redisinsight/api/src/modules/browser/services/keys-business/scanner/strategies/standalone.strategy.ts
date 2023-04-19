@@ -1,7 +1,6 @@
-import * as isGlob from 'is-glob';
 import { isNull } from 'lodash';
 import config from 'src/utils/config';
-import { unescapeGlob } from 'src/utils';
+import { isRedisGlob, unescapeRedisGlob } from 'src/utils';
 import {
   GetKeyInfoResponse,
   GetKeysWithDetailsResponse,
@@ -47,8 +46,8 @@ export class StandaloneStrategy extends AbstractStrategy {
 
     node.total = await getTotal(client);
 
-    if (!isGlob(match, { strict: false })) {
-      const keyName = Buffer.from(unescapeGlob(match));
+    if (!isRedisGlob(match)) {
+      const keyName = Buffer.from(unescapeRedisGlob(match));
       node.cursor = 0;
       node.scanned = isNull(node.total) ? 1 : node.total;
       node.keys = await this.getKeysInfo(client, [keyName]);
@@ -72,6 +71,11 @@ export class StandaloneStrategy extends AbstractStrategy {
       node.keys = node.keys.map((name) => ({ name }));
     }
 
+    // workaround for "pika" databases
+    if (!node.total && (node.cursor > 0 || node.keys?.length)) {
+      node.total = null;
+    }
+
     return [node];
   }
 
@@ -86,12 +90,11 @@ export class StandaloneStrategy extends AbstractStrategy {
     // todo: remove settings from here. threshold should be part of query?
     const settings = await this.settingsService.getAppSettings('1');
     while (
-      (node.total > 0 || isNull(node.total))
+      (node.total >= 0 || isNull(node.total))
       && !fullScanned
       && node.keys.length < count
       && (
-        (node.total < settings.scanThreshold && node.cursor)
-        || node.scanned < settings.scanThreshold
+        node.scanned < settings.scanThreshold
       )
     ) {
       let commandArgs = [`${node.cursor}`, 'MATCH', match, 'COUNT', count];

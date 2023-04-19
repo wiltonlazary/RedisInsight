@@ -1,5 +1,6 @@
-@import "_dark_theme.less";
-@import "_light_theme.less";
+@charset "UTF-8";
+@import (less) "_dark_theme.less";
+@import (less) "_light_theme.less";
 
 * {
   margin: 0px;
@@ -252,6 +253,13 @@
   color: var(--info-color);
   padding: 12px !important;
   font-family: monospace !important;
+}
+
+.parsedRedisReply {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font: normal normal normal 14px/17px Inconsolata !important;
+  padding: 4px 12px !important;
 }
 
 .euiToolTip {

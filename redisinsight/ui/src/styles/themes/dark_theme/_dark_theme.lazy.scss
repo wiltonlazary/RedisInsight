@@ -126,10 +126,17 @@
 
   --moduleBackgroundColor: #{$commandGroupBadgeColor};
   --callOutBackgroundColor: #{$euiTooltipBackgroundColor};
+  --tooltipLightBgColor: #{$tooltipLightBgColor};
 
   --overlayPromoNYColor: #{$overlayPromoNYColor};
 
   --monacoBgColor: #{$monacoBgColor};
+  --highlightDotColor: #{$highlightDotColor};
+  --monacoParamsColor: #{$monacoParamsColor};
+
+  --successBorderColor: #{$successBorderColor};
+  --warningBorderColor: #{$warningBorderColor};
+  --errorBorderColor: #{$errorBorderColor};
 
   // KeyTypes
   --typeHashColor: #{$typeHashColor};
@@ -172,7 +179,12 @@
   --wbRunResultsBg: #{$wbRunResultsBg};
   --wbHoverIconColor: #{$wbHoverIconColor};
   --wbActiveIconColor: #{$wbActiveIconColor};
+  --wbTextColor: #{$wbTextColor};
 
   // Pub/Sub
   --pubSubClientsBadge: #{$pubSubClientsBadge};
+
+  // Database analysis
+  --badgeIconColor: #{$badgeIconColor};
+  --recommendationBorderColor: #{$recommendationBorderColor};
 }

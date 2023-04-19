@@ -1,25 +1,24 @@
 import { rte } from '../../../helpers/constants';
 import { acceptLicenseTermsAndAddDatabaseApi } from '../../../helpers/database';
-import { MyRedisDatabasePage, WorkbenchPage, CliPage } from '../../../pageObjects';
+import { MyRedisDatabasePage, WorkbenchPage } from '../../../pageObjects';
 import { commonUrl, ossStandaloneConfig } from '../../../helpers/conf';
 import { deleteStandaloneDatabaseApi } from '../../../helpers/api/api-database';
 import { Common } from '../../../helpers/common';
 
 const myRedisDatabasePage = new MyRedisDatabasePage();
 const workbenchPage = new WorkbenchPage();
-const cliPage = new CliPage();
 const common = new Common();
 
 let indexName = common.generateWord(5);
 let keyName = common.generateWord(5);
 
 fixture `Scripting area at Workbench`
-    .meta({type: 'critical_path', rte: rte.standalone})
+    .meta({ type: 'critical_path', rte: rte.standalone })
     .page(commonUrl)
     .beforeEach(async t => {
         await acceptLicenseTermsAndAddDatabaseApi(ossStandaloneConfig, ossStandaloneConfig.databaseName);
         //Go to Workbench page
-        await t.click(myRedisDatabasePage.workbenchButton);
+        await t.click(myRedisDatabasePage.NavigationPanel.workbenchButton);
     })
     .afterEach(async t => {
         await t.switchToMainWindow();
@@ -30,9 +29,7 @@ fixture `Scripting area at Workbench`
 // Update after resolving https://redislabs.atlassian.net/browse/RI-3299
 test('Verify that user can resize scripting area in Workbench', async t => {
     const commandForSend = 'info';
-    const offsetY = 200;
-    const inputHeightStart = await workbenchPage.queryInput.clientHeight;
-    const inputHeightEnd = inputHeightStart + 150;
+    const offsetY = 130;
 
     await workbenchPage.sendCommandInWorkbench(commandForSend);
     // Verify that user can run any script from CLI in Workbench and see the results
@@ -40,10 +37,13 @@ test('Verify that user can resize scripting area in Workbench', async t => {
     const sentCommandText = workbenchPage.queryCardCommand.withExactText(commandForSend);
     await t.expect(sentCommandText.exists).ok('Result of sent command exists');
 
+    const inputHeightStart = await workbenchPage.queryInput.clientHeight;
+
     await t.hover(workbenchPage.resizeButtonForScriptingAndResults);
-    await t.drag(workbenchPage.resizeButtonForScriptingAndResults, 0, offsetY, { speed: 0.01 });
+    await t.drag(workbenchPage.resizeButtonForScriptingAndResults, 0, offsetY, { speed: 0.1 });
     // Verify that user can resize scripting area
-    await t.expect(await workbenchPage.queryInput.clientHeight > inputHeightEnd).ok('Scripting area after resize has incorrect size');
+    const inputHeightEnd = inputHeightStart + 15;
+    await t.expect(await workbenchPage.queryInput.clientHeight).gt(inputHeightEnd, 'Scripting area after resize has incorrect size');
 });
 test('Verify that user when he have more than 10 results can request to view more results in Workbench', async t => {
     indexName = common.generateWord(5);
@@ -65,13 +65,13 @@ test('Verify that user when he have more than 10 results can request to view mor
     const commandToCreateSchema = `FT.CREATE ${indexName} ON HASH PREFIX 1 product: SCHEMA name TEXT`;
     const searchCommand = `FT.SEARCH ${indexName} * LIMIT 0 20`;
     //Open CLI
-    await t.click(cliPage.cliExpandButton);
+    await t.click(workbenchPage.Cli.cliExpandButton);
     //Create new keys for search
     for(const command of commandsForSendInCli) {
-        await t.typeText(cliPage.cliCommandInput, command, { replace: true });
+        await t.typeText(workbenchPage.Cli.cliCommandInput, command, { replace: true });
         await t.pressKey('enter');
     }
-    await t.click(cliPage.cliCollapseButton);
+    await t.click(workbenchPage.Cli.cliCollapseButton);
     //Send commands
     await workbenchPage.sendCommandInWorkbench(commandToCreateSchema);
     //Send search command

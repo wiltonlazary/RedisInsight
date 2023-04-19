@@ -1,5 +1,8 @@
 enum ApiEndpoints {
   DATABASES = 'databases',
+  DATABASES_IMPORT = 'databases/import',
+  DATABASES_TEST_CONNECTION = 'databases/test',
+  DATABASES_EXPORT = 'databases/export',
 
   CA_CERTIFICATES = 'certificates/ca',
   CLIENT_CERTIFICATES = 'certificates/client',
@@ -77,14 +80,16 @@ enum ApiEndpoints {
   PROFILER_LOGS = 'profiler/logs',
 
   REDIS_COMMANDS = 'commands',
-  GUIDES = 'static/guides/guides.json',
-  // TODO double check it, when tutorials will be completed
-  TUTORIALS = 'static/tutorials/tutorials.json',
+  GUIDES = 'static/guides/manifest.json',
+  TUTORIALS = 'static/tutorials/manifest.json',
+  CUSTOM_TUTORIALS = 'custom-tutorials',
+  CUSTOM_TUTORIALS_MANIFEST = 'custom-tutorials/manifest',
   PLUGINS = 'plugins',
   STATE = 'state',
   CONTENT_CREATE_DATABASE = 'static/content/create-redis.json',
   GUIDES_PATH = 'static/guides',
   TUTORIALS_PATH = 'static/tutorials',
+  CUSTOM_TUTORIALS_PATH = 'static/custom-tutorials',
 
   SLOW_LOGS = 'slow-logs',
   SLOW_LOGS_CONFIG = 'slow-logs/config',
@@ -99,6 +104,7 @@ enum ApiEndpoints {
 
   REDISEARCH = 'redisearch',
   REDISEARCH_SEARCH = 'redisearch/search',
+  HISTORY = 'history',
 }
 
 export const DEFAULT_SEARCH_MATCH = '*'

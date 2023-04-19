@@ -1,4 +1,4 @@
-import { KeyTypes, KeyValueFormat } from 'uiSrc/constants'
+import { KeyTypes, KeyValueCompressor, KeyValueFormat } from 'uiSrc/constants'
 import { IKeyPropTypes } from 'uiSrc/constants/prop-types/keys'
 import { Maybe, Nullable } from 'uiSrc/utils'
 import { GetKeyInfoResponse } from 'apiSrc/modules/browser/dto'
@@ -23,6 +23,7 @@ export enum SearchMode {
 
 export interface KeysStore {
   loading: boolean
+  deleting: boolean
   error: string
   search: string
   filter: Nullable<KeyTypes>
@@ -40,11 +41,25 @@ export interface KeysStore {
     data: Nullable<IKeyPropTypes>
     length: Maybe<number>
     viewFormat: KeyValueFormat
+    compressor: Nullable<KeyValueCompressor>
   }
   addKey: {
     loading: boolean
     error: string
   }
+  searchHistory: {
+    data: null | Array<SearchHistoryItem>
+    loading: boolean
+  }
+}
+
+export interface SearchHistoryItem {
+  id: string
+  filter: {
+    type: string
+    match: string
+  }
+  mode: string
 }
 
 export interface KeysStoreData {

@@ -1,13 +1,20 @@
 import { Database } from 'src/modules/database/models/database';
 import { mockCaCertificate, mockClientCertificate } from 'src/__mocks__/certificates';
 import { SentinelMaster } from 'src/modules/redis-sentinel/models/sentinel-master';
-import { ConnectionType, DatabaseEntity } from 'src/modules/database/entities/database.entity';
+import { Compressor, ConnectionType, DatabaseEntity } from 'src/modules/database/entities/database.entity';
 import { EncryptionStrategy } from 'src/modules/encryption/models';
 import { mockIORedisClient } from 'src/__mocks__/redis';
 import { mockSentinelMasterDto } from 'src/__mocks__/redis-sentinel';
 import { pick } from 'lodash';
 import { RedisDatabaseInfoResponse } from 'src/modules/database/dto/redis-info.dto';
 import { DatabaseOverview } from 'src/modules/database/models/database-overview';
+import { ClientContext, ClientMetadata } from 'src/common/models';
+import {
+  mockSshOptionsBasic,
+  mockSshOptionsBasicEntity,
+  mockSshOptionsPrivateKey,
+  mockSshOptionsPrivateKeyEntity,
+} from 'src/__mocks__/ssh';
 
 export const mockDatabaseId = 'a77b23c1-7816-4ea4-b61f-d37795a0f805-db-id';
 
@@ -25,11 +32,37 @@ export const mockDatabase = Object.assign(new Database(), {
   host: '127.0.100.1',
   port: 6379,
   connectionType: ConnectionType.STANDALONE,
+  timeout: 30_000,
+  new: false,
+  compressor: Compressor.NONE,
 });
 
 export const mockDatabaseEntity = Object.assign(new DatabaseEntity(), {
   ...mockDatabase,
   encryption: null,
+});
+
+export const mockDatabaseWithSshBasic = Object.assign(new Database(), {
+  ...mockDatabase,
+  ssh: true,
+  sshOptions: mockSshOptionsBasic,
+});
+
+export const mockDatabaseWithSshBasicEntity = Object.assign(new DatabaseEntity(), {
+  ...mockDatabaseWithSshBasic,
+  encryption: null,
+  sshOptions: mockSshOptionsBasicEntity,
+});
+
+export const mockDatabaseWithSshPrivateKey = Object.assign(new Database(), {
+  ...mockDatabase,
+  ssh: true,
+  sshOptions: mockSshOptionsPrivateKey,
+});
+
+export const mockDatabaseWithSshPrivateKeyEntity = Object.assign(new DatabaseEntity(), {
+  ...mockDatabaseWithSshPrivateKey,
+  sshOptions: mockSshOptionsPrivateKeyEntity,
 });
 
 export const mockDatabaseWithAuth = Object.assign(new Database(), {
@@ -113,6 +146,17 @@ export const mockClusterDatabaseWithTlsAuthEntity = Object.assign(new DatabaseEn
   nodes: JSON.stringify(mockClusterNodes),
 });
 
+export const mockNewDatabase = Object.assign(new Database(), {
+  ...mockDatabase,
+  new: true,
+});
+
+export const mockClientMetadata: ClientMetadata = {
+  session: undefined,
+  databaseId: mockDatabase.id,
+  context: ClientContext.Common,
+};
+
 export const mockDatabaseOverview: DatabaseOverview = {
   version: '6.2.4',
   usedMemory: 1,
@@ -168,6 +212,7 @@ export const mockDatabaseService = jest.fn(() => ({
 
 export const mockDatabaseConnectionService = jest.fn(() => ({
   getOrCreateClient: jest.fn().mockResolvedValue(mockIORedisClient),
+  createClient: jest.fn().mockResolvedValue(mockIORedisClient),
 }));
 
 export const mockDatabaseInfoProvider = jest.fn(() => ({

@@ -13,7 +13,7 @@ import { deleteRedisearchKeyFromList } from 'uiSrc/slices/browser/redisearch'
 import { DeleteListElementsDto, PushElementToListDto } from 'apiSrc/modules/browser/dto'
 import {
   defaultSelectedKeyAction,
-  deleteKeySuccess,
+  deleteSelectedKeySuccess,
   refreshKeyInfo,
   updateSelectedKeyRefreshTime,
 } from '../../browser/keys'
@@ -200,13 +200,21 @@ describe('list slice', () => {
         loading: false,
         data: {
           ...initialState.data,
-          elements: data.elements.map((element, i) => ({ element, index: i })),
+          elements: data.elements.concat(data.elements).map((element, i) => ({ element, index: i })),
         },
+      }
+
+      const initialStateWithElements = {
+        ...initialState,
+        data: {
+          ...initialState.data,
+          elements: data.elements.map((element, i) => ({ element, index: i })),
+        }
       }
 
       // Act
       const nextState = reducer(
-        initialState,
+        initialStateWithElements,
         loadMoreListElementsSuccess(data)
       )
 
@@ -865,7 +873,7 @@ describe('list slice', () => {
         const expectedActions = [
           deleteListElements(),
           deleteListElementsSuccess(),
-          deleteKeySuccess(),
+          deleteSelectedKeySuccess(),
           deleteRedisearchKeyFromList(data.keyName),
           addMessageNotification(successMessages.DELETED_KEY(data.keyName))
         ]

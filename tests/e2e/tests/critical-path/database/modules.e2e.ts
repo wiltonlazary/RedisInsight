@@ -1,13 +1,13 @@
 import { Selector } from 'testcafe';
 import { rte, env } from '../../../helpers/constants';
 import { acceptLicenseTerms } from '../../../helpers/database';
-import { MyRedisDatabasePage, DatabaseOverviewPage } from '../../../pageObjects';
+import { BrowserPage, MyRedisDatabasePage } from '../../../pageObjects';
 import { commonUrl, ossStandaloneRedisearch } from '../../../helpers/conf';
 import { addNewStandaloneDatabaseApi, deleteStandaloneDatabaseApi } from '../../../helpers/api/api-database';
 import { Common } from '../../../helpers/common';
 
 const myRedisDatabasePage = new MyRedisDatabasePage();
-const databaseOverviewPage = new DatabaseOverviewPage();
+const browserPage = new BrowserPage();
 const common = new Common();
 
 const moduleNameList = ['RediSearch', 'RedisJSON', 'RedisGraph', 'RedisTimeSeries', 'RedisBloom', 'RedisGears', 'RedisAI'];
@@ -56,7 +56,7 @@ test
         // Open Edit mode
         await t.click(myRedisDatabasePage.editDatabaseButton);
         // Verify that module column is not displayed
-        await t.expect(myRedisDatabasePage.moduleColumn.visible).notOk('Module column not found');
+        await t.expect(myRedisDatabasePage.moduleColumn.exists).notOk('Module column not found');
         // Verify modules in Edit mode
         await myRedisDatabasePage.checkModulesOnPage(moduleList);
     });
@@ -72,8 +72,8 @@ test
             await t.expect(moduleName).eql(await moduleList[i].getAttribute('data-testid'), 'Correct icon not found');
         }
         // Verify that if DB has more than 6 modules loaded, user can click on three dots and see other modules in the tooltip
-        await t.click(databaseOverviewPage.overviewMoreInfo);
+        await t.click(browserPage.OverviewPanel.overviewMoreInfo);
         for (let j = numberOfIcons; j < moduleNameList.length; j++) {
-            await t.expect(databaseOverviewPage.overviewTooltip.withText(moduleNameList[j]).visible).ok('Tooltip module not found');
+            await t.expect(browserPage.OverviewPanel.overviewTooltip.withText(moduleNameList[j]).visible).ok('Tooltip module not found');
         }
     });

@@ -1,5 +1,5 @@
 import { Cluster, Command, Redis } from 'ioredis';
-import { toNumber, uniq } from 'lodash';
+import { isUndefined, toNumber, uniq } from 'lodash';
 import {
   BadRequestException,
   ConflictException,
@@ -16,17 +16,23 @@ import {
   SearchRedisearchDto,
 } from 'src/modules/browser/dto/redisearch';
 import { GetKeysWithDetailsResponse } from 'src/modules/browser/dto';
-import { RedisErrorCodes } from 'src/constants';
+import { DEFAULT_MATCH, RedisErrorCodes } from 'src/constants';
 import { plainToClass } from 'class-transformer';
 import { numberWithSpaces } from 'src/utils/base.helper';
+import { BrowserHistoryMode } from 'src/common/constants';
 import { BrowserToolService } from '../browser-tool/browser-tool.service';
+import { BrowserHistoryService } from '../browser-history/browser-history.service';
+import { CreateBrowserHistoryDto } from '../../dto/browser-history/create.browser-history.dto';
 
 @Injectable()
 export class RedisearchService {
+  private maxSearchResults: Map<string, null | number> = new Map();
+
   private logger = new Logger('RedisearchService');
 
   constructor(
     private browserTool: BrowserToolService,
+    private browserHistory: BrowserHistoryService,
   ) {}
 
   /**
@@ -141,42 +147,55 @@ export class RedisearchService {
     this.logger.log('Searching keys using redisearch.');
 
     try {
-      let maxResults;
       const {
         index, query, offset, limit,
       } = dto;
 
       const client = await this.browserTool.getRedisClient(clientMetadata);
 
-      try {
-        const [[, maxSearchResults]] = await client.sendCommand(
+      if (isUndefined(this.maxSearchResults.get(clientMetadata.databaseId))) {
+        try {
           // response: [ [ 'MAXSEARCHRESULTS', '10000' ] ]
-          new Command('FT.CONFIG', ['GET', 'MAXSEARCHRESULTS'], {
-            replyEncoding: 'utf8',
-          }),
-        ) as [[string, string]];
+          const [[, maxSearchResults]] = await client.sendCommand(
+            new Command('FT.CONFIG', ['GET', 'MAXSEARCHRESULTS'], {
+              replyEncoding: 'utf8',
+            }),
+          ) as [[string, string]];
 
-        maxResults = toNumber(maxSearchResults);
-      } catch (error) {
-        maxResults = null;
+          this.maxSearchResults.set(clientMetadata.databaseId, toNumber(maxSearchResults));
+        } catch (error) {
+          this.maxSearchResults.set(clientMetadata.databaseId, null);
+        }
       }
-
       // Workaround: recalculate limit to not query more then MAXSEARCHRESULTS
       let safeLimit = limit;
-      if (maxResults && offset + limit > maxResults) {
-        safeLimit = offset <= maxResults ? maxResults - offset : limit;
+      const maxSearchResult = this.maxSearchResults.get(clientMetadata.databaseId)
+
+      if (maxSearchResult && offset + limit > maxSearchResult) {
+        safeLimit = offset <= maxSearchResult ? maxSearchResult - offset : limit;
       }
 
       const [total, ...keyNames] = await client.sendCommand(
         new Command('FT.SEARCH', [index, query, 'NOCONTENT', 'LIMIT', offset, safeLimit]),
       );
 
+      // Do not save default match "*"
+      if (query !== DEFAULT_MATCH) {
+        await this.browserHistory.create(
+          clientMetadata,
+          plainToClass(
+            CreateBrowserHistoryDto,
+            { filter: { match: query, type: null }, mode: BrowserHistoryMode.Redisearch },
+          ),
+        );
+      }
+
       return plainToClass(GetKeysWithDetailsResponse, {
         cursor: limit + offset,
         total,
         scanned: keyNames.length + offset,
         keys: keyNames.map((name) => ({ name })),
-        maxResults,
+        maxResults: maxSearchResult,
       });
     } catch (e) {
       this.logger.error('Failed to search keys using redisearch index', e);

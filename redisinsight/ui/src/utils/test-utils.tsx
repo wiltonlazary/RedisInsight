@@ -29,6 +29,7 @@ import { initialState as initialStateAppContext } from 'uiSrc/slices/app/context
 import { initialState as initialStateAppRedisCommands } from 'uiSrc/slices/app/redis-commands'
 import { initialState as initialStateAppPluginsReducer } from 'uiSrc/slices/app/plugins'
 import { initialState as initialStateAppSocketConnectionReducer } from 'uiSrc/slices/app/socket-connection'
+import { initialState as initialStateAppFeaturesReducer } from 'uiSrc/slices/app/features'
 import { initialState as initialStateCliSettings } from 'uiSrc/slices/cli/cli-settings'
 import { initialState as initialStateCliOutput } from 'uiSrc/slices/cli/cli-output'
 import { initialState as initialStateMonitor } from 'uiSrc/slices/cli/monitor'
@@ -36,6 +37,7 @@ import { initialState as initialStateUserSettings } from 'uiSrc/slices/user/user
 import { initialState as initialStateWBResults } from 'uiSrc/slices/workbench/wb-results'
 import { initialState as initialStateWBEGuides } from 'uiSrc/slices/workbench/wb-guides'
 import { initialState as initialStateWBETutorials } from 'uiSrc/slices/workbench/wb-tutorials'
+import { initialState as initialStateWBECustomTutorials } from 'uiSrc/slices/workbench/wb-custom-tutorials'
 import { initialState as initialStateCreateRedisButtons } from 'uiSrc/slices/content/create-redis-buttons'
 import { initialState as initialStateSlowLog } from 'uiSrc/slices/analytics/slowlog'
 import { initialState as initialClusterDetails } from 'uiSrc/slices/analytics/clusterDetails'
@@ -61,7 +63,8 @@ const initialStateDefault: RootState = {
     context: cloneDeep(initialStateAppContext),
     redisCommands: cloneDeep(initialStateAppRedisCommands),
     plugins: cloneDeep(initialStateAppPluginsReducer),
-    socketConnection: cloneDeep(initialStateAppSocketConnectionReducer)
+    socketConnection: cloneDeep(initialStateAppSocketConnectionReducer),
+    features: cloneDeep(initialStateAppFeaturesReducer)
   },
   connections: {
     instances: cloneDeep(initialStateInstances),
@@ -95,6 +98,7 @@ const initialStateDefault: RootState = {
     results: cloneDeep(initialStateWBResults),
     guides: cloneDeep(initialStateWBEGuides),
     tutorials: cloneDeep(initialStateWBETutorials),
+    customTutorials: cloneDeep(initialStateWBECustomTutorials),
   },
   content: {
     createRedisButtons: cloneDeep(initialStateCreateRedisButtons)
@@ -211,6 +215,27 @@ jest.mock(
   () => ({
     checkIsAnalyticsGranted: jest.fn(),
     getAppType: jest.fn()
+  })
+)
+
+export const MOCKED_HIGHLIGHTING_FEATURES = ['importDatabases', 'anotherFeature']
+jest.mock(
+  'uiSrc/constants/featuresHighlighting',
+  () => ({
+    BUILD_FEATURES: {
+      importDatabases: {
+        type: 'tooltip',
+        title: 'Import Database Connections',
+        content: 'Import your database connections from other Redis UIs',
+        page: 'browser'
+      },
+      anotherFeature: {
+        type: 'tooltip',
+        title: 'Import Database Connections',
+        content: 'Import your database connections from other Redis UIs',
+        page: 'browser'
+      }
+    }
   })
 )
 

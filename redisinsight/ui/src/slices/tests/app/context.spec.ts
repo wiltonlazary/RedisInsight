@@ -1,6 +1,6 @@
 import { cloneDeep } from 'lodash'
 import { DEFAULT_DELIMITER, KeyTypes } from 'uiSrc/constants'
-import { getTreeLeafField } from 'uiSrc/utils'
+import { getTreeLeafField, stringToBuffer } from 'uiSrc/utils'
 
 import {
   cleanup,
@@ -22,10 +22,10 @@ import reducer, {
   appContextSelector,
   appContextBrowser,
   appContextWorkbench,
-  setWorkbenchEAItem,
+  setWorkbenchEASearch,
   appContextWorkbenchEA,
   setWorkbenchEAItemScrollTop,
-  resetWorkbenchEAItem,
+  resetWorkbenchEASearch,
   setBrowserTreeNodesOpen,
   setBrowserTreePanelSizes,
   resetBrowserTree,
@@ -38,7 +38,10 @@ import reducer, {
   updateKeyDetailsSizes,
   appContextBrowserKeyDetails,
   appContextDbConfig,
-  setSlowLogUnits, setDbConfig,
+  setSlowLogUnits,
+  setDbConfig,
+  setDbIndexState,
+  appContextDbIndex,
 } from '../../app/context'
 
 jest.mock('uiSrc/services', () => ({
@@ -71,25 +74,31 @@ describe('slices', () => {
         browser: {
           ...initialState.browser,
           keyList: {
+            ...initialState.browser.keyList,
             isDataLoaded: true,
             scrollTopPosition: 100,
-            selectedKey: 'some key'
+            selectedKey: stringToBuffer('some key'),
           },
           tree: {
+            ...initialState.browser.tree,
             delimiter: '-',
           },
           bulkActions: {
+            ...initialState.browser.bulkActions,
             opened: true,
           },
         },
         workbench: {
+          ...initialState.workbench,
           script: '123123',
         },
         pubsub: {
+          ...initialState.pubsub,
           channel: '123123',
           message: '123123'
         },
         analytics: {
+          ...initialState.analytics,
           lastViewedPage: 'zxczxc'
         }
       }
@@ -182,7 +191,7 @@ describe('slices', () => {
   describe('setBrowserSelectedKey', () => {
     it('should properly set selectedKey', () => {
       // Arrange
-      const selectedKey = 'nameOfKey'
+      const selectedKey = stringToBuffer('nameOfKey')
       const state = {
         ...initialState.browser,
         keyList: {
@@ -326,7 +335,7 @@ describe('slices', () => {
     })
   })
 
-  describe('setWorkbenchEAItem', () => {
+  describe('setWorkbenchEASearch', () => {
     it('should properly set path to opened guide page', () => {
       // Arrange
       const prevState = {
@@ -334,7 +343,8 @@ describe('slices', () => {
         workbench: {
           ...initialState.workbench,
           enablementArea: {
-            itemPath: 'static/enablement-area/guides/guide1.html',
+            ...initialState.workbench.enablementArea,
+            search: 'static/enablement-area/guides/guide1.html',
             itemScrollTop: 200,
           }
         },
@@ -342,12 +352,12 @@ describe('slices', () => {
       const itemPath = 'static/enablement-area/guides/guide2.html'
       const state = {
         ...initialState.workbench.enablementArea,
-        itemPath,
+        search: itemPath,
         itemScrollTop: 0,
       }
 
       // Act
-      const nextState = reducer(prevState, setWorkbenchEAItem(itemPath))
+      const nextState = reducer(prevState, setWorkbenchEASearch(itemPath))
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -378,7 +388,7 @@ describe('slices', () => {
     })
   })
 
-  describe('resetWorkbenchEAItem', () => {
+  describe('resetWorkbenchEASearch', () => {
     it('should properly reset enablement-area context', () => {
       // Arrange
       const prevState = {
@@ -386,19 +396,20 @@ describe('slices', () => {
         workbench: {
           ...initialState.workbench,
           enablementArea: {
-            itemPath: 'static/enablement-area/guides/guide1.html',
+            ...initialState.workbench.enablementArea,
+            search: 'static/enablement-area/guides/guide1.html',
             itemScrollTop: 200,
           }
         },
       }
       const state = {
         ...initialState.workbench.enablementArea,
-        itemPath: '',
+        search: '',
         itemScrollTop: 0,
       }
 
       // Act
-      const nextState = reducer(prevState, resetWorkbenchEAItem())
+      const nextState = reducer(prevState, resetWorkbenchEASearch())
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -805,6 +816,26 @@ describe('slices', () => {
       })
 
       expect(appContextBrowserKeyDetails(rootState)).toEqual(state)
+    })
+  })
+
+  describe('setDbIndexState', () => {
+    it('should properly set state for db index', () => {
+      // Arrange
+      const state = {
+        ...initialState.dbIndex,
+        disabled: true
+      }
+
+      // Act
+      const nextState = reducer(initialState, setDbIndexState(true))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        app: { context: nextState },
+      })
+
+      expect(appContextDbIndex(rootState)).toEqual(state)
     })
   })
 })

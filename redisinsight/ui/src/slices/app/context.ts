@@ -15,6 +15,9 @@ export const initialState: StateAppContext = {
     treeViewDelimiter: DEFAULT_DELIMITER,
     slowLogDurationUnit: DEFAULT_SLOWLOG_DURATION_UNIT
   },
+  dbIndex: {
+    disabled: false
+  },
   browser: {
     keyList: {
       isDataPatternLoaded: false,
@@ -43,7 +46,8 @@ export const initialState: StateAppContext = {
   workbench: {
     script: '',
     enablementArea: {
-      itemPath: '',
+      isMinimized: localStorageService?.get(BrowserStorageItem.isEnablementAreaMinimized) ?? false,
+      search: '',
       itemScrollTop: 0,
     },
     panelSizes: {
@@ -107,6 +111,12 @@ const appContextSlice = createSlice({
     setBrowserIsNotRendered: (state, { payload }: { payload: boolean }) => {
       state.browser.keyList.isNotRendered = payload
     },
+    clearBrowserKeyListData: (state) => {
+      state.browser.keyList = {
+        ...initialState.browser.keyList,
+        selectedKey: state.browser.keyList.selectedKey
+      }
+    },
     setBrowserPanelSizes: (state, { payload }: { payload: any }) => {
       state.browser.panelSizes = payload
     },
@@ -151,9 +161,9 @@ const appContextSlice = createSlice({
     setLastPageContext: (state, { payload }: { payload: string }) => {
       state.lastPage = payload
     },
-    setWorkbenchEAItem: (state, { payload }: { payload: any }) => {
-      const prevValue = state.workbench.enablementArea.itemPath
-      state.workbench.enablementArea.itemPath = payload
+    setWorkbenchEASearch: (state, { payload }: { payload: any }) => {
+      const prevValue = state.workbench.enablementArea.search
+      state.workbench.enablementArea.search = payload
       if (prevValue !== payload) {
         state.workbench.enablementArea.itemScrollTop = 0
       }
@@ -161,9 +171,13 @@ const appContextSlice = createSlice({
     setWorkbenchEAItemScrollTop: (state, { payload }: { payload: any }) => {
       state.workbench.enablementArea.itemScrollTop = payload || 0
     },
-    resetWorkbenchEAItem: (state) => {
-      state.workbench.enablementArea.itemPath = ''
+    resetWorkbenchEASearch: (state) => {
+      state.workbench.enablementArea.search = ''
       state.workbench.enablementArea.itemScrollTop = 0
+    },
+    setWorkbenchEAMinimized: (state, { payload }) => {
+      state.workbench.enablementArea.isMinimized = payload
+      localStorageService.set(BrowserStorageItem.isEnablementAreaMinimized, payload)
     },
     resetBrowserTree: (state) => {
       state.browser.tree.selectedLeaf = {}
@@ -186,6 +200,9 @@ const appContextSlice = createSlice({
       const { type, sizes } = payload
       state.browser.keyDetailsSizes[type] = sizes
       localStorageService?.set(BrowserStorageItem.keyDetailSizes, state.browser.keyDetailsSizes)
+    },
+    setDbIndexState: (state, { payload }: { payload: boolean }) => {
+      state.dbIndex.disabled = payload
     }
   },
 })
@@ -212,13 +229,16 @@ export const {
   setWorkbenchScript,
   setWorkbenchVerticalPanelSizes,
   setLastPageContext,
-  setWorkbenchEAItem,
-  resetWorkbenchEAItem,
+  setWorkbenchEASearch,
+  resetWorkbenchEASearch,
+  setWorkbenchEAMinimized,
   setWorkbenchEAItemScrollTop,
   setPubSubFieldsContext,
   setBrowserBulkActionOpen,
   setLastAnalyticsPage,
-  updateKeyDetailsSizes
+  updateKeyDetailsSizes,
+  clearBrowserKeyListData,
+  setDbIndexState
 } = appContextSlice.actions
 
 // Selectors
@@ -242,6 +262,8 @@ export const appContextPubSub = (state: RootState) =>
   state.app.context.pubsub
 export const appContextAnalytics = (state: RootState) =>
   state.app.context.analytics
+export const appContextDbIndex = (state: RootState) =>
+  state.app.context.dbIndex
 
 // The reducer
 export default appContextSlice.reducer

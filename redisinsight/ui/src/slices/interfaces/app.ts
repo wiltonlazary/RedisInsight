@@ -42,6 +42,9 @@ export interface StateAppContext {
     treeViewDelimiter: string
     slowLogDurationUnit: DurationUnits
   }
+  dbIndex: {
+    disabled: boolean
+  }
   browser: {
     keyList: {
       isDataPatternLoaded: boolean
@@ -78,7 +81,8 @@ export interface StateAppContext {
   workbench: {
     script: string
     enablementArea: {
-      itemPath: string
+      isMinimized: boolean
+      search: string
       itemScrollTop: number
     },
     panelSizes: {
@@ -141,6 +145,20 @@ export interface StateAppSocketConnection {
   isConnected: boolean
 }
 
+export interface StateAppFeatures {
+  highlighting: {
+    version: string
+    features: string[]
+    pages: {
+      [key: string]: string[]
+    }
+  }
+  onboarding: {
+    currentStep: number
+    totalSteps: number
+    isActive: boolean
+  }
+}
 export enum NotificationType {
   Global = 'global'
 }

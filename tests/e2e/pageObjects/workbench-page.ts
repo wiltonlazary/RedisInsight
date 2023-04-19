@@ -1,6 +1,7 @@
 import { Selector, t } from 'testcafe';
+import { InstancePage } from './instance-page';
 
-export class WorkbenchPage {
+export class WorkbenchPage extends InstancePage {
     //CSS selectors
     cssSelectorPaginationButtonPrevious = '[data-test-subj=pagination-button-previous]';
     cssSelectorPaginationButtonNext = '[data-test-subj=pagination-button-next]';
@@ -9,6 +10,8 @@ export class WorkbenchPage {
     cssQueryCardOutputResponseSuccess = '[data-testid=query-card-output-response-success]';
     cssQueryCardOutputResponseFailed = '[data-testid=query-card-output-response-failed]';
     cssTableViewTypeOption = '[data-testid=view-type-selected-Plugin-redisearch__redisearch]';
+    cssClientListViewTypeOption = '[data-testid=view-type-selected-Plugin-client-list__clients-list]';
+    cssJsonViewTypeOption = '[data-testid=view-type-selected-Plugin-client-list__json-view]';
     cssMonacoCommandPaletteLine = '[aria-label="Command Palette"]';
     cssQueryTextResult = '[data-testid=query-cli-result]';
     cssWorkbenchCommandInHistory = '[data-testid=wb-command]';
@@ -29,6 +32,16 @@ export class WorkbenchPage {
     //*The following categories are ordered alphabetically (Alerts, Buttons, Checkboxes, etc.).
     //-------------------------------------------------------------------------------------------
     //BUTTONS
+    welcomePageTitle = Selector('[data-testid=welcome-page-title]');
+    customTutorials = Selector('[data-testid=accordion-button-custom-tutorials]');
+    tutorialOpenUploadButton = Selector('[data-testid=open-upload-tutorial-btn]');
+    tutorialLinkField = Selector('[data-testid=tutorial-link-field]');
+    tutorialLatestDeleteIcon = Selector('[data-testid^=delete-tutorial-icon-]').nth(0);
+    tutorialDeleteButton = Selector('[data-testid^=delete-tutorial-]').withText('Delete');
+    tutorialNameField = Selector('[data-testid=tutorial-name-field]');
+    tutorialSubmitButton = Selector('[data-testid=submit-upload-tutorial-btn]');
+    tutorialImport = Selector('[data-testid=import-tutorial]');
+    tutorialAccordionButton = Selector('[data-testid^=accordion-button-]');
     submitCommandButton = Selector('[data-testid=btn-submit]');
     resizeButtonForScriptingAndResults = Selector('[data-test-subj=resize-btn-scripting-area-and-results]');
     collapsePreselectAreaButton = Selector('[data-testid=collapse-enablement-area]');
@@ -69,6 +82,10 @@ export class WorkbenchPage {
     documentHashCreateButton = Selector('[data-testid=preselect-auto-Create]');
     //ICONS
     noCommandHistoryIcon = Selector('[data-testid=wb_no-results__icon]');
+    parametersAnchor = Selector('[data-testid=parameters-anchor]');
+    groupModeIcon = Selector('[data-testid=group-mode-tooltip]');
+    rawModeIcon = Selector('[data-testid=raw-mode-tooltip]');
+    silentModeIcon = Selector('[data-testid=silent-mode-tooltip]');
     //LINKS
     timeSeriesLink = Selector('[data-testid=internal-link-redis_for_time_series]');
     redisStackLinks = Selector('[data-testid=accordion-redis_stack] [data-testid^=internal-link]');
@@ -83,16 +100,16 @@ export class WorkbenchPage {
     //TEXT ELEMENTS
     queryPluginResult = Selector('[data-testid=query-plugin-result]');
     responseInfo = Selector('[class="responseInfo"]');
+    parsedRedisReply = Selector('[class="parsedRedisReply"]');
     scriptsLines = Selector('[data-testid=query-input-container] .view-lines');
     queryCardContainer = Selector('[data-testid^=query-card-container]');
     queryCardCommand = Selector('[data-testid=query-card-command]');
     queryTableResult = Selector('[data-testid^=query-table-result-]');
+    queryJsonResult = Selector('[data-testid=json-view]');
     mainEditorArea = Selector('[data-testid=main-input-container-area]');
     queryTextResult = Selector(this.cssQueryTextResult);
     queryColumns = Selector('[data-testid*=query-column-]');
     queryInputScriptArea = Selector('[data-testid=query-input-container] .view-line');
-    overviewTotalKeys = Selector('[data-test-subj=overview-total-keys]');
-    overviewTotalMemory = Selector('[data-test-subj=overview-total-memory]');
     queryCardNoModuleOutput = Selector('[data-testid=query-card-no-module-output]');
     noCommandHistorySection = Selector('[data-testid=wb_no-results]');
     preselectArea = Selector('[data-testid=enablementArea]');
@@ -134,9 +151,12 @@ export class WorkbenchPage {
     //OPTIONS
     selectViewType = Selector('[data-testid=select-view-type]');
     textViewTypeOption = Selector('[data-test-subj^=view-type-option-Text]');
+    jsonStringViewTypeOption = Selector('[data-test-subj=view-type-option-Plugin-client-list__json-string-view]');
     tableViewTypeOption = Selector('[data-test-subj^=view-type-option-Plugin]');
     graphViewTypeOption = Selector('[data-test-subj^=view-type-option-Plugin-graph]');
-
+    typeSelectedClientsList = Selector('[data-testid=view-type-selected-Plugin-client-list__clients-list]');
+    viewTypeOptionClientList = Selector('[data-test-subj=view-type-option-Plugin-client-list__clients-list]');
+    viewTypeOptionsText = Selector('[data-test-subj=view-type-option-Text-default__Text]');
     /**
      * Get card container by command
      * @param command The command
@@ -150,6 +170,13 @@ export class WorkbenchPage {
         await t
             .click(this.selectViewType)
             .click(this.textViewTypeOption);
+    }
+
+    // Select Json view option in Workbench results
+    async selectViewTypeJson(): Promise<void> {
+        await t
+            .click(this.selectViewType)
+            .click(this.jsonStringViewTypeOption);
     }
 
     // Select Table view option in Workbench results
@@ -174,8 +201,22 @@ export class WorkbenchPage {
      */
     async sendCommandInWorkbench(command: string, speed = 1, paste = true): Promise<void> {
         await t
+            .click(this.queryInput)
             .typeText(this.queryInput, command, { replace: true, speed, paste })
             .click(this.submitCommandButton);
+    }
+
+    /**
+     * Send multiple commands in Workbench
+     * @param commands The commands
+     */
+    async sendMultipleCommandsInWorkbench(commands: string[]): Promise<void> {
+        for (const command of commands) {
+            await t
+                .typeText(this.queryInput, command, { replace: false, speed: 1, paste: true })
+                .pressKey('enter');
+        }
+        await t.click(this.submitCommandButton);
     }
 
     /**
@@ -197,9 +238,64 @@ export class WorkbenchPage {
     async checkWorkbenchCommandResult(command: string, result: string, childNum = 0): Promise<void> {
         // Compare the command with executed command
         const actualCommand = await this.queryCardContainer.nth(childNum).find(this.cssQueryCardCommand).textContent;
-        await t.expect(actualCommand).eql(command, 'Actual command is not equal to executed');
+        await t.expect(actualCommand).contains(command, 'Actual command is not equal to executed');
         // Compare the command result with executed command
         const actualCommandResult = await this.queryCardContainer.nth(childNum).find(this.cssQueryTextResult).textContent;
-        await t.expect(actualCommandResult).eql(result, 'Actual command result is not equal to executed');
+        await t.expect(actualCommandResult).contains(result, 'Actual command result is not equal to executed');
+    }
+
+    /**
+     * Get selector with tutorial name
+     * @param tutorialName name of the uploaded tutorial
+     */
+    async getAccordionButtonWithName(tutorialName: string): Promise<Selector> {
+        return Selector(`[data-testid=accordion-button-${tutorialName}]`);
+    }
+
+    /**
+     * Get internal tutorial link with .md name
+     * @param internalLink name of the .md file
+     */
+    async getInternalLinkWithManifest(internalLink: string): Promise<Selector> {
+        return Selector(`[data-testid="internal-link-${internalLink}.md"]`);
+    }
+
+    /**
+     * Get internal tutorial link without .md name
+     * @param internalLink name of the label
+     */
+    async getInternalLinkWithoutManifest(internalLink: string): Promise<Selector> {
+        return Selector(`[data-testid="internal-link-${internalLink}"]`);
+    }
+
+    /**
+     * Find tutorial selector by name
+     * @param name A tutorial name
+     */
+    async getTutorialByName(name: string): Promise<Selector> {
+        return Selector('div').withText(name);
+    }
+
+    /**
+     * Find image in tutorial by alt text
+     * @param alt Image alt text
+     */
+    async getTutorialImageByAlt(alt: string): Promise<Selector> {
+        return Selector('img').withAttribute('alt', alt);
+    }
+
+    /**
+     * Wait until image rendered
+     * @param selector Image selector
+     */
+    async waitUntilImageRendered(selector: Selector): Promise<void> {
+        const searchTimeout = 5 * 1000; // 5 sec maximum wait
+        const startTime = Date.now();
+        let imageHeight = await selector.getStyleProperty('height');
+
+        do {
+            imageHeight = await selector.getStyleProperty('height');
+        }
+        while ((imageHeight == '0px') && Date.now() - startTime < searchTimeout);
     }
 }

@@ -26,9 +26,11 @@ import appContextReducer from './app/context'
 import appRedisCommandsReducer from './app/redis-commands'
 import appPluginsReducer from './app/plugins'
 import appsSocketConnectionReducer from './app/socket-connection'
+import appFeaturesReducer from './app/features'
 import workbenchResultsReducer from './workbench/wb-results'
 import workbenchGuidesReducer from './workbench/wb-guides'
 import workbenchTutorialsReducer from './workbench/wb-tutorials'
+import workbenchCustomTutorialsReducer from './workbench/wb-custom-tutorials'
 import contentCreateRedisButtonReducer from './content/create-redis-buttons'
 import pubSubReducer from './pubsub/pubsub'
 import slowLogReducer from './analytics/slowlog'
@@ -46,7 +48,8 @@ export const rootReducer = combineReducers({
     context: appContextReducer,
     redisCommands: appRedisCommandsReducer,
     plugins: appPluginsReducer,
-    socketConnection: appsSocketConnectionReducer
+    socketConnection: appsSocketConnectionReducer,
+    features: appFeaturesReducer
   }),
   connections: combineReducers({
     instances: instancesReducer,
@@ -80,6 +83,7 @@ export const rootReducer = combineReducers({
     results: workbenchResultsReducer,
     guides: workbenchGuidesReducer,
     tutorials: workbenchTutorialsReducer,
+    customTutorials: workbenchCustomTutorialsReducer,
   }),
   content: combineReducers({
     createRedisButtons: contentCreateRedisButtonReducer,

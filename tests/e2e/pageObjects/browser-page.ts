@@ -1,9 +1,10 @@
 import { t, Selector } from 'testcafe';
 import { Common } from '../helpers/common';
+import { InstancePage } from './instance-page';
 
 const common = new Common();
 
-export class BrowserPage {
+export class BrowserPage extends InstancePage {
     //CSS Selectors
     cssSelectorGrid = '[aria-label="grid"]';
     cssSelectorRows = '[aria-label="row"]';
@@ -15,6 +16,7 @@ export class BrowserPage {
     cssKeyBadge = '[data-testid^=badge-]';
     cssKeyTtl = '[data-testid^=ttl-]';
     cssKeySize = '[data-testid^=size-]';
+    cssRemoveSuggestionItem = '[data-testid^=remove-suggestion-item-]';
     //-------------------------------------------------------------------------------------------
     //DECLARATION OF SELECTORS
     //*Declare all elements/components of the relevant page.
@@ -25,15 +27,15 @@ export class BrowserPage {
     hashDeleteButton = Selector('[data-testid=hash-delete-btn]');
     setDeleteButton = Selector('[data-testid=set-delete-btn]');
     streamDeleteButton = Selector('[data-testid=stream-delete-btn]');
-    myRedisDbIcon = Selector('[data-testid=my-redis-db-icon]');
+    applyButton = Selector('[data-testid=apply-btn]');
     deleteKeyButton = Selector('[data-testid=delete-key-btn]');
+    submitDeleteKeyButton = Selector('[data-testid=submit-delete-key]');
     confirmDeleteKeyButton = Selector('[data-testid=delete-key-confirm-btn]');
     editKeyTTLButton = Selector('[data-testid=edit-ttl-btn]');
     closeEditTTL = Selector('[data-testid=cancel-btn]');
     saveTTLValue = Selector('[data-testid=apply-btn]');
     refreshKeysButton = Selector('[data-testid=refresh-keys-btn]');
     refreshKeyButton = Selector('[data-testid=refresh-key-btn]');
-    applyButton = Selector('[data-testid=apply-btn]');
     editKeyNameButton = Selector('[data-testid=edit-key-btn]');
     editKeyValueButton = Selector('[data-testid=edit-key-value-btn]');
     closeKeyButton = Selector('[data-testid=close-key-btn]');
@@ -99,11 +101,12 @@ export class BrowserPage {
     editHashButton = Selector('[data-testid^=edit-hash-button-]');
     editZsetButton = Selector('[data-testid^=zset-edit-button-]');
     editListButton = Selector('[data-testid^=edit-list-button-]');
-    workbenchLinkButton = Selector('[data-test-subj=workbench-page-btn]');
     cancelStreamGroupBtn = Selector('[data-testid=cancel-stream-groups-btn]');
     submitTooltipBtn = Selector('[data-testid=submit-tooltip-btn]');
     patternModeBtn = Selector('[data-testid=search-mode-pattern-btn]');
     redisearchModeBtn = Selector('[data-testid=search-mode-redisearch-btn]');
+    showFilterHistoryBtn = Selector('[data-testid=show-suggestions-btn]');
+    clearFilterHistoryBtn = Selector('[data-testid=clear-history-btn]');
     //CONTAINERS
     streamGroupsContainer = Selector('[data-testid=stream-groups-container]');
     streamConsumersContainer = Selector('[data-testid=stream-consumers-container]');
@@ -141,6 +144,8 @@ export class BrowserPage {
     cancelIndexCreationBtn = Selector('[data-testid=create-index-cancel-btn]');
     confirmIndexCreationBtn = Selector('[data-testid=create-index-btn]');
     resizeTrigger = Selector('[data-testid^=resize-trigger-]');
+    filterHistoryOption = Selector('[data-testid^=suggestion-item-]');
+    filterHistoryItemText = Selector('[data-testid=suggestion-item-text]');
     //TABS
     streamTabGroups = Selector('[data-testid=stream-tab-Groups]');
     streamTabConsumers = Selector('[data-testid=stream-tab-Consumers]');
@@ -158,7 +163,8 @@ export class BrowserPage {
     listKeyElementInput = Selector('[data-testid=element]');
     listKeyElementEditorInput = Selector('[data-testid=element-value-editor]');
     stringKeyValueInput = Selector('[data-testid=string-value]');
-    jsonKeyValueInput = Selector('[data-testid=json-value]');
+    jsonKeyValueInput = Selector('[data-mode-id=json]');
+    jsonUploadInput = Selector('[data-testid=upload-input-file]');
     setMemberInput = Selector('[data-testid=member-name]');
     zsetMemberScoreInput = Selector('[data-testid=member-score]');
     filterByPatterSearchInput = Selector('[data-testid=search-key]');
@@ -210,8 +216,6 @@ export class BrowserPage {
     searchAdvices = Selector('[data-test-subj=search-advices]');
     keysNumberOfResults = Selector('[data-testid=keys-number-of-results]');
     keysTotalNumber = Selector('[data-testid=keys-total]');
-    overviewTotalKeys = Selector('[data-test-subj=overview-total-keys]');
-    overviewTotalMemory = Selector('[data-test-subj=overview-total-memory]');
     overviewConnectedClients = Selector('[data-test-subj=overview-connected-clients]');
     overviewCommandsSec = Selector('[data-test-subj=overview-commands-sec]');
     overviewCpu = Selector('[data-test-subj=overview-cpu]');
@@ -359,9 +363,9 @@ export class BrowserPage {
     /**
      * Adding a new ZSet key
      * @param keyName The name of the key
+     * @param scores The score of the key member
      * @param TTL The Time to live value of the key
      * @param members The key members
-     * @param scores The score of the key member
      */
     async addZSetKey(keyName: string, scores = ' ', TTL = ' ', members = ' '): Promise<void> {
         await common.waitForElementNotVisible(this.progressLine);
@@ -574,6 +578,16 @@ export class BrowserPage {
         for (const name of keyNames) {
             await this.deleteKeyByName(name);
         }
+    }
+
+    /**
+     * Delete Key By name after Hovering
+     */
+    async deleteKeyByNameFromList(keyName: string): Promise<void> {
+        await this.searchByKeyName(keyName);
+        await t.hover(this.keyNameInTheList);
+        await t.click(Selector(`[data-testid="delete-key-btn-${keyName}"]`));
+        await t.click(this.submitDeleteKeyButton);
     }
 
     /**
@@ -861,21 +875,6 @@ export class BrowserPage {
         await t.typeText(this.jsonValueInput, jsonStructure, { replace: true, paste: true });
         await t.click(this.applyEditButton);
     }
-
-    /**
-     * Get Values list of the key
-     * @param element Selector of the element with list
-     */
-    async getValuesListByElement(element: any): Promise<string[]> {
-        const keyValues: string[] = [];
-        const count = await element.count;
-        for (let i = 0; i < count; i++) {
-            keyValues[i] = await element.nth(i).textContent;
-            i++;
-        }
-        return keyValues;
-    }
-
     /**
      * Check tree view structure
      * @folders name of folders for tree view build
@@ -1021,7 +1020,7 @@ export class BrowserPage {
     * Get text from first tree element
     */
     async getTextFromNthTreeElement(number: number): Promise<string> {
-        return (await Selector(`[role="treeitem"]`).nth(number).find(`div`).textContent).replace(/\s/g, '');
+        return (await Selector('[role="treeitem"]').nth(number).find('div').textContent).replace(/\s/g, '');
     }
 
     /**
@@ -1029,11 +1028,11 @@ export class BrowserPage {
     * @param names folder names with sequence of subfolder
     */
     async openTreeFolders(names: string[]): Promise<void> {
-        let base = `node-item_${names[0]}:`
+        let base = `node-item_${names[0]}:`;
         await t.click(Selector(`[data-testid="${base}"]`));
         if (names.length > 1) {
             for (let i = 1; i < names.length; i++) {
-                base = base + `${names[i]}:`;
+                base = `${base  }${names[i]}:`;
                 await t.click(Selector(`[data-testid="${base}"]`));
             }
         }
@@ -1041,7 +1040,22 @@ export class BrowserPage {
 
         await t.expect(
             Selector(`[data-testid="${base}keys:keys:"]`).visible)
-            .ok("Folder is not selected");
+            .ok('Folder is not selected');
+    }
+
+    /**
+    * Verify that database has no keys
+    */
+    async verifyNoKeysInDatabase(): Promise<void> {
+        await t.expect(this.keyListMessage.exists).ok('Database not empty')
+            .expect(this.keysSummary.exists).notOk('Total value is displayed for empty database');
+    }
+
+    /**
+    * Clear filter on Browser page
+    */
+    async clearFilter(): Promise<void> {
+        await t.click(this.clearFilterButton);
     }
 }
 

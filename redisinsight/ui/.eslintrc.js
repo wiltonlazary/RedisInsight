@@ -28,7 +28,7 @@ module.exports = {
       },
     },
   ],
-  ignorePatterns: ['dist', 'src/packages/redisearch/src/icons/*.js', 'src/packages/clients-list-example/src/icons/*.js'],
+  ignorePatterns: ['dist', 'src/packages/redisearch/src/icons/*.js', 'src/packages/common/src/icons/*.js'],
 
   rules: {
     radix: 'off',
@@ -79,6 +79,11 @@ module.exports = {
           'index',
         ],
         pathGroups: [
+          {
+            pattern: 'uiSrc/**',
+            group: 'internal',
+            position: 'after'
+          },
           {
             pattern: 'apiSrc/**',
             group: 'internal',
