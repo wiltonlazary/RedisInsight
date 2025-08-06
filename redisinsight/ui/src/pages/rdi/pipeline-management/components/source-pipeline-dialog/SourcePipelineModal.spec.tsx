@@ -38,15 +38,23 @@ jest.mock('uiSrc/telemetry', () => ({
   sendEventTelemetry: jest.fn(),
 }))
 
-jest.mock('uiSrc/slices/rdi/pipeline', () => ({
-  ...jest.requireActual('uiSrc/slices/rdi/pipeline'),
-  rdiPipelineSelector: jest.fn(),
-}))
+jest.mock('uiSrc/components/base/display', () => {
+  const actual = jest.requireActual('uiSrc/components/base/display')
 
-jest.mock('uiSrc/slices/app/context', () => ({
-  ...jest.requireActual('uiSrc/slices/app/context'),
-  appContextPipelineManagement: jest.fn(),
-}))
+  return {
+    ...actual,
+    Modal: {
+      ...actual.Modal,
+      Content: {
+        ...actual.Modal.Content,
+        Header: {
+          ...actual.Modal.Content.Header,
+          Title: jest.fn().mockReturnValue(null),
+        },
+      },
+    },
+  }
+})
 
 let store: typeof mockedStore
 beforeEach(() => {

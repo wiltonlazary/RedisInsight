@@ -1,32 +1,23 @@
-import React, { ChangeEvent } from 'react'
-import {
-  EuiCheckbox,
-  EuiFieldNumber,
-  EuiFieldPassword,
-  EuiFieldText,
-  EuiFormRow,
-  EuiRadioGroup,
-  EuiRadioGroupOption,
-  EuiTextArea,
-  htmlIdGenerator,
-} from '@elastic/eui'
-import cx from 'classnames'
+import React from 'react'
 import { FormikProps } from 'formik'
 
-import {
-  MAX_PORT_NUMBER,
-  selectOnFocus,
-  validateField,
-  validatePortNumber,
-} from 'uiSrc/utils'
+import { MAX_PORT_NUMBER, selectOnFocus, validateField } from 'uiSrc/utils'
 import { SECURITY_FIELD } from 'uiSrc/constants'
 
 import { SshPassType } from 'uiSrc/pages/home/constants'
 import { DbConnectionInfo } from 'uiSrc/pages/home/interfaces'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import { Spacer } from 'uiSrc/components/base/layout/spacer'
-import styles from '../styles.module.scss'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import {
+  NumericInput,
+  PasswordInput,
+  TextArea,
+  TextInput,
+} from 'uiSrc/components/base/inputs'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { RiRadioGroup } from 'uiSrc/components/base/forms/radio-group/RadioGroup'
+import { useGenerateId } from 'uiSrc/components/base/utils/hooks/generate-id'
 
 export interface Props {
   flexGroupClassName?: string
@@ -34,35 +25,34 @@ export interface Props {
   formik: FormikProps<DbConnectionInfo>
 }
 
-const sshPassTypeOptions: EuiRadioGroupOption[] = [
+const sshPassTypeOptions = [
   {
     id: SshPassType.Password,
+    value: SshPassType.Password,
     label: 'Password',
-    'data-test-subj': 'radio-btn-password',
+    // 'data-test-subj': 'radio-btn-password',
   },
   {
     id: SshPassType.PrivateKey,
+    value: SshPassType.PrivateKey,
     label: 'Private Key',
-    'data-test-subj': 'radio-btn-privateKey',
+    // 'data-test-subj': 'radio-btn-privateKey',
   },
 ]
 
 const SSHDetails = (props: Props) => {
   const { flexGroupClassName = '', flexItemClassName = '', formik } = props
+  const id = useGenerateId('', ' ssh')
 
   return (
-    <>
+    <Col gap="m">
       <Row
-        gap="m"
-        className={cx(flexGroupClassName, {
-          [styles.tlsContainer]: !flexGroupClassName,
-          [styles.tlsSniOpened]: !!formik.values.ssh,
-        })}
+        className={flexGroupClassName}
         align={!flexGroupClassName ? 'end' : undefined}
       >
         <FlexItem style={{ width: '230px' }} className={flexItemClassName}>
-          <EuiCheckbox
-            id={`${htmlIdGenerator()()} ssh`}
+          <Checkbox
+            id={id}
             name="ssh"
             label="Use SSH Tunnel"
             checked={!!formik.values.ssh}
@@ -73,11 +63,11 @@ const SSHDetails = (props: Props) => {
       </Row>
 
       {formik.values.ssh && (
-        <>
+        <Col gap="l">
           <Row gap="m" responsive className={flexGroupClassName}>
-            <FlexItem grow className={cx(flexItemClassName)}>
-              <EuiFormRow label="Host*">
-                <EuiFieldText
+            <FlexItem grow className={flexItemClassName}>
+              <FormField label="Host*">
+                <TextInput
                   name="sshHost"
                   id="sshHost"
                   data-testid="sshHost"
@@ -85,45 +75,39 @@ const SSHDetails = (props: Props) => {
                   maxLength={200}
                   placeholder="Enter SSH Host"
                   value={formik.values.sshHost ?? ''}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  onChange={value => {
                     formik.setFieldValue(
-                      e.target.name,
-                      validateField(e.target.value.trim()),
+                      'sshHost',
+                      validateField(value.trim()),
                     )
                   }}
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
-
             <FlexItem grow className={flexItemClassName}>
-              <EuiFormRow label="Port*" helpText="Should not exceed 65535.">
-                <EuiFieldNumber
+              <FormField
+                label="Port*"
+                additionalText="Should not exceed 65535."
+              >
+                <NumericInput
+                  autoValidate
+                  min={0}
+                  max={MAX_PORT_NUMBER}
                   name="sshPort"
                   id="sshPort"
                   data-testid="sshPort"
-                  style={{ width: '100%' }}
                   placeholder="Enter SSH Port"
-                  value={formik.values.sshPort ?? ''}
-                  maxLength={6}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    formik.setFieldValue(
-                      e.target.name,
-                      validatePortNumber(e.target.value.trim()),
-                    )
-                  }}
+                  value={Number(formik.values.sshPort)}
+                  onChange={(value) => formik.setFieldValue('sshPort', value)}
                   onFocus={selectOnFocus}
-                  type="text"
-                  min={0}
-                  max={MAX_PORT_NUMBER}
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
           </Row>
-
-          <Row gap="m" responsive className={flexGroupClassName}>
-            <FlexItem grow className={cx(flexItemClassName)}>
-              <EuiFormRow label="Username*">
-                <EuiFieldText
+          <Row responsive className={flexGroupClassName}>
+            <FlexItem grow className={flexItemClassName}>
+              <FormField label="Username*">
+                <TextInput
                   name="sshUsername"
                   id="sshUsername"
                   data-testid="sshUsername"
@@ -131,29 +115,23 @@ const SSHDetails = (props: Props) => {
                   maxLength={200}
                   placeholder="Enter SSH Username"
                   value={formik.values.sshUsername ?? ''}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  onChange={value => {
                     formik.setFieldValue(
-                      e.target.name,
-                      validateField(e.target.value.trim()),
+                      'sshUsername',
+                      validateField(value.trim()),
                     )
                   }}
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
           </Row>
-
-          <Spacer />
-          <Row gap="m" responsive className={flexGroupClassName}>
-            <FlexItem
-              grow
-              className={cx(flexItemClassName, styles.sshPassTypeWrapper)}
-              >
-              <EuiRadioGroup
+          <Row responsive className={flexGroupClassName}>
+            <FlexItem grow className={flexItemClassName}>
+              <RiRadioGroup
                 id="sshPassType"
-                name="sshPassType"
-                options={sshPassTypeOptions}
-                idSelected={formik.values.sshPassType}
-                className={styles.sshPassType}
+                items={sshPassTypeOptions}
+                layout="horizontal"
+                value={formik.values.sshPassType}
                 onChange={(id) => formik.setFieldValue('sshPassType', id)}
                 data-testid="ssh-pass-type"
               />
@@ -161,16 +139,13 @@ const SSHDetails = (props: Props) => {
           </Row>
 
           {formik.values.sshPassType === SshPassType.Password && (
-            <Row gap="m" responsive className={flexGroupClassName}>
+            <Row responsive className={flexGroupClassName}>
               <FlexItem grow className={flexItemClassName}>
-                <EuiFormRow label="Password">
-                  <EuiFieldPassword
-                    type="password"
+                <FormField label="Password">
+                  <PasswordInput
                     name="sshPassword"
                     id="sshPassword"
                     data-testid="sshPassword"
-                    fullWidth
-                    className="passwordField"
                     maxLength={10_000}
                     placeholder="Enter SSH Password"
                     value={
@@ -178,7 +153,7 @@ const SSHDetails = (props: Props) => {
                         ? SECURITY_FIELD
                         : (formik.values.sshPassword ?? '')
                     }
-                    onChange={formik.handleChange}
+                    onChangeCapture={formik.handleChange}
                     onFocus={() => {
                       if (formik.values.sshPassword === true) {
                         formik.setFieldValue('sshPassword', '')
@@ -186,22 +161,20 @@ const SSHDetails = (props: Props) => {
                     }}
                     autoComplete="new-password"
                   />
-                </EuiFormRow>
+                </FormField>
               </FlexItem>
             </Row>
           )}
 
           {formik.values.sshPassType === SshPassType.PrivateKey && (
-            <>
-              <Row gap="m" responsive className={flexGroupClassName}>
+            <Col gap="m">
+              <Row responsive className={flexGroupClassName}>
                 <FlexItem grow className={flexItemClassName}>
-                  <EuiFormRow label="Private Key*">
-                    <EuiTextArea
+                  <FormField label="Private Key*">
+                    <TextArea
                       name="sshPrivateKey"
                       id="sshPrivateKey"
                       data-testid="sshPrivateKey"
-                      fullWidth
-                      className="passwordField"
                       maxLength={50_000}
                       placeholder="Enter SSH Private Key in PEM format"
                       value={
@@ -212,26 +185,23 @@ const SSHDetails = (props: Props) => {
                               '•',
                             ) ?? '')
                       }
-                      onChange={formik.handleChange}
+                      onChangeCapture={formik.handleChange}
                       onFocus={() => {
                         if (formik.values.sshPrivateKey === true) {
                           formik.setFieldValue('sshPrivateKey', '')
                         }
                       }}
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               </Row>
-              <Row gap="m" responsive className={flexGroupClassName}>
+              <Row responsive className={flexGroupClassName}>
                 <FlexItem grow className={flexItemClassName}>
-                  <EuiFormRow label="Passphrase">
-                    <EuiFieldPassword
-                      type="password"
+                  <FormField label="Passphrase">
+                    <PasswordInput
                       name="sshPassphrase"
                       id="sshPassphrase"
                       data-testid="sshPassphrase"
-                      fullWidth
-                      className="passwordField"
                       maxLength={50_000}
                       placeholder="Enter Passphrase for Private Key"
                       value={
@@ -239,7 +209,7 @@ const SSHDetails = (props: Props) => {
                           ? SECURITY_FIELD
                           : (formik.values.sshPassphrase ?? '')
                       }
-                      onChange={formik.handleChange}
+                      onChangeCapture={formik.handleChange}
                       onFocus={() => {
                         if (formik.values.sshPassphrase === true) {
                           formik.setFieldValue('sshPassphrase', '')
@@ -247,14 +217,14 @@ const SSHDetails = (props: Props) => {
                       }}
                       autoComplete="new-password"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               </Row>
-            </>
+            </Col>
           )}
-        </>
+        </Col>
       )}
-    </>
+    </Col>
   )
 }
 

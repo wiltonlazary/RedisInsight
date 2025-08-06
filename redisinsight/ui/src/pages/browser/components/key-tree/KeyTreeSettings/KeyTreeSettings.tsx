@@ -2,15 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react'
 import cx from 'classnames'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import {
-  EuiButton,
-  EuiButtonIcon,
-  EuiComboBox,
-  EuiComboBoxOptionOption,
-  EuiIcon,
-  EuiPopover,
-  EuiSuperSelect,
-} from '@elastic/eui'
 import { isEqual } from 'lodash'
 
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
@@ -25,10 +16,22 @@ import {
   setBrowserTreeDelimiter,
   setBrowserTreeSort,
 } from 'uiSrc/slices/app/context'
-import TreeViewSort from 'uiSrc/assets/img/browser/treeViewSort.svg?react'
 import { comboBoxToArray } from 'uiSrc/utils'
 
 import { Col, FlexItem } from 'uiSrc/components/base/layout/flex'
+import {
+  IconButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { SettingsIcon } from 'uiSrc/components/base/icons'
+import {
+  AutoTag,
+  AutoTagOption,
+} from 'uiSrc/components/base/forms/combo-box/AutoTag'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { RiPopover } from 'uiSrc/components/base'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -37,7 +40,10 @@ export interface Props {
 const sortOptions = [SortOrder.ASC, SortOrder.DESC].map((value) => ({
   value,
   inputDisplay: (
-    <span data-testid={`tree-view-sorting-item-${value}`}>
+    <span
+      data-testid={`tree-view-sorting-item-${value}`}
+      className={styles.selectItem}
+    >
       Key name {value}
     </span>
   ),
@@ -51,7 +57,7 @@ const KeyTreeSettings = ({ loading }: Props) => {
   } = useSelector(appContextDbConfig)
   const [sorting, setSorting] = useState<SortOrder>(treeViewSort)
   const [delimiters, setDelimiters] =
-    useState<EuiComboBoxOptionOption[]>(treeViewDelimiter)
+    useState<AutoTagOption[]>(treeViewDelimiter)
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
 
@@ -80,8 +86,8 @@ const KeyTreeSettings = ({ loading }: Props) => {
   }, [treeViewSort, treeViewDelimiter])
 
   const button = (
-    <EuiButtonIcon
-      iconType="indexSettings"
+    <IconButton
+      icon={SettingsIcon}
       onClick={onButtonClick}
       disabled={loading}
       className={cx(styles.anchorBtn)}
@@ -132,7 +138,7 @@ const KeyTreeSettings = ({ loading }: Props) => {
 
   return (
     <div className={styles.container}>
-      <EuiPopover
+      <RiPopover
         ownFocus={false}
         anchorPosition="downLeft"
         isOpen={isPopoverOpen}
@@ -144,10 +150,9 @@ const KeyTreeSettings = ({ loading }: Props) => {
         <Col gap="s">
           <FlexItem grow className={styles.row} />
           <FlexItem grow className={styles.row}>
-            <div className={styles.label}>Delimiter</div>
-            <EuiComboBox
-              noSuggestions
-              isClearable={false}
+            <AutoTag
+              layout="horizontal"
+              label="Delimiter"
               placeholder=":"
               delimiter=" "
               selectedOptions={delimiters}
@@ -161,41 +166,38 @@ const KeyTreeSettings = ({ loading }: Props) => {
           </FlexItem>
           <FlexItem className={styles.row}>
             <div className={styles.label}>
-              <EuiIcon type={TreeViewSort} className={styles.sortIcon} />
+              <RiIcon type="DescendingIcon" className={styles.sortIcon} />
               Sort by
             </div>
-            <EuiSuperSelect
+            <RiSelect
               options={sortOptions}
-              valueOfSelected={sorting}
+              valueRender={({ option }) => option.inputDisplay ?? option.value}
+              value={sorting}
               className={styles.select}
-              itemClassName={styles.selectItem}
               onChange={(value: SortOrder) => onChangeSort(value)}
               data-testid="tree-view-sorting-select"
             />
           </FlexItem>
           <FlexItem className={styles.row}>
             <div className={styles.footer}>
-              <EuiButton
+              <SecondaryButton
                 size="s"
-                color="secondary"
                 data-testid="tree-view-cancel-btn"
                 onClick={closePopover}
               >
                 Cancel
-              </EuiButton>
-              <EuiButton
-                fill
+              </SecondaryButton>
+              <PrimaryButton
                 size="s"
-                color="secondary"
                 data-testid="tree-view-apply-btn"
                 onClick={handleApply}
               >
                 Apply
-              </EuiButton>
+              </PrimaryButton>
             </div>
           </FlexItem>
         </Col>
-      </EuiPopover>
+      </RiPopover>
     </div>
   )
 }

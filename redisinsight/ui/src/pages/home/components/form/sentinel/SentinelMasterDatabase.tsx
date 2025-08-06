@@ -1,18 +1,13 @@
 import React from 'react'
-import {
-  EuiFieldPassword,
-  EuiFieldText,
-  EuiFormRow,
-  EuiText,
-  EuiTextColor,
-} from '@elastic/eui'
 import { FormikProps } from 'formik'
 
 import { Nullable } from 'uiSrc/utils'
 import { SECURITY_FIELD } from 'uiSrc/constants'
 import { DbConnectionInfo } from 'uiSrc/pages/home/interfaces'
-
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { PasswordInput, TextInput } from 'uiSrc/components/base/inputs'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
 import styles from '../../styles.module.scss'
 
 export interface Props {
@@ -34,38 +29,35 @@ const SentinelMasterDatabase = (props: Props) => {
   return (
     <>
       {!!db && !isCloneMode && (
-        <EuiText color="subdued" className={styles.sentinelCollapsedField}>
+        <Text color="subdued" className={styles.sentinelCollapsedField}>
           Database Index:
           <span style={{ paddingLeft: 5 }}>
-            <EuiTextColor>{db}</EuiTextColor>
+            <ColorText>{db}</ColorText>
           </span>
-        </EuiText>
+        </Text>
       )}
       <Row gap="m" responsive className={flexGroupClassName}>
         <FlexItem grow className={flexItemClassName}>
-          <EuiFormRow label="Username">
-            <EuiFieldText
+          <FormField label="Username">
+            <TextInput
               name="sentinelMasterUsername"
               id="sentinelMasterUsername"
-              fullWidth
               maxLength={200}
               placeholder="Enter Username"
               value={formik.values.sentinelMasterUsername ?? ''}
-              onChange={formik.handleChange}
+              onChange={(value) => formik.setFieldValue('sentinelMasterUsername', value)}
               data-testid="sentinel-mater-username"
             />
-          </EuiFormRow>
+          </FormField>
         </FlexItem>
 
         <FlexItem grow className={flexItemClassName}>
-          <EuiFormRow label="Password">
-            <EuiFieldPassword
+          <FormField label="Password">
+            <PasswordInput
               type="password"
               name="sentinelMasterPassword"
               id="sentinelMasterPassword"
               data-testid="sentinel-master-password"
-              fullWidth
-              className="passwordField"
               maxLength={200}
               placeholder="Enter Password"
               value={
@@ -73,16 +65,15 @@ const SentinelMasterDatabase = (props: Props) => {
                   ? SECURITY_FIELD
                   : (formik.values.sentinelMasterPassword ?? '')
               }
-              onChange={formik.handleChange}
+              onChangeCapture={formik.handleChange}
               onFocus={() => {
                 if (formik.values.sentinelMasterPassword === true) {
                   formik.setFieldValue('sentinelMasterPassword', '')
                 }
               }}
-              dualToggleProps={{ color: 'text' }}
               autoComplete="new-password"
             />
-          </EuiFormRow>
+          </FormField>
         </FlexItem>
       </Row>
     </>

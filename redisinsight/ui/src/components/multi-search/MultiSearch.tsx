@@ -1,17 +1,23 @@
-import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiIcon,
-  EuiProgress,
-  EuiToolTip,
-  keys,
-} from '@elastic/eui'
+import React, { useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
-import { GroupBadge } from 'uiSrc/components'
+
+import * as keys from 'uiSrc/constants/keys'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { GroupBadge, RiTooltip } from 'uiSrc/components'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
 import { Nullable } from 'uiSrc/utils'
 
+import {
+  CancelSlimIcon,
+  SearchIcon,
+  SwitchIcon,
+} from 'uiSrc/components/base/icons'
+import {
+  ActionIconButton,
+  IconButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
 import styles from './styles.module.scss'
 
 interface MultiSearchSuggestion {
@@ -147,13 +153,11 @@ const MultiSearch = (props: Props) => {
   }
 
   const SubmitBtn = () => (
-    <EuiButtonIcon
-      iconType="search"
-      color="primary"
+    <IconButton
+      icon={SearchIcon}
       aria-label="Search"
       disabled={disableSubmit}
-      className={styles.searchButton}
-      iconSize="s"
+      size="S"
       onClick={handleSubmit}
       data-testid="search-btn"
     />
@@ -182,18 +186,16 @@ const MultiSearch = (props: Props) => {
               />
             ))}
           </div>
-          <EuiFieldText
+          <TextInput
             className={styles.multiSearchInput}
             placeholder={placeholder}
             value={value}
             onKeyDown={handleKeyDown}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              onChange(e.target.value)
+            onChange={onChange
             }
             onFocus={() => setIsInputFocus(true)}
             onBlur={() => setIsInputFocus(false)}
-            controlOnly
-            inputRef={inputRef}
+            ref={inputRef}
             {...rest}
           />
           {showAutoSuggestions && !!suggestionOptions?.length && (
@@ -203,11 +205,9 @@ const MultiSearch = (props: Props) => {
               data-testid="suggestions"
             >
               {suggestions?.loading && (
-                <EuiProgress
-                  color="primary"
-                  size="xs"
-                  position="absolute"
+                <ProgressBarLoader
                   data-testid="progress-suggestions"
+                  color="primary"
                 />
               )}
               <ul role="listbox">
@@ -236,9 +236,9 @@ const MultiSearch = (props: Props) => {
                         >
                           {value}
                         </span>
-                        <EuiButtonIcon
+                        <IconButton
                           className={styles.suggestionRemoveBtn}
-                          iconType="cross"
+                          icon={CancelSlimIcon}
                           color="primary"
                           aria-label="Remove History Record"
                           onClick={(e: React.MouseEvent) => {
@@ -261,35 +261,32 @@ const MultiSearch = (props: Props) => {
                 }
                 data-testid="clear-history-btn"
               >
-                <EuiIcon type="eraser" style={{ marginRight: 6 }} />
+                <RiIcon type="EraserIcon" style={{ marginRight: 6 }} />
                 <span>Clear history</span>
               </div>
             </div>
           )}
           {(value || !!options.length) && (
-            <EuiToolTip content="Reset Filters" position="bottom">
-              <EuiButtonIcon
-                display="empty"
-                iconType="cross"
-                color="primary"
-                size="xs"
+            <RiTooltip content="Reset Filters" position="bottom">
+              <ActionIconButton
+                icon={CancelSlimIcon}
+                size="XS"
                 aria-label="Reset Filters"
                 onClick={onClear}
                 className={styles.clearButton}
                 data-testid="reset-filter-btn"
+                variant="secondary"
               />
-            </EuiToolTip>
+            </RiTooltip>
           )}
           {!!suggestionOptions?.length && (
-            <EuiToolTip
+            <RiTooltip
               content={suggestions?.buttonTooltipTitle}
               position="bottom"
             >
-              <EuiButtonIcon
-                display="empty"
-                iconType="sortable"
-                color="primary"
-                size="xs"
+              <IconButton
+                icon={SwitchIcon}
+                size="S"
                 aria-label={suggestions?.buttonTooltipTitle}
                 onClick={() => {
                   setShowAutoSuggestions((v) => !v)
@@ -298,18 +295,17 @@ const MultiSearch = (props: Props) => {
                 className={styles.historyIcon}
                 data-testid="show-suggestions-btn"
               />
-            </EuiToolTip>
+            </RiTooltip>
           )}
           {appendRight}
           {disableSubmit && (
-            <EuiToolTip
+            <RiTooltip
               position="top"
-              display="inlineBlock"
               anchorClassName={styles.anchorSubmitBtn}
               content="Please choose index in order to preform the search"
             >
               {SubmitBtn()}
-            </EuiToolTip>
+            </RiTooltip>
           )}
           {!disableSubmit && SubmitBtn()}
         </div>

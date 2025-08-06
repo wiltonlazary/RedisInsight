@@ -9,8 +9,12 @@ import {
   render as rtlRender,
   renderHook as rtlRenderHook,
   waitFor,
+  screen,
 } from '@testing-library/react'
 
+import { ThemeProvider } from 'styled-components'
+import { themeLight } from '@redis-ui/styles'
+import userEvent from '@testing-library/user-event'
 import { RootState, store as rootStore } from 'uiSrc/slices/store'
 import { initialState as initialStateInstances } from 'uiSrc/slices/instances/instances'
 import { initialState as initialStateTags } from 'uiSrc/slices/instances/tags'
@@ -173,7 +177,9 @@ const render = (
   }: Options = initialStateDefault,
 ) => {
   const Wrapper = ({ children }: { children: JSX.Element }) => (
-    <Provider store={store}>{children}</Provider>
+    <ThemeProvider theme={themeLight}>
+      <Provider store={store}>{children}</Provider>
+    </ThemeProvider>
   )
 
   const wrapper = !withRouter ? Wrapper : BrowserRouter
@@ -223,30 +229,53 @@ const clearStoreActions = (actions: any[]) => {
 }
 
 /**
- * Ensure the EuiToolTip being tested is open and visible before continuing
+ * Ensure the RiTooltip being tested is open and visible before continuing
  */
-const waitForEuiToolTipVisible = async (timeout = 500) => {
+const waitForRiTooltipVisible = async (timeout = 500) => {
   await waitFor(
     () => {
-      const tooltip = document.querySelector('.euiToolTipPopover')
+      const tooltip = document.querySelector(
+        '[data-radix-popper-content-wrapper]',
+      )
       expect(tooltip).toBeInTheDocument()
     },
     { timeout }, // Account for long delay on tooltips
   )
 }
 
-const waitForEuiToolTipHidden = async () => {
+const waitForRiTooltipHidden = async () => {
   await waitFor(() => {
-    const tooltip = document.querySelector('.euiToolTipPopover')
+    const tooltip = document.querySelector(
+      '[data-radix-popper-content-wrapper]',
+    )
     expect(tooltip).toBeNull()
   })
 }
 
-const waitForEuiPopoverVisible = async (timeout = 500) => {
+const waitForRiPopoverVisible = async (timeout = 500) => {
   await waitFor(
     () => {
-      const tooltip = document.querySelector('.euiPopover__panel-isOpen')
+      const tooltip = document.querySelector(
+        'div[data-radix-popper-content-wrapper]',
+      ) as HTMLElement | null
       expect(tooltip).toBeInTheDocument()
+
+      if (tooltip) {
+        // Note: during unit tests, the popover is not interactive by default so we need to enable pointer events
+        tooltip.style.pointerEvents = 'all'
+      }
+    },
+    { timeout }, // Account for long delay on popover
+  )
+}
+
+export const waitForRedisUiSelectVisible = async (timeout = 500) => {
+  await waitFor(
+    () => {
+      const element = document.querySelector(
+        '[data-radix-popper-content-wrapper]',
+      )
+      expect(element).toBeInTheDocument()
     },
     { timeout }, // Account for long delay on popover
   )
@@ -254,6 +283,13 @@ const waitForEuiPopoverVisible = async (timeout = 500) => {
 
 export const waitForStack = async (timeout = 0) => {
   await waitFor(() => {}, { timeout })
+}
+
+export const toggleAccordion = async (testId: string) => {
+  const accordion = screen.getByTestId(testId)
+  expect(accordion).toBeInTheDocument()
+  const btn = accordion.querySelector('button')
+  await userEvent.click(btn!)
 }
 
 // mock useHistory
@@ -394,12 +430,13 @@ export const mockFeatureFlags = (
 export * from '@testing-library/react'
 // override render method
 export {
+  userEvent,
   initialStateDefault,
   render,
   renderHook,
   renderWithRouter,
   clearStoreActions,
-  waitForEuiToolTipVisible,
-  waitForEuiToolTipHidden,
-  waitForEuiPopoverVisible,
+  waitForRiTooltipVisible,
+  waitForRiTooltipHidden,
+  waitForRiPopoverVisible,
 }

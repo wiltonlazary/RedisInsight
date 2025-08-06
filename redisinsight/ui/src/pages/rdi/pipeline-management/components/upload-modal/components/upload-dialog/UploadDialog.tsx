@@ -1,8 +1,9 @@
-import { EuiIcon, EuiText } from '@elastic/eui'
 import React, { useState } from 'react'
 
+import { Text } from 'uiSrc/components/base/text'
 import ImportFileModal from 'uiSrc/components/import-file-modal'
 
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -54,9 +55,9 @@ const UploadDialog = ({
       }
       submitResults={
         <div className={styles.result} data-testid="result-succeeded">
-          <EuiText color="subdued">
+          <Text color="subdued">
             A new pipeline has been successfully uploaded.
-          </EuiText>
+          </Text>
         </div>
       }
       loading={loading}
@@ -64,10 +65,14 @@ const UploadDialog = ({
       warning={
         showWarning ? (
           <div className={styles.warning} data-testid="input-file-warning">
-            <EuiText size="xs" color="subdued">
-              <EuiIcon type="alert" className={styles.alertIcon} />
+            <Text size="s" color="subdued">
+              <RiIcon
+                type="ToastDangerIcon"
+                className={styles.alertIcon}
+                size="m"
+              />
               {warningMessage}
-            </EuiText>
+            </Text>
           </div>
         ) : null
       }

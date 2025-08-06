@@ -1,6 +1,5 @@
 import React, { useContext } from 'react'
 import { capitalize } from 'lodash'
-import { EuiIcon, EuiText } from '@elastic/eui'
 
 import cx from 'classnames'
 import {
@@ -10,17 +9,12 @@ import {
 } from 'uiSrc/slices/interfaces'
 import { getModule, Nullable, truncateText } from 'uiSrc/utils'
 
-import ConnectionIcon from 'uiSrc/assets/img/icons/connection.svg?react'
-import UserIcon from 'uiSrc/assets/img/icons/user.svg?react'
-import VersionIcon from 'uiSrc/assets/img/icons/version.svg?react'
-import MessageInfoIcon from 'uiSrc/assets/img/icons/help_illus.svg'
-
 import { DEFAULT_MODULES_INFO } from 'uiSrc/constants/modules'
 import { Theme } from 'uiSrc/constants'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
-import UnknownDark from 'uiSrc/assets/img/modules/UnknownDark.svg'
-import UnknownLight from 'uiSrc/assets/img/modules/UnknownLight.svg'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { AllIconsType, RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
 import styles from './styles.module.scss'
 
@@ -42,7 +36,7 @@ const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
   const { theme } = useContext(ThemeContext)
 
   const getIcon = (name: string) => {
-    const icon =
+    const icon: AllIconsType =
       DEFAULT_MODULES_INFO[name]?.[
         theme === Theme.Dark ? 'iconDark' : 'iconLight'
       ]
@@ -50,7 +44,7 @@ const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
       return icon
     }
 
-    return theme === Theme.Dark ? UnknownDark : UnknownLight
+    return theme === Theme.Dark ? 'UnknownDarkIcon' : 'UnknownLightIcon'
   }
 
   return (
@@ -64,29 +58,26 @@ const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
         </span>
       </div>
       {databases > 1 && (
-        <Row
-          className={styles.dbIndexInfo}
-          align="center"
-        >
+        <Row className={styles.dbIndexInfo} align="center">
           <FlexItem style={{ marginRight: 16 }}>
-            <EuiIcon
+            <RiIcon
               className={styles.messageInfoIcon}
               size="xxl"
-              type={MessageInfoIcon}
+              type="MessageInfoIcon"
             />
           </FlexItem>
           <FlexItem grow>
-            <EuiText size="s">Logical Databases</EuiText>
-            <EuiText color="subdued" size="xs">
+            <Text size="s">Logical Databases</Text>
+            <Text color="subdued" size="xs">
               Select logical databases to work with in Browser, Workbench, and
               Database Analysis.
-            </EuiText>
+            </Text>
           </FlexItem>
         </Row>
       )}
       <Row className={styles.tooltipItem} align="center" justify="start">
         <FlexItem className={styles.rowTooltipItem}>
-          <EuiIcon type={ConnectionIcon} />
+          <RiIcon type="ConnectionIcon" />
           <span className={styles.tooltipItemValue}>
             {connectionType
               ? CONNECTION_TYPE_DISPLAY[connectionType]
@@ -94,11 +85,11 @@ const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
           </span>
         </FlexItem>
         <FlexItem className={styles.rowTooltipItem}>
-          <EuiIcon type={VersionIcon} />
+          <RiIcon type="VersionIcon" />
           <span className={styles.tooltipItemValue}>{version}</span>
         </FlexItem>
         <FlexItem className={styles.rowTooltipItem}>
-          <EuiIcon type={UserIcon} />
+          <RiIcon type="UserIcon" />
           <span className={styles.tooltipItemValue}>{user || 'Default'}</span>
         </FlexItem>
       </Row>
@@ -111,7 +102,7 @@ const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
               className={cx(styles.mi_moduleName)}
               data-testid={`module_${name}`}
             >
-              <EuiIcon type={getIcon(name)} className={styles.mi_icon} />
+              <RiIcon type={getIcon(name)} className={styles.mi_icon} />
               <span>
                 {truncateText(
                   getModule(name)?.name ||

@@ -1,26 +1,21 @@
-import React, { ChangeEvent, useEffect, useState } from 'react'
-import {
-  EuiFieldText,
-  EuiIcon,
-  EuiPopover,
-  EuiTab,
-  EuiTabs,
-  EuiText,
-} from '@elastic/eui'
-import cx from 'classnames'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
 import { instancesSelector as rdiInstancesSelector } from 'uiSrc/slices/rdi/instances'
 import { instancesSelector as dbInstancesSelector } from 'uiSrc/slices/instances/instances'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import Divider from 'uiSrc/components/divider/Divider'
 import { BrowserStorageItem, DEFAULT_SORT, Pages } from 'uiSrc/constants'
-import Down from 'uiSrc/assets/img/Down.svg?react'
 import Search from 'uiSrc/assets/img/Search.svg'
 import { Instance, RdiInstance } from 'uiSrc/slices/interfaces'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { localStorageService } from 'uiSrc/services'
 import { filterAndSort } from 'uiSrc/utils'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import Tabs, { TabInfo } from 'uiSrc/components/base/layout/tabs'
+import { RiPopover } from 'uiSrc/components/base'
 import InstancesList from './components/instances-list'
 import styles from './styles.module.scss'
 
@@ -69,8 +64,7 @@ const InstancesNavigationPopover = ({ name }: Props) => {
     setFilteredRdiInstances(rdiFiltered)
   }, [dbInstances, rdiInstances, searchFilter])
 
-  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target
+  const handleSearch = (value: string) => {
     setSearchFilter(value)
   }
 
@@ -99,61 +93,62 @@ const InstancesNavigationPopover = ({ name }: Props) => {
     )
   }
 
+  const tabs: TabInfo[] = useMemo(
+    () => [
+      {
+        label: `${InstancesTabs.Databases} (${dbInstances?.length || 0})`,
+        value: InstancesTabs.Databases,
+        content: null,
+      },
+      {
+        label: `${InstancesTabs.RDI} (${rdiInstances?.length || 0})`,
+        value: InstancesTabs.RDI,
+        content: null,
+      },
+    ],
+    [dbInstances, rdiInstances],
+  )
+
   return (
-    <EuiPopover
+    <RiPopover
       ownFocus
       anchorPosition="downRight"
       panelPaddingSize="none"
       isOpen={isPopoverOpen}
       closePopover={() => showPopover()}
       button={
-        <EuiText
+        <Text
           className={styles.showPopoverBtn}
           onClick={() => showPopover()}
           data-testid="nav-instance-popover-btn"
         >
           <b className={styles.breadCrumbLink}>{name}</b>
           <span>
-            <EuiIcon color="primaryText" type={Down} />
+            <RiIcon color="primary500" type="CaretDownIcon" />
           </span>
-        </EuiText>
+        </Text>
       }
     >
       <div className={styles.wrapper}>
         <div className={styles.searchInputContainer}>
-          <EuiFieldText
-            fullWidth
+          <TextInput
             className={styles.searchInput}
             icon={Search}
             value={searchFilter}
-            onChange={(e) => handleSearch(e)}
+            onChange={handleSearch}
             data-testid="instances-nav-popover-search"
           />
         </div>
         <div>
           <div className={styles.tabsContainer}>
-            <EuiTabs
-              className={cx('tabs-active-borders', styles.tabs)}
+            <Tabs
+              tabs={tabs}
+              value={selectedTab}
+              // @ts-expect-error type mismatch
+              onChange={setSelectedTab}
+              className={styles.tabs}
               data-testid="instances-tabs-testId"
-            >
-              <EuiTab
-                className={styles.tab}
-                isSelected={selectedTab === InstancesTabs.Databases}
-                onClick={() => setSelectedTab(InstancesTabs.Databases)}
-                data-testid={`${InstancesTabs.Databases}-tab-id`}
-              >
-                {InstancesTabs.Databases} ({dbInstances?.length || 0})
-              </EuiTab>
-
-              <EuiTab
-                className={styles.tab}
-                isSelected={selectedTab === InstancesTabs.RDI}
-                onClick={() => setSelectedTab(InstancesTabs.RDI)}
-                data-testid={`${InstancesTabs.RDI}-tab-id`}
-              >
-                {InstancesTabs.RDI} ({rdiInstances?.length || 0})
-              </EuiTab>
-            </EuiTabs>
+            />
           </div>
           <Spacer size="m" />
           <InstancesList
@@ -166,14 +161,14 @@ const InstancesNavigationPopover = ({ name }: Props) => {
             <Spacer size="m" />
             <Divider />
             <div className={styles.footerContainer}>
-              <EuiText className={styles.homePageLink} onClick={goHome}>
+              <Text className={styles.homePageLink} onClick={goHome}>
                 {btnLabel}
-              </EuiText>
+              </Text>
             </div>
           </div>
         </div>
       </div>
-    </EuiPopover>
+    </RiPopover>
   )
 }
 

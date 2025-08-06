@@ -1,16 +1,4 @@
 import {
-  EuiButton,
-  EuiFieldPassword,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiIcon,
-  EuiTitle,
-  EuiToolTip,
-  EuiToolTipProps,
-  ToolTipPositions,
-} from '@elastic/eui'
-import {
   Field,
   FieldInputProps,
   FieldMetaProps,
@@ -25,17 +13,28 @@ import { isNull } from 'lodash'
 
 import ReactDOM from 'react-dom'
 import { SECURITY_FIELD } from 'uiSrc/constants'
+import { RiTooltip, RiTooltipProps } from 'uiSrc/components'
 import { RdiInstance } from 'uiSrc/slices/interfaces'
 import { getFormUpdates, Nullable } from 'uiSrc/utils'
 import { useModalHeader } from 'uiSrc/contexts/ModalTitleProvider'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { PasswordInput, TextInput } from 'uiSrc/components/base/inputs'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Spacer } from 'uiSrc/components/base/layout'
 import ValidationTooltip from './components/ValidationTooltip'
 
 import styles from './styles.module.scss'
 
 export interface AppendInfoProps
-  extends Omit<EuiToolTipProps, 'children' | 'delay' | 'position'> {
-  position?: ToolTipPositions
+  extends Omit<RiTooltipProps, 'children' | 'delay' | 'position'> {
+  position?: RiTooltipProps['position']
 }
 
 export interface ConnectionFormValues {
@@ -62,15 +61,15 @@ const getInitialValues = (
 })
 
 const AppendInfo = ({ title, content, ...rest }: AppendInfoProps) => (
-  <EuiToolTip
+  <RiTooltip
     anchorClassName="inputAppendIcon"
     position="right"
     title={title}
     content={content}
     {...rest}
   >
-    <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-  </EuiToolTip>
+    <RiIcon type="InfoIcon" style={{ cursor: 'pointer' }} />
+  </RiTooltip>
 )
 
 const ConnectionForm = (props: Props) => {
@@ -84,9 +83,9 @@ const ConnectionForm = (props: Props) => {
   useEffect(() => {
     setInitialFormValues(getInitialValues(editInstance))
     setModalHeader(
-      <EuiTitle size="s">
-        <h4>{editInstance ? 'Edit endpoint' : 'Add RDI endpoint'}</h4>
-      </EuiTitle>,
+      <Title size="M">
+        {editInstance ? 'Edit endpoint' : 'Add RDI endpoint'}
+      </Title>,
     )
   }, [editInstance])
 
@@ -127,30 +126,27 @@ const ConnectionForm = (props: Props) => {
         <FlexItem>
           <Row gap="m">
             <FlexItem>
-              <EuiButton
+              <SecondaryButton
                 size="s"
-                color="secondary"
                 data-testid="connection-form-cancel-button"
                 onClick={onCancel}
               >
                 Cancel
-              </EuiButton>
+              </SecondaryButton>
             </FlexItem>
             <FlexItem>
               <ValidationTooltip isValid={isValid} errors={errors}>
-                <EuiButton
+                <PrimaryButton
                   data-testid="connection-form-add-button"
                   type="submit"
-                  fill
                   size="s"
-                  color="secondary"
-                  iconType={!isValid ? 'iInCircle' : undefined}
-                  isLoading={isLoading}
+                  icon={!isValid ? InfoIcon : undefined}
+                  loading={isLoading}
                   disabled={!isValid}
                   onClick={onSubmit}
                 >
                   {editInstance ? 'Apply Changes' : 'Add Endpoint'}
-                </EuiButton>
+                </PrimaryButton>
               </ValidationTooltip>
             </FlexItem>
           </Row>
@@ -170,67 +166,73 @@ const ConnectionForm = (props: Props) => {
     >
       {({ isValid, errors, values }) => (
         <Form className={styles.form}>
-          <EuiForm
-            component="div"
-            className="databasePanelWrapper"
-            data-testid="connection-form"
-          >
+          <div className="databasePanelWrapper" data-testid="connection-form">
             <div className={cx('container relative')}>
-              <EuiFormRow
-                label="RDI Alias*"
-                fullWidth
-                className={styles.withoutPadding}
-              >
+              <FormField label="RDI Alias*" className={styles.withoutPadding}>
                 <Field name="name">
                   {({ field }: { field: FieldInputProps<string> }) => (
-                    <EuiFieldText
+                    <TextInput
                       data-testid="connection-form-name-input"
-                      fullWidth
                       placeholder="Enter RDI Alias"
                       maxLength={500}
-                      {...field}
+                      name={field.name}
+                      value={field.value}
+                      onChange={(value) => field.onChange({ target: { name: field.name, value } })}
                     />
                   )}
                 </Field>
-              </EuiFormRow>
-              <EuiFormRow label="URL*" fullWidth>
+              </FormField>
+              <Spacer size='s' />
+              <FormField
+                label="URL*"
+                infoIconProps={{
+                  content: "The RDI machine servers REST API via port 443. Ensure that Redis Insight can access the RDI host over port 443."
+                }}
+              >
                 <Field name="url">
                   {({ field }: { field: FieldInputProps<string> }) => (
-                    <EuiFieldText
+                    <TextInput
                       data-testid="connection-form-url-input"
-                      fullWidth
                       placeholder="Enter the RDI host IP as: https://[IP-Address]"
                       disabled={!!editInstance}
-                      append={
-                        <AppendInfo content="The RDI machine servers REST API via port 443. Ensure that Redis Insight can access the RDI host over port 443." />
-                      }
-                      {...field}
+                      name={field.name}
+                      value={field.value}
+                      onChange={(value) => field.onChange({ target: { name: field.name, value } })}
                     />
                   )}
                 </Field>
-              </EuiFormRow>
-              <EuiFormRow>
+              </FormField>
+              <Spacer size='s' />
+              <FormField>
                 <Row gap="m">
                   <FlexItem grow={1}>
-                    <EuiFormRow label="Username">
+                    <FormField
+                      label="Username"
+                      infoIconProps={{
+                        content: "The RDI REST API authentication is using the RDI Redis username and password."
+                      }}
+                    >
                       <Field name="username">
                         {({ field }: { field: FieldInputProps<string> }) => (
-                          <EuiFieldText
+                          <TextInput
                             data-testid="connection-form-username-input"
-                            fullWidth
                             placeholder="Enter the RDI Redis username"
                             maxLength={500}
-                            append={
-                              <AppendInfo content="The RDI REST API authentication is using the RDI Redis username and password." />
-                            }
-                            {...field}
+                            name={field.name}
+                            value={field.value}
+                            onChange={(value) => field.onChange({ target: { name: field.name, value } })}
                           />
                         )}
                       </Field>
-                    </EuiFormRow>
+                    </FormField>
                   </FlexItem>
                   <FlexItem grow={1}>
-                    <EuiFormRow label="Password">
+                    <FormField
+                      infoIconProps={{
+                        content: "The RDI REST API authentication is using the RDI Redis username and password."
+                      }}
+                      label="Password"
+                    >
                       <Field name="password">
                         {({
                           field,
@@ -241,13 +243,12 @@ const ConnectionForm = (props: Props) => {
                           form: FormikHelpers<string>
                           meta: FieldMetaProps<string>
                         }) => (
-                          <EuiFieldPassword
+                          <PasswordInput
                             data-testid="connection-form-password-input"
-                            className={styles.passwordField}
-                            fullWidth
                             placeholder="Enter the RDI Redis password"
                             maxLength={500}
                             {...field}
+                            onChangeCapture={field.onChange}
                             value={
                               isNull(field.value) ? SECURITY_FIELD : field.value
                             }
@@ -256,23 +257,20 @@ const ConnectionForm = (props: Props) => {
                                 form.setFieldValue('password', '')
                               }
                             }}
-                            append={
-                              <AppendInfo content="The RDI REST API authentication is using the RDI Redis username and password." />
-                            }
                           />
                         )}
                       </Field>
-                    </EuiFormRow>
+                    </FormField>
                   </FlexItem>
                 </Row>
-              </EuiFormRow>
+              </FormField>
             </div>
             <Footer
               isValid={isValid}
               errors={errors}
               onSubmit={() => handleSubmit(values)}
             />
-          </EuiForm>
+          </div>
         </Form>
       )}
     </Formik>

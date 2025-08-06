@@ -1,4 +1,3 @@
-import { EuiPanel } from '@elastic/eui'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
@@ -20,6 +19,7 @@ import HomePageTemplate from 'uiSrc/templates/home-page-template'
 import { setTitle } from 'uiSrc/utils'
 import { Page, PageBody } from 'uiSrc/components/base/layout/page'
 import { RIResizeObserver } from 'uiSrc/components/base/utils'
+import { Card } from 'uiSrc/components/base/layout'
 import { Rdi as RdiInstanceResponse } from 'apiSrc/modules/rdi/models/rdi'
 import EmptyMessage from './empty-message/EmptyMessage'
 import ConnectionForm from './connection-form/ConnectionFormWrapper'
@@ -122,11 +122,11 @@ const RdiPage = () => {
 
   const InstanceList = () =>
     !data.length ? (
-      <EuiPanel className={styles.emptyPanel} borderRadius="none">
+      <>
         {!loading && !loadingChanging && (
           <EmptyMessage onAddInstanceClick={handleOpenConnectionForm} />
         )}
-      </EuiPanel>
+      </>
     ) : (
       <RIResizeObserver onResize={onResize}>
         {(resizeRef) => (

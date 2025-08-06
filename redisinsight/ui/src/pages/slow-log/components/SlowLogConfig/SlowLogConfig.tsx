@@ -1,14 +1,5 @@
-import {
-  EuiButton,
-  EuiButtonEmpty,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiSuperSelect,
-  EuiText,
-} from '@elastic/eui'
 import { toNumber } from 'lodash'
-import React, { ChangeEvent, useState } from 'react'
+import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 import cx from 'classnames'
@@ -31,6 +22,19 @@ import { errorValidateNegativeInteger, validateNumber } from 'uiSrc/utils'
 import { numberWithSpaces } from 'uiSrc/utils/numbers'
 import { useConnectionType } from 'uiSrc/components/hooks/useConnectionType'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import {
+  defaultValueRender,
+  RiSelect,
+} from 'uiSrc/components/base/forms/select/RiSelect'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { convertNumberByUnits } from '../../utils'
 import styles from './styles.module.scss'
 
@@ -117,7 +121,7 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
 
   const clusterContent = () => (
     <>
-      <EuiText color="subdued" className={styles.clusterText}>
+      <Text color="subdued" className={styles.clusterText}>
         Each node can have different Slow Log configuration in a clustered
         database.
         <Spacer size="s" />
@@ -126,18 +130,16 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
         {' or '}
         <code>CONFIG SET slowlog-max-len</code>
         {' for a specific node in redis-cli to configure it.'}
-      </EuiText>
+      </Text>
 
       <Spacer size="xs" />
-      <EuiButton
-        fill
-        color="secondary"
+      <PrimaryButton
         className={styles.clusterBtn}
         onClick={closePopover}
         data-testid="slowlog-config-ok-btn"
       >
         Ok
-      </EuiButton>
+      </PrimaryButton>
     </>
   )
 
@@ -165,7 +167,7 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
   }
 
   return (
-    <div
+    <Col
       className={cx(styles.container, {
         [styles.containerCluster]: connectionType === ConnectionType.Cluster,
       })}
@@ -173,104 +175,118 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
       {connectionType === ConnectionType.Cluster && clusterContent()}
       {connectionType !== ConnectionType.Cluster && (
         <>
-          <EuiForm component="form">
-            <EuiFormRow className={styles.formRow}>
-              <>
+          <form>
+            <FormField
+              layout="horizontal"
+              className={styles.formRow}
+              label={
                 <div className={styles.rowLabel}>slowlog-log-slower-than</div>
-                <div className={styles.rowFields}>
-                  <EuiFieldText
+              }
+              additionalText={
+                <div className={styles.helpText}>
+                  <div data-testid="unit-converter">{unitConverter()}</div>
+                  <div>
+                    Execution time to exceed in order to log the command.
+                    <br />
+                    -1 disables Slow Log. 0 logs each command.
+                  </div>
+                </div>
+              }
+            >
+              <Row
+                grow={false}
+                align="center"
+                justify="start"
+                className={styles.rowFields}
+              >
+                <div className={styles.input}>
+                  <TextInput
                     name="slowerThan"
                     id="slowerThan"
-                    className={styles.input}
                     value={slowerThan}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    onChange={value => {
                       setSlowerThan(
-                        validateNumber(e.target.value.trim(), -1, Infinity),
+                        validateNumber(value.trim(), -1, Infinity),
                       )
                     }}
                     placeholder={`${convertNumberByUnits(DEFAULT_SLOWLOG_SLOWER_THAN, durationUnit)}`}
                     autoComplete="off"
                     data-testid="slower-than-input"
                   />
-                  <EuiSuperSelect
-                    options={options}
-                    valueOfSelected={durationUnit}
-                    onChange={onChangeUnit}
-                    popoverClassName={styles.selectWrapper}
-                    data-test-subj="select-default-unit"
-                  />
-                  <div className={styles.helpText}>
-                    <div data-testid="unit-converter">{unitConverter()}</div>
-                    <div>
-                      Execution time to exceed in order to log the command.
-                      <br />
-                      -1 disables Slow Log. 0 logs each command.
-                    </div>
-                  </div>
                 </div>
-              </>
-            </EuiFormRow>
-            <EuiFormRow className={styles.formRow}>
+                <RiSelect
+                  style={{ maxWidth: 100 }}
+                  options={options}
+                  value={durationUnit}
+                  valueRender={defaultValueRender}
+                  onChange={onChangeUnit}
+                  data-test-subj="select-default-unit"
+                />
+              </Row>
+            </FormField>
+            <FormField
+              className={styles.formRow}
+              layout="horizontal"
+              label={<div className={styles.rowLabel}>slowlog-max-len</div>}
+              additionalText={
+                <div className={styles.helpText}>
+                  The length of the Slow Log. When a new command is logged the
+                  oldest
+                  <br />
+                  one is removed from the queue of logged commands.
+                </div>
+              }
+            >
               <>
-                <div className={styles.rowLabel}>slowlog-max-len</div>
                 <div className={styles.rowFields}>
-                  <EuiFieldText
+                  <TextInput
                     name="maxLen"
                     id="maxLen"
                     className={styles.input}
                     placeholder={`${DEFAULT_SLOWLOG_MAX_LEN}`}
                     value={maxLen}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setMaxLen(validateNumber(e.target.value.trim()))
+                    onChange={value => {
+                      setMaxLen(validateNumber(value.trim()))
                     }}
                     autoComplete="off"
                     data-testid="max-len-input"
                   />
-                  <div className={styles.helpText}>
-                    The length of the Slow Log. When a new command is logged the
-                    oldest
-                    <br />
-                    one is removed from the queue of logged commands.
-                  </div>
                 </div>
               </>
-            </EuiFormRow>
+            </FormField>
             <Spacer size="m" />
-          </EuiForm>
+          </form>
 
-          <div className={styles.footer}>
-            <div className={styles.helpText}>
+          <Row className={styles.footer}>
+            <FlexItem className={styles.helpText}>
               NOTE: This is server configuration
-            </div>
-            <div className={styles.actions}>
-              <EuiButtonEmpty
-                size="l"
+            </FlexItem>
+            <Row align="center" gap="m" className={styles.actions}>
+              <EmptyButton
+                size="large"
                 onClick={handleDefault}
                 data-testid="slowlog-config-default-btn"
               >
                 Default
-              </EuiButtonEmpty>
-              <EuiButton
-                color="secondary"
+              </EmptyButton>
+              <SecondaryButton
                 onClick={handleCancel}
                 data-testid="slowlog-config-cancel-btn"
               >
                 Cancel
-              </EuiButton>
-              <EuiButton
-                fill
-                color="secondary"
-                isDisabled={disabledApplyBtn()}
+              </SecondaryButton>
+              <PrimaryButton
+                disabled={disabledApplyBtn()}
                 onClick={handleSave}
                 data-testid="slowlog-config-save-btn"
               >
                 Save
-              </EuiButton>
-            </div>
-          </div>
+              </PrimaryButton>
+            </Row>
+          </Row>
         </>
       )}
-    </div>
+    </Col>
   )
 }
 

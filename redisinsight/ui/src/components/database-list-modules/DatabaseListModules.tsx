@@ -1,6 +1,5 @@
 /* eslint-disable sonarjs/no-nested-template-literals */
 import React, { useContext } from 'react'
-import { EuiButtonIcon, EuiIcon, EuiTextColor, EuiToolTip } from '@elastic/eui'
 import cx from 'classnames'
 
 import { Theme } from 'uiSrc/constants'
@@ -8,9 +7,13 @@ import { getModule, truncateText } from 'uiSrc/utils'
 import { IDatabaseModule, sortModules } from 'uiSrc/utils/modules'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
 
-import UnknownLight from 'uiSrc/assets/img/modules/UnknownLight.svg'
-import UnknownDark from 'uiSrc/assets/img/modules/UnknownDark.svg'
-import { DEFAULT_MODULES_INFO } from 'uiSrc/constants/modules'
+import { DEFAULT_MODULES_INFO, ModuleInfo } from 'uiSrc/constants/modules'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { ColorText } from 'uiSrc/components/base/text'
+import { RiTooltip } from 'uiSrc/components'
+import { RiIcon } from 'uiSrc/components/base/icons'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { RedisDefaultModules } from 'uiSrc/slices/interfaces'
 import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
 
 import styles from './styles.module.scss'
@@ -19,7 +22,6 @@ export interface Props {
   content?: JSX.Element
   modules: AdditionalRedisModule[]
   inCircle?: boolean
-  dark?: boolean
   highlight?: boolean
   maxViewModules?: number
   tooltipTitle?: React.ReactNode
@@ -46,20 +48,22 @@ const DatabaseListModules = React.memo((props: Props) => {
 
   const newModules: IDatabaseModule[] = sortModules(
     modules?.map(({ name: propName, semanticVersion = '', version = '' }) => {
-      const moduleName = DEFAULT_MODULES_INFO[propName]?.text || propName
+      const isValidModuleKey = Object.values(RedisDefaultModules).includes(propName as RedisDefaultModules)
+      
+      const module: ModuleInfo | undefined = isValidModuleKey 
+        ? DEFAULT_MODULES_INFO[propName as RedisDefaultModules]
+        : undefined
+      const moduleName = module?.text || propName
 
       const { abbreviation = '', name = moduleName } = getModule(moduleName)
 
       const moduleAlias = truncateText(name, 50)
       // eslint-disable-next-line sonarjs/no-nested-template-literals
-      let icon =
-        DEFAULT_MODULES_INFO[propName]?.[
-          theme === Theme.Dark ? 'iconDark' : 'iconLight'
-        ]
+      let icon = module?.[theme === Theme.Dark ? 'iconDark' : 'iconLight']
       const content = `${moduleAlias}${semanticVersion || version ? ` v. ${semanticVersion || version}` : ''}`
 
       if (!icon && !abbreviation) {
-        icon = theme === Theme.Dark ? UnknownDark : UnknownLight
+        icon = theme === Theme.Dark ? 'UnknownDarkIcon' : 'UnknownLightIcon'
       }
 
       mainContent.push({ icon, content, abbreviation, moduleName })
@@ -72,7 +76,6 @@ const DatabaseListModules = React.memo((props: Props) => {
       }
     }),
   )
-
   // set count of hidden modules
   if (maxViewModules && newModules.length > maxViewModules + 1) {
     newModules.length = maxViewModules
@@ -85,25 +88,34 @@ const DatabaseListModules = React.memo((props: Props) => {
   }
 
   const Content = sortModules(mainContent).map(
-    ({ icon, content, abbreviation = '' }) => (
-      <div className={styles.tooltipItem} key={content || abbreviation}>
-        {!!icon && <EuiIcon type={icon} style={{ marginRight: 10 }} />}
-        {!icon && (
-          <EuiTextColor
-            className={cx(styles.icon, styles.abbr)}
-            style={{ marginRight: 10 }}
-          >
-            {abbreviation}
-          </EuiTextColor>
-        )}
-        {!!content && (
-          <EuiTextColor className={cx(styles.tooltipItemText)}>
-            {content}
-          </EuiTextColor>
-        )}
-        <br />
-      </div>
-    ),
+    ({ icon, content, abbreviation = '' }) => {
+      const hasIcon = !!icon
+      const hasContent = !!content
+      const hasAbbreviation = !!abbreviation
+      return (
+        <Row
+          align="center"
+          gap="m"
+          className={styles.tooltipItem}
+          key={content || abbreviation}
+        >
+          {hasIcon && <RiIcon type={icon} />}
+          {!hasIcon && hasAbbreviation && (
+            <ColorText
+              className={cx(styles.icon, styles.abbr)}
+              style={{ marginRight: 10 }}
+            >
+              {abbreviation}
+            </ColorText>
+          )}
+          {hasContent && (
+            <ColorText className={cx(styles.tooltipItemText)}>
+              {content}
+            </ColorText>
+          )}
+        </Row>
+      )
+    },
   )
 
   const Module = (
@@ -114,15 +126,15 @@ const DatabaseListModules = React.memo((props: Props) => {
   ) => (
     <span key={moduleName || abbreviation || content}>
       {icon ? (
-        <EuiButtonIcon
-          iconType={icon}
+        <IconButton
+          icon={icon}
           className={cx(styles.icon, { [styles.circle]: inCircle })}
           onClick={() => handleCopy(content)}
           data-testid={`${content}_module`}
           aria-labelledby={`${content}_module`}
         />
       ) : (
-        <EuiTextColor
+        <ColorText
           className={cx(styles.icon, styles.abbr, {
             [styles.circle]: inCircle,
           })}
@@ -131,7 +143,7 @@ const DatabaseListModules = React.memo((props: Props) => {
           aria-labelledby={`${content}_module`}
         >
           {abbreviation}
-        </EuiTextColor>
+        </ColorText>
       )}
     </span>
   )
@@ -141,15 +153,14 @@ const DatabaseListModules = React.memo((props: Props) => {
       !inCircle ? (
         Module(moduleName, abbreviation, icon, content)
       ) : (
-        <EuiToolTip
+        <RiTooltip
           position="bottom"
-          display="inlineBlock"
           content={Content[i]}
           anchorClassName={styles.anchorModuleTooltip}
           key={moduleName}
         >
           <>{Module(moduleName, abbreviation, icon, content)}</>
-        </EuiToolTip>
+        </RiTooltip>
       ),
     )
 
@@ -164,15 +175,14 @@ const DatabaseListModules = React.memo((props: Props) => {
       {inCircle ? (
         Modules()
       ) : (
-        <EuiToolTip
+        <RiTooltip
           position="bottom"
           title={tooltipTitle ?? undefined}
-          display="inlineBlock"
           content={Content}
           data-testid="modules-tooltip"
         >
           <>{content ?? Modules()}</>
-        </EuiToolTip>
+        </RiTooltip>
       )}
     </div>
   )

@@ -1,10 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { EuiButton, EuiCheckbox, EuiPopover } from '@elastic/eui'
 import { useSelector, useDispatch } from 'react-redux'
 import { isEmpty } from 'lodash'
 import cx from 'classnames'
 
-import ColumnsIcon from 'uiSrc/assets/img/icons/columns.svg?react'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import {
   instancesSelector,
@@ -14,6 +12,7 @@ import { OAuthSocialAction, OAuthSocialSource } from 'uiSrc/slices/interfaces'
 import PromoLink from 'uiSrc/components/promo-link/PromoLink'
 
 import { FeatureFlagComponent, OAuthSsoHandlerDialog } from 'uiSrc/components'
+import { RiPopover } from 'uiSrc/components/base'
 import { getPathToResource } from 'uiSrc/services/resourcesService'
 import { ContentCreateRedis } from 'uiSrc/slices/interfaces/content'
 import { HELP_LINKS } from 'uiSrc/pages/home/constants'
@@ -28,6 +27,12 @@ import {
 } from 'uiSrc/constants'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { ColumnsIcon } from 'uiSrc/components/base/icons'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
 import SearchDatabasesList from '../search-databases-list'
 
 import styles from './styles.module.scss'
@@ -118,15 +123,13 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
   }
 
   const AddInstanceBtn = () => (
-    <EuiButton
-      fill
-      color="secondary"
+    <PrimaryButton
       onClick={handleOnAddDatabase}
       className={styles.addInstanceBtn}
       data-testid="add-redis-database-short"
     >
       <span>+ Add Redis database</span>
-    </EuiButton>
+    </PrimaryButton>
   )
 
   const CreateBtn = ({ content }: { content: ContentCreateRedis }) => {
@@ -143,7 +146,6 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
             description={description}
             url={links?.main?.url}
             testId="promo-btn"
-            icon="arrowRight"
             styles={{
               ...linkStyles,
               backgroundImage: linkStyles?.backgroundImage
@@ -168,7 +170,7 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
 
   const columnCheckboxes = Array.from(COLUMN_FIELD_NAME_MAP.entries()).map(
     ([field, name]) => (
-      <EuiCheckbox
+      <Checkbox
         key={`show-${field}`}
         id={`show-${field}`}
         name={`show-${field}`}
@@ -211,28 +213,34 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
           <FlexItem grow>
             <Row justify="end" align="center" gap="s">
               <FlexItem className={styles.columnsButtonItem}>
-                <EuiPopover
+                <RiPopover
                   ownFocus={false}
                   anchorPosition="downLeft"
                   isOpen={columnsConfigShown}
                   closePopover={() => setColumnsConfigShown(false)}
                   data-testid="columns-config-popover"
                   button={
-                    <EuiButton
-                      size="m"
-                      color="secondary"
-                      iconType={ColumnsIcon}
+                    <SecondaryButton
+                      icon={ColumnsIcon}
                       onClick={toggleColumnsConfigVisibility}
                       className={styles.columnsButton}
                       data-testid="btn-columns-config"
                       aria-label="columns"
                     >
                       <span>Columns</span>
-                    </EuiButton>
+                    </SecondaryButton>
                   }
                 >
-                  {columnCheckboxes}
-                </EuiPopover>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {columnCheckboxes}
+                  </div>
+                </RiPopover>
               </FlexItem>
               <FlexItem>
                 <SearchDatabasesList />

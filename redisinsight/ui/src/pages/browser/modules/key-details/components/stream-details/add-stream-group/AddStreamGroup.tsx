@@ -1,14 +1,5 @@
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiFormRow,
-  EuiIcon,
-  EuiPanel,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
 import cx from 'classnames'
-import React, { ChangeEvent, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 
@@ -22,6 +13,14 @@ import {
 } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiTooltip } from 'uiSrc/components'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { CreateConsumerGroupsDto } from 'apiSrc/modules/browser/stream/dto'
 
 import styles from './styles.module.scss'
@@ -88,17 +87,9 @@ const AddStreamGroup = (props: Props) => {
 
   return (
     <>
-      <EuiPanel
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
+      <div
+        className={styles.content}
         data-test-subj="add-stream-groups-field-panel"
-        className={cx(
-          styles.content,
-          'eui-yScroll',
-          'flexItemNoFullWidth',
-          'inlineFieldsNoSpace',
-        )}
       >
         <FlexItem
           className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
@@ -108,53 +99,52 @@ const AddStreamGroup = (props: Props) => {
             <FlexItem grow>
               <Row align="start">
                 <FlexItem className={styles.groupNameWrapper} grow>
-                  <EuiFormRow fullWidth>
-                    <EuiFieldText
-                      fullWidth
+                  <FormField>
+                    <TextInput
                       name="group-name"
                       id="group-name"
                       placeholder="Enter Group Name*"
                       value={groupName}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        setGroupName(e.target.value)
+                      onChange={value =>
+                        setGroupName(value)
                       }
                       autoComplete="off"
                       data-testid="group-name-field"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
                 <FlexItem className={styles.timestampWrapper} grow>
-                  <EuiFormRow fullWidth>
-                    <EuiFieldText
-                      fullWidth
+                  <FormField
+                    additionalText={
+                      <RiTooltip
+                        anchorClassName="inputAppendIcon"
+                        className={styles.entryIdTooltip}
+                        position="left"
+                        title="Enter Valid ID, 0 or $"
+                        content={lastDeliveredIDTooltipText}
+                      >
+                        <RiIcon
+                          type="InfoIcon"
+                          style={{ cursor: 'pointer' }}
+                          data-testid="entry-id-info-icon"
+                        />
+                      </RiTooltip>
+                    }
+                  >
+                    <TextInput
                       name="id"
                       id="id"
                       placeholder="ID*"
                       value={id}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        setId(validateConsumerGroupId(e.target.value))
+                      onChange={value =>
+                        setId(validateConsumerGroupId(value))
                       }
                       onBlur={() => setIsIdFocused(false)}
                       onFocus={() => setIsIdFocused(true)}
-                      append={
-                        <EuiToolTip
-                          anchorClassName="inputAppendIcon"
-                          className={styles.entryIdTooltip}
-                          position="left"
-                          title="Enter Valid ID, 0 or $"
-                          content={lastDeliveredIDTooltipText}
-                        >
-                          <EuiIcon
-                            type="iInCircle"
-                            style={{ cursor: 'pointer' }}
-                            data-testid="entry-id-info-icon"
-                          />
-                        </EuiToolTip>
-                      }
                       autoComplete="off"
                       data-testid="id-field"
                     />
-                  </EuiFormRow>
+                  </FormField>
                   {!showIdError && (
                     <span className={styles.idText} data-testid="id-help-text">
                       Timestamp - Sequence Number or $
@@ -170,41 +160,32 @@ const AddStreamGroup = (props: Props) => {
             </FlexItem>
           </Row>
         </FlexItem>
-      </EuiPanel>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        className="flexItemNoFullWidth"
-      >
-        <Row justify="end" gap="l">
+      </div>
+      <>
+        <Row justify="end" gap="l" style={{ padding: 18 }}>
           <FlexItem>
             <div>
-              <EuiButton
-                color="secondary"
+              <SecondaryButton
                 onClick={() => closePanel(true)}
                 data-testid="cancel-stream-groups-btn"
               >
-                <EuiTextColor color="default">Cancel</EuiTextColor>
-              </EuiButton>
+                Cancel
+              </SecondaryButton>
             </div>
           </FlexItem>
           <FlexItem>
             <div>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
+              <PrimaryButton
                 onClick={submitData}
                 disabled={!isFormValid}
                 data-testid="save-groups-btn"
               >
                 Save
-              </EuiButton>
+              </PrimaryButton>
             </div>
           </FlexItem>
         </Row>
-      </EuiPanel>
+      </>
     </>
   )
 }

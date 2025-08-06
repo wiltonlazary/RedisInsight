@@ -1,21 +1,22 @@
 /* eslint-disable react/no-array-index-key */
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import {
-  EuiButton,
-  EuiIcon,
-  EuiTitle,
-  EuiText,
-  EuiButtonEmpty,
-} from '@elastic/eui'
+import { PlusIcon } from 'uiSrc/components/base/icons'
 import { ConnectionProvider, Instance } from 'uiSrc/slices/interfaces'
 import { FormDialog } from 'uiSrc/components'
-import WarningIcon from 'uiSrc/assets/img/warning.svg?react'
 
 import { updateInstanceAction } from 'uiSrc/slices/instances/instances'
 import { addMessageNotification } from 'uiSrc/slices/app/notifications'
 import successMessages from 'uiSrc/components/notifications/success-messages'
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { VALID_TAG_KEY_REGEX, VALID_TAG_VALUE_REGEX } from './constants'
 import { TagInputField } from './TagInputField'
 import { getInvalidTagErrors } from './utils'
@@ -103,48 +104,45 @@ export const ManageTagsModal = ({
     <FormDialog
       isOpen
       onClose={onClose}
+      className={styles.manageTagsModal}
       header={
         <div className={styles.header}>
-          <EuiTitle size="s">
-            <h4>Manage tags for {instance.name}</h4>
-          </EuiTitle>
+          <Title size="M">Manage tags for {instance.name}</Title>
           <Spacer size="s" />
-          <EuiText size="s" color="subdued">
-            <p>
-              Tags are key-value pairs that let you categorize your databases.
-            </p>
-          </EuiText>
+          <Text size="s" color="subdued">
+            Tags are key-value pairs that let you categorize your databases.
+          </Text>
         </div>
       }
       footer={
         <>
           {(isCloudDb || isClusterDb) && (
             <div className={styles.warning}>
-              <EuiIcon type={WarningIcon} color="warning" size="m" />
-              <EuiText size="m">
+              <RiIcon
+                type="ToastNotificationIcon"
+                color="attention600"
+                size="m"
+              />
+              <Text size="m">
                 Tag changes in Redis Insight apply locally and are not synced
                 with Redis {isCloudDb ? 'Cloud' : 'Software'}.
-              </EuiText>
+              </Text>
             </div>
           )}
           <div className={styles.footer}>
-            <EuiButton onClick={onClose} size="s" data-testid="close-button">
+            <SecondaryButton onClick={onClose} data-testid="close-button">
               Close
-            </EuiButton>
-            <EuiButton
+            </SecondaryButton>
+            <PrimaryButton
               onClick={handleSave}
-              fill
-              size="s"
-              color="secondary"
-              isDisabled={isSaveButtonDisabled}
+              disabled={isSaveButtonDisabled}
               data-testid="save-tags-button"
             >
               Save tags
-            </EuiButton>
+            </PrimaryButton>
           </div>
         </>
       }
-      className={styles.manageTagsModal}
     >
       <div className={styles.tagForm}>
         <div className={styles.tagFormHeader}>
@@ -176,8 +174,8 @@ export const ManageTagsModal = ({
                     handleTagChange(index, 'value', value)
                   }}
                   rightContent={
-                    <EuiIcon
-                      type="trash"
+                    <RiIcon
+                      type="DeleteIcon"
                       onClick={() => handleRemoveTag(index)}
                       className={styles.deleteIcon}
                       data-testid="remove-tag-button"
@@ -190,16 +188,15 @@ export const ManageTagsModal = ({
         </div>
       </div>
       <Spacer size="s" />
-      <EuiButtonEmpty
-        iconType="plus"
+      <EmptyButton
+        icon={PlusIcon}
         onClick={handleAddTag}
-        size="s"
-        color="text"
+        size="small"
         className={styles.addTagButton}
         data-testid="add-tag-button"
       >
         Add additional tag
-      </EuiButtonEmpty>
+      </EmptyButton>
     </FormDialog>
   )
 }

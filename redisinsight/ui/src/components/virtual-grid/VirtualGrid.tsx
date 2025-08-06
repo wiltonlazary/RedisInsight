@@ -2,13 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
 import AutoSizer, { Size } from 'react-virtualized-auto-sizer'
 import { isObject, xor } from 'lodash'
-import { EuiProgress, EuiIcon, EuiText } from '@elastic/eui'
 import InfiniteLoader from 'react-window-infinite-loader'
 import { VariableSizeGrid as Grid, GridChildComponentProps } from 'react-window'
 
 import { Maybe, Nullable } from 'uiSrc/utils'
 import { SortOrder } from 'uiSrc/constants'
 import { SCAN_COUNT_DEFAULT } from 'uiSrc/constants/api'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
 import { IProps } from './interfaces'
 import { getColumnWidth, useInnerElementType } from './utils'
 
@@ -200,12 +202,12 @@ const VirtualGrid = (props: IProps) => {
                       ? content.render(content)
                       : renderNotEmptyContent(content.label)}
                     <span style={{ paddingLeft: 0 }}>
-                      <EuiIcon
+                      <RiIcon
                         style={{ marginLeft: '4px' }}
                         type={
                           sortedColumn?.order === SortOrder.DESC
-                            ? 'sortDown'
-                            : 'sortUp'
+                            ? 'ArrowDownIcon'
+                            : 'ArrowUpIcon'
                         }
                       />
                     </span>
@@ -307,10 +309,8 @@ const VirtualGrid = (props: IProps) => {
       data-testid="virtual-grid-container"
     >
       {loading && !hideProgress && (
-        <EuiProgress
+        <ProgressBarLoader
           color="primary"
-          size="xs"
-          position="absolute"
           className={styles.progress}
           data-testid="progress-entry-list"
         />
@@ -371,9 +371,9 @@ const VirtualGrid = (props: IProps) => {
         </AutoSizer>
       )}
       {items.length === 1 && (
-        <EuiText className={styles.noItems} color="subdued">
+        <Text className={styles.noItems} color="subdued">
           {loading ? loadingMsg : noItemsMessage}
-        </EuiText>
+        </Text>
       )}
     </div>
   )

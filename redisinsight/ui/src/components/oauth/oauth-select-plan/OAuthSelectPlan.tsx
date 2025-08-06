@@ -1,15 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import {
-  EuiButton,
-  EuiIcon,
-  EuiModal,
-  EuiModalBody,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-  EuiText,
-  EuiTextColor,
-  EuiTitle,
-} from '@elastic/eui'
 import { toNumber, filter, get, find, first } from 'lodash'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
@@ -28,6 +17,16 @@ import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import { FeatureFlags } from 'uiSrc/constants'
 import { Region } from 'uiSrc/slices/interfaces'
 
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { Modal } from 'uiSrc/components/base/display'
+import { CancelIcon } from 'uiSrc/components/base/icons'
 import { CloudSubscriptionPlanResponse } from 'apiSrc/modules/cloud/subscription/dto'
 import { OAuthProvider, OAuthProviders } from './constants'
 import styles from './styles.module.scss'
@@ -120,24 +119,30 @@ const OAuthSelectPlan = () => {
       find(rsRegions, { provider })?.regions || []
 
     return (
-      <EuiText color="subdued" size="s" data-testid={`option-${region}`}>
+      <Text
+        color="subdued"
+        size="s"
+        data-testid={`option-${region}`}
+        data-test-subj={`oauth-region-${region}`}
+      >
         {`${countryName} (${cityName})`}
-        <EuiTextColor className={styles.regionName}>{region}</EuiTextColor>
+        <ColorText className={styles.regionName}>{region}</ColorText>
         {rsProviderRegions?.includes(region) && (
-          <EuiTextColor
+          <ColorText
             className={styles.rspreview}
             data-testid={`rs-text-${region}`}
           >
             (Redis 7.2)
-          </EuiTextColor>
+          </ColorText>
         )}
-      </EuiText>
+      </Text>
     )
   }
 
-  const regionOptions: EuiSuperSelectOption<string>[] = plans.map((item) => {
+  const regionOptions = plans.map((item) => {
     const { id, region = '' } = item
     return {
+      label: `${id}`,
       value: `${id}`,
       inputDisplay: getOptionDisplay(item),
       dropdownDisplay: getOptionDisplay(item),
@@ -167,86 +172,93 @@ const OAuthSelectPlan = () => {
   }
 
   return (
-    <EuiModal
-      className={styles.container}
-      onClose={handleOnClose}
-      data-testid="oauth-select-plan-dialog"
-    >
-      <EuiModalBody className={styles.modalBody}>
-        <section className={styles.content}>
-          <EuiTitle size="s">
-            <h2 className={styles.title}>Choose a cloud vendor</h2>
-          </EuiTitle>
-          <EuiText className={styles.subTitle}>
-            Select a cloud vendor and region to complete the final step towards
-            your free trial Redis database. No credit card is required.
-          </EuiText>
-          <section className={styles.providers}>
-            {OAuthProviders.map(({ icon, id, label }) => (
-              <div className={styles.provider} key={id}>
-                {id === providerSelected && (
-                  <div className={cx(styles.providerActiveIcon)}>
-                    <EuiIcon type="check" />
+    <Modal.Compose open>
+      <Modal.Content.Compose className={styles.container} data-testid="oauth-select-plan-dialog">
+        <Modal.Content.Close icon={CancelIcon} onClick={handleOnClose} data-testid="oauth-select-plan-dialog-close-btn" />
+        <Modal.Content.Header.Title>
+          Choose a cloud vendor
+        </Modal.Content.Header.Title>
+        <Modal.Content.Body.Compose width="fit-content">
+          <section className={styles.content}>
+            <Text className={styles.subTitle}>
+              Select a cloud vendor and region to complete the final step
+              towards your free trial Redis database. No credit card is
+              required.
+            </Text>
+            <section className={styles.providers}>
+              {OAuthProviders.map(({ icon, id, label }) => {
+                const Icon = () => (
+                  <RiIcon type={icon} size="original" style={{ width: 44 }} />
+                )
+                return (
+                  <div className={styles.provider} key={id}>
+                    {id === providerSelected && (
+                      <div className={cx(styles.providerActiveIcon)}>
+                        <RiIcon type="CheckThinIcon" />
+                      </div>
+                    )}
+                    <EmptyButton
+                      size="large"
+                      icon={Icon}
+                      onClick={() => setProviderSelected(id)}
+                      className={cx(styles.providerBtn, {
+                        [styles.activeProvider]: id === providerSelected,
+                      })}
+                    />
+                    <Text className={styles.providerLabel}>{label}</Text>
                   </div>
-                )}
-                <EuiButton
-                  iconType={icon}
-                  onClick={() => setProviderSelected(id)}
-                  className={cx(styles.providerBtn, {
-                    [styles.activeProvider]: id === providerSelected,
-                  })}
-                />
-                <EuiText className={styles.providerLabel}>{label}</EuiText>
-              </div>
-            ))}
-          </section>
-          <section className={styles.region}>
-            <EuiText className={styles.regionLabel}>Region</EuiText>
-            <EuiSuperSelect
-              fullWidth
-              itemClassName={styles.regionSelectItem}
-              className={styles.regionSelect}
-              disabled={loading || !regionOptions.length}
-              isLoading={loading}
-              options={regionOptions}
-              valueOfSelected={planIdSelected}
-              onChange={onChangeRegion}
-              data-testid="select-oauth-region"
-            />
-            {!regionOptions.length && (
-              <EuiText
-                className={styles.selectDescription}
-                data-testid="select-region-select-description"
+                )
+              })}
+            </section>
+            <section className={styles.region}>
+              <Text className={styles.regionLabel}>Region</Text>
+              <RiSelect
+                loading={loading}
+                disabled={loading || !regionOptions.length}
+                options={regionOptions}
+                value={planIdSelected}
+                data-testid="select-oauth-region"
+                onChange={onChangeRegion}
+                valueRender={({ option, isOptionValue }) => {
+                  if (isOptionValue) {
+                    return option.inputDisplay
+                  }
+                  return option.dropdownDisplay
+                }}
+              />
+              {!regionOptions.length && (
+                <Text
+                  className={styles.selectDescription}
+                  data-testid="select-region-select-description"
+                >
+                  No regions available, try another vendor.
+                </Text>
+              )}
+            </section>
+            <footer className={styles.footer}>
+              <SecondaryButton
+                className={styles.button}
+                onClick={handleOnClose}
+                data-testid="close-oauth-select-plan-dialog"
+                aria-labelledby="close oauth select plan dialog"
               >
-                No regions available, try another vendor.
-              </EuiText>
-            )}
+                Cancel
+              </SecondaryButton>
+              <PrimaryButton
+                disabled={loading || !planIdSelected}
+                loading={loading}
+                className={styles.button}
+                onClick={handleSubmit}
+                data-testid="submit-oauth-select-plan-dialog"
+                aria-labelledby="submit oauth select plan dialog"
+              >
+                Create database
+              </PrimaryButton>
+            </footer>
           </section>
-          <footer className={styles.footer}>
-            <EuiButton
-              className={styles.button}
-              onClick={handleOnClose}
-              data-testid="close-oauth-select-plan-dialog"
-              aria-labelledby="close oauth select plan dialog"
-            >
-              Cancel
-            </EuiButton>
-            <EuiButton
-              fill
-              isDisabled={loading || !planIdSelected}
-              isLoading={loading}
-              color="secondary"
-              className={styles.button}
-              onClick={handleSubmit}
-              data-testid="submit-oauth-select-plan-dialog"
-              aria-labelledby="submit oauth select plan dialog"
-            >
-              Create database
-            </EuiButton>
-          </footer>
-        </section>
-      </EuiModalBody>
-    </EuiModal>
+        </Modal.Content.Body.Compose>
+      </Modal.Content.Compose>
+    </Modal.Compose>
   )
 }
 

@@ -1,15 +1,10 @@
-import {
-  EuiFieldText,
-  EuiFieldPassword,
-  EuiIcon,
-  EuiFieldNumber,
-} from '@elastic/eui'
 import { omit } from 'lodash'
 import React, { useState } from 'react'
 import cx from 'classnames'
 import { useDebouncedEffect } from 'uiSrc/services'
-import { validateNumber } from 'uiSrc/utils'
+import { NumericInput, PasswordInput, TextInput } from 'uiSrc/components/base/inputs'
 
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export enum SentinelInputFieldType {
@@ -59,37 +54,34 @@ const InputFieldSentinel = (props: Props) => {
   return (
     <>
       {inputType === SentinelInputFieldType.Text && (
-        <EuiFieldText
+        <TextInput
           {...clearProp}
-          compressed
           value={value}
-          onChange={(e) => handleChange(e.target?.value)}
+          onChange={handleChange}
           data-testid="sentinel-input"
         />
       )}
       {inputType === SentinelInputFieldType.Password && (
-        <EuiFieldPassword
+        <PasswordInput
           {...clearProp}
-          compressed
           value={value}
-          onChange={(e) => handleChange(e.target?.value)}
+          onChange={(value) => handleChange(value)}
           data-testid="sentinel-input-password"
         />
       )}
       {inputType === SentinelInputFieldType.Number && (
-        <EuiFieldNumber
+        <NumericInput
           {...clearProp}
-          compressed
-          type="text"
-          value={value}
-          onChange={(e) => handleChange(validateNumber(e.target?.value))}
+          autoValidate
+          value={Number(value)}
+          onChange={(value) => handleChange(value ? value.toString() : '')}
           data-testid="sentinel-input-number"
         />
       )}
       {isInvalid && (
-        <EuiIcon
-          color="danger"
-          type="alert"
+        <RiIcon
+          color="danger500"
+          type="ToastDangerIcon"
           className={cx(styles.inputInvalidIcon)}
         />
       )}

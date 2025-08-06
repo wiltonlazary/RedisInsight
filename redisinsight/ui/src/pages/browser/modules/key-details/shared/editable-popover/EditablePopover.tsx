@@ -1,16 +1,16 @@
 import React, { FormEvent, useEffect, useState } from 'react'
-
-import {
-  EuiButton,
-  EuiButtonIcon,
-  EuiForm,
-  EuiLoadingSpinner,
-  EuiPopover,
-} from '@elastic/eui'
-
 import cx from 'classnames'
+
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  IconButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { EditIcon } from 'uiSrc/components/base/icons'
+import { Loader } from 'uiSrc/components/base/display'
+import { RiPopover } from 'uiSrc/components/base'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -105,20 +105,19 @@ const EditablePopover = (props: Props) => {
   const isDisabledApply = (): boolean => !!(isLoading || isDisabled)
 
   const button = (
-    <EuiButtonIcon
-      disabled={isPopoverOpen}
-      iconType={btnIconType || 'pencil'}
+    <IconButton
+      disabled={isPopoverOpen || isDisabledEditButton}
+      icon={btnIconType || EditIcon}
       aria-label="Edit field"
       color="primary"
       onClick={isDisabledEditButton ? () => {} : handleButtonClick}
       className={editBtnClassName}
       data-testid={`${prefix}_edit-btn-${field}`}
-      isDisabled={isDisabledEditButton}
     />
   )
 
   return (
-    <EuiPopover
+    <RiPopover
       ownFocus
       anchorPosition="downLeft"
       isOpen={isPopoverOpen}
@@ -136,10 +135,7 @@ const EditablePopover = (props: Props) => {
         >
           {content}
           {isDelayed && (
-            <EuiLoadingSpinner
-              className={cx(editBtnClassName, styles.spinner)}
-              size="m"
-            />
+            <Loader className={cx(editBtnClassName, styles.spinner)} size="m" />
           )}
           {!isPopoverOpen && isHovering && !isDelayed && button}
         </div>
@@ -147,36 +143,33 @@ const EditablePopover = (props: Props) => {
       data-testid="popover-item-editor"
       onClick={(e) => e.stopPropagation()}
     >
-      <EuiForm component="form" onSubmit={onFormSubmit}>
+      <form onSubmit={onFormSubmit}>
         <div className={styles.content}>{children}</div>
         <Spacer size="s" />
-        <Row className={styles.footer} justify="end">
+        <Row className={styles.footer} justify="end" gap="m">
           <FlexItem>
-            <EuiButton
+            <SecondaryButton
               size="s"
-              color="secondary"
               onClick={() => handleDecline()}
               data-testid="cancel-btn"
             >
               Cancel
-            </EuiButton>
+            </SecondaryButton>
           </FlexItem>
 
           <FlexItem>
-            <EuiButton
-              fill
+            <PrimaryButton
               size="s"
               type="submit"
-              color="secondary"
-              isDisabled={isDisabledApply()}
+              disabled={isDisabledApply()}
               data-testid="save-btn"
             >
               Save
-            </EuiButton>
+            </PrimaryButton>
           </FlexItem>
         </Row>
-      </EuiForm>
-    </EuiPopover>
+      </form>
+    </RiPopover>
   )
 }
 

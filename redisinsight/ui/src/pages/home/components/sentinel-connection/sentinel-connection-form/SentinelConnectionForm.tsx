@@ -1,9 +1,9 @@
-import { EuiButton, EuiForm, EuiToolTip, keys } from '@elastic/eui'
 import { FormikErrors, useFormik } from 'formik'
 import { isEmpty, pick } from 'lodash'
 import React, { useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 
+import * as keys from 'uiSrc/constants/keys'
 import validationErrors from 'uiSrc/constants/validationErrors'
 import { fieldDisplayNames } from 'uiSrc/pages/home/constants'
 import { getFormErrors, getSubmitButtonContent } from 'uiSrc/pages/home/utils'
@@ -14,6 +14,12 @@ import {
   TlsDetails,
 } from 'uiSrc/pages/home/components/form'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RiTooltip } from 'uiSrc/components'
 
 export interface Props {
   loading: boolean
@@ -75,7 +81,7 @@ const SentinelConnectionForm = (props: Props) => {
   }
 
   const SubmitButton = ({ onClick, submitIsDisabled }: ISubmitButton) => (
-    <EuiToolTip
+    <RiTooltip
       position="top"
       anchorClassName="euiToolTip__btn-disabled"
       title={
@@ -85,21 +91,19 @@ const SentinelConnectionForm = (props: Props) => {
       }
       content={getSubmitButtonContent(errors, submitIsDisabled)}
     >
-      <EuiButton
-        fill
+      <PrimaryButton
         size="s"
-        color="secondary"
         type="submit"
         onClick={onClick}
         disabled={submitIsDisabled}
-        isLoading={loading}
-        iconType={submitIsDisabled ? 'iInCircle' : undefined}
+        loading={loading}
+        icon={submitIsDisabled ? InfoIcon : undefined}
         data-testid="btn-submit"
         style={{ marginLeft: 12 }}
       >
         Discover Database
-      </EuiButton>
-    </EuiToolTip>
+      </PrimaryButton>
+    </RiTooltip>
   )
 
   const Footer = () => {
@@ -109,15 +113,14 @@ const SentinelConnectionForm = (props: Props) => {
       return ReactDOM.createPortal(
         <div className="footerAddDatabase">
           {onClose && (
-            <EuiButton
+            <SecondaryButton
               size="s"
               onClick={onClose}
-              color="secondary"
               className="btn-cancel"
               data-testid="btn-cancel"
             >
               Cancel
-            </EuiButton>
+            </SecondaryButton>
           )}
           <SubmitButton
             onClick={formik.submitForm}
@@ -139,11 +142,11 @@ const SentinelConnectionForm = (props: Props) => {
       <div className="getStartedForm eui-yScroll" ref={formRef}>
         <MessageSentinel />
         <br />
-        <EuiForm
-          component="form"
+        <form
           onSubmit={formik.handleSubmit}
           data-testid="form"
           onKeyDown={onKeyDown}
+          role="presentation"
         >
           <DatabaseForm
             formik={formik}
@@ -161,7 +164,7 @@ const SentinelConnectionForm = (props: Props) => {
             certificates={certificates}
             caCertificates={caCertificates}
           />
-        </EuiForm>
+        </form>
       </div>
       <Footer />
     </div>

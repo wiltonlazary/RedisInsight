@@ -1,29 +1,17 @@
-import {
-  EuiBasicTableColumn,
-  EuiIcon,
-  EuiInMemoryTable,
-  EuiToolTip,
-  PropertySort,
-} from '@elastic/eui'
-import { IconType } from '@elastic/eui/src/components/icon/icon'
+import { EuiIcon } from '@elastic/eui'
 import cx from 'classnames'
 import { map } from 'lodash'
 import React, { useState } from 'react'
 
 import { LoadingContent } from 'uiSrc/components/base/layout'
-import {
-  InputIconSvg,
-  KeyIconSvg,
-  MemoryIconSvg,
-  OutputIconSvg,
-  UserIconSvg,
-  MeasureIconSvg,
-} from 'uiSrc/components/database-overview/components/icons'
-import { ModifiedClusterNodes } from 'uiSrc/pages/clusterDetails/ClusterDetailsPage'
+import { Table, ColumnDefinition } from 'uiSrc/components/base/layout/table'
 import { formatBytes, Nullable } from 'uiSrc/utils'
 import { rgb } from 'uiSrc/utils/colors'
 import { numberWithSpaces } from 'uiSrc/utils/numbers'
+import { RiTooltip } from 'uiSrc/components'
 
+import { ModifiedClusterNodes } from '../../ClusterDetailsPage'
+import { AllIconsType, RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 const ClusterNodesTable = ({
@@ -46,24 +34,24 @@ const ClusterNodesTable = ({
     )
   }
 
-  const headerIconTemplate = (label: string, icon: IconType) => (
+  const headerIconTemplate = (label: string, icon: AllIconsType) => (
     <div className={cx(styles.headerCell, styles.headerCellIcon)}>
-      <EuiIcon type={icon} className={styles.headerIcon} />
+      <RiIcon type={icon} className={styles.headerIcon} />
       <span>{label}</span>
     </div>
   )
 
-  const columns: EuiBasicTableColumn<any>[] = [
+  const columns: ColumnDefinition<ModifiedClusterNodes>[] = [
     {
-      name: (
-        <div className={styles.headerCell}>
-          <span>{`${nodes?.length} Primary nodes`}</span>
-        </div>
-      ),
-      field: 'host',
-      dataType: 'string',
-      sortable: ({ index }) => index,
-      render: (value: number, { letter, port, color }) => (
+      header: `${nodes?.length} Primary nodes`,
+      id: 'host',
+      accessorKey: 'host',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { letter, port, color },
+        },
+      }) => (
         <>
           <div
             className={styles.nodeColor}
@@ -75,19 +63,22 @@ const ClusterNodesTable = ({
               {letter}
             </span>
             <span>
-              {value}:{port}
+              {letter}:{port}
             </span>
           </div>
         </>
       ),
     },
     {
-      name: headerIconTemplate('Commands/s', MeasureIconSvg),
-      field: 'opsPerSecond',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      header: () => headerIconTemplate('Commands/s', 'MeasureIconIcon'),
+      id: 'opsPerSecond',
+      accessorKey: 'opsPerSecond',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { opsPerSecond: value },
+        },
+      }) => {
         const isMax = isMaxValue('opsPerSecond', value)
         return (
           <span
@@ -100,12 +91,15 @@ const ClusterNodesTable = ({
       },
     },
     {
-      name: headerIconTemplate('Network Input', InputIconSvg),
-      field: 'networkInKbps',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      header: () => headerIconTemplate('Network Input', 'InputIconIcon'),
+      id: 'networkInKbps',
+      accessorKey: 'networkInKbps',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { networkInKbps: value },
+        },
+      }) => {
         const isMax = isMaxValue('networkInKbps', value)
         return (
           <>
@@ -121,12 +115,15 @@ const ClusterNodesTable = ({
       },
     },
     {
-      name: headerIconTemplate('Network Output', OutputIconSvg),
-      field: 'networkOutKbps',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      header: () => headerIconTemplate('Network Output', 'OutputIconIcon'),
+      id: 'networkOutKbps',
+      accessorKey: 'networkOutKbps',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { networkOutKbps: value },
+        },
+      }) => {
         const isMax = isMaxValue('networkOutKbps', value)
         return (
           <>
@@ -142,16 +139,19 @@ const ClusterNodesTable = ({
       },
     },
     {
-      name: headerIconTemplate('Total Memory', MemoryIconSvg),
-      field: 'usedMemory',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      header: () => headerIconTemplate('Total Memory', 'MemoryIconIcon'),
+      id: 'usedMemory',
+      accessorKey: 'usedMemory',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { usedMemory: value },
+        },
+      }) => {
         const [number, size] = formatBytes(value, 3, true)
         const isMax = isMaxValue('usedMemory', value)
         return (
-          <EuiToolTip
+          <RiTooltip
             content={`${numberWithSpaces(value)} B`}
             data-testid="usedMemory-tooltip"
           >
@@ -164,17 +164,20 @@ const ClusterNodesTable = ({
               </span>
               <span className={styles.valueUnit}>{size}</span>
             </>
-          </EuiToolTip>
+          </RiTooltip>
         )
       },
     },
     {
-      name: headerIconTemplate('Total Keys', KeyIconSvg),
-      field: 'totalKeys',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      header: () => headerIconTemplate('Total Keys', 'KeyIconIcon'),
+      id: 'totalKeys',
+      accessorKey: 'totalKeys',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { totalKeys: value },
+        },
+      }) => {
         const isMax = isMaxValue('totalKeys', value)
         return (
           <span
@@ -187,17 +190,20 @@ const ClusterNodesTable = ({
       },
     },
     {
-      name: (
+      header: () => (
         <div className={cx(styles.headerCell, styles.headerCellIcon)}>
-          <EuiIcon type={UserIconSvg} className={styles.headerIcon} />
+          <RiIcon type="UserIconIcon" className={styles.headerIcon} />
           <span>Clients</span>
         </div>
       ),
-      field: 'connectedClients',
-      width: '12%',
-      sortable: true,
-      align: 'right',
-      render: (value: number) => {
+      id: 'connectedClients',
+      accessorKey: 'connectedClients',
+      enableSorting: true,
+      cell: ({
+        row: {
+          original: { connectedClients: value },
+        },
+      }) => {
         const isMax = isMaxValue('connectedClients', value)
         return (
           <span
@@ -222,21 +228,22 @@ const ClusterNodesTable = ({
         </div>
       )}
       {nodes && (
-        <div className={styles.tableWrapper}>
-          <EuiInMemoryTable
-            items={nodes ?? []}
+        <div className={styles.tableWrapper} data-testid="primary-nodes-table">
+          <Table
             columns={columns}
-            className={cx(
-              'inMemoryTableDefault',
-              'noHeaderBorders',
-              'stickyHeader',
-              styles.table,
-              styles.tableNodes,
-            )}
-            responsive={false}
-            sorting={{ sort }}
-            onTableChange={({ sort }: any) => setSort(sort)}
-            data-testid="primary-nodes-table"
+            data={nodes}
+            defaultSorting={[
+              {
+                id: sort.field,
+                desc: sort.direction === 'desc',
+              },
+            ]}
+            onSortingChange={(newSort) =>
+              setSort({
+                field: newSort[0].id,
+                direction: newSort[0].desc ? 'desc' : 'asc',
+              })
+            }
           />
         </div>
       )}

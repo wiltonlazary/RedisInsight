@@ -1,13 +1,6 @@
-import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiIcon,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import cx from 'classnames'
 import { isNull } from 'lodash'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 import InlineItemEditor from 'uiSrc/components/inline-item-editor/InlineItemEditor'
@@ -34,6 +27,13 @@ import {
 } from 'uiSrc/utils'
 
 import { FlexItem, Grid } from 'uiSrc/components/base/layout/flex'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CopyIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { RiTooltip } from 'uiSrc/components'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -83,9 +83,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
     setKeyIsEditing(true)
   }
 
-  const onChangeKey = ({
-    currentTarget: { value },
-  }: ChangeEvent<HTMLInputElement>) => {
+  const onChangeKey = (value: string) => {
     keyIsEditing && setKey(value)
   }
 
@@ -144,7 +142,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
   }
 
   const appendKeyEditing = () =>
-    !keyIsEditing ? <EuiIcon type="pencil" color="subdued" /> : ''
+    !keyIsEditing ? <RiIcon type="EditIcon" color="informative400" /> : ''
 
   return (
     <FlexItem
@@ -163,7 +161,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
           data-testid="edit-key-grid"
         >
           <FlexItem grow className={styles.flexItemKeyInput}>
-            <EuiToolTip
+            <RiTooltip
               title="Key Name"
               position="left"
               content={tooltipContent}
@@ -179,53 +177,53 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
                   isLoading={loading}
                   declineOnUnmount={false}
                 >
-                  <EuiFieldText
-                    name="key"
-                    id="key"
-                    inputRef={keyNameRef}
-                    className={cx(styles.keyInput, {
-                      [styles.keyInputEditing]: keyIsEditing,
-                      'input-warning': !keyIsEditable,
-                    })}
-                    placeholder={
-                      AddCommonFieldsFormConfig?.keyName?.placeholder
-                    }
-                    value={key!}
-                    fullWidth={false}
-                    compressed
-                    isLoading={loading}
-                    onChange={onChangeKey}
-                    append={appendKeyEditing()}
-                    readOnly={!keyIsEditing}
-                    autoComplete="off"
-                    data-testid="edit-key-input"
-                  />
+                  <FormField
+                    additionalText={appendKeyEditing()}
+                  >
+                    <TextInput
+                      name="key"
+                      id="key"
+                      ref={keyNameRef}
+                      className={cx(styles.keyInput, {
+                        [styles.keyInputEditing]: keyIsEditing,
+                        'input-warning': !keyIsEditable,
+                      })}
+                      placeholder={
+                        AddCommonFieldsFormConfig?.keyName?.placeholder
+                      }
+                      value={key!}
+                      loading={loading}
+                      onChange={onChangeKey}
+                      readOnly={!keyIsEditing}
+                      autoComplete="off"
+                      data-testid="edit-key-input"
+                    />
+                  </FormField>
                 </InlineItemEditor>
                 <p className={styles.keyHiddenText}>{key}</p>
               </>
-            </EuiToolTip>
+            </RiTooltip>
             {keyIsHovering && (
-              <EuiToolTip
+              <RiTooltip
                 position="right"
                 content="Copy"
                 anchorClassName={styles.copyKey}
               >
-                <EuiButtonIcon
-                  iconType="copy"
+                <IconButton
+                  icon={CopyIcon}
                   id={COPY_KEY_NAME_ICON}
                   aria-label="Copy key name"
-                  color="primary"
                   onClick={(event: any) =>
                     handleCopy(event, key!, keyIsEditing, keyNameRef)
                   }
                   data-testid="copy-key-name-btn"
                 />
-              </EuiToolTip>
+              </RiTooltip>
             )}
           </FlexItem>
         </Grid>
       )}
-      <EuiText
+      <Text
         className={cx(styles.key, {
           [styles.hidden]: keyIsEditing || keyIsHovering,
         })}
@@ -234,7 +232,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
         <b className="truncateText">
           {replaceSpaces(keyProp?.substring(0, 200))}
         </b>
-      </EuiText>
+      </Text>
     </FlexItem>
   )
 }

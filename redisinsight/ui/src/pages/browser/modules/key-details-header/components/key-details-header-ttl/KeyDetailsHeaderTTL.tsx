@@ -1,6 +1,5 @@
-import { EuiFieldText, EuiIcon, EuiText } from '@elastic/eui'
 import cx from 'classnames'
-import React, { ChangeEvent, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 import InlineItemEditor from 'uiSrc/components/inline-item-editor/InlineItemEditor'
@@ -13,6 +12,9 @@ import { RedisResponseBuffer } from 'uiSrc/slices/interfaces'
 import { MAX_TTL_NUMBER, validateTTLNumber } from 'uiSrc/utils'
 
 import { FlexItem, Grid } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -47,9 +49,7 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
     setTTLIsEditing(true)
   }
 
-  const onChangeTtl = ({
-    currentTarget: { value },
-  }: ChangeEvent<HTMLInputElement>) => {
+  const onChangeTtl = (value: string) => {
     ttlIsEditing && setTTL(validateTTLNumber(value) || '-1')
   }
 
@@ -74,7 +74,11 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
 
   const appendTTLEditing = () =>
     !ttlIsEditing ? (
-      <EuiIcon className={styles.iconPencil} type="pencil" color="subdued" />
+      <RiIcon
+        className={styles.iconPencil}
+        type="EditIcon"
+        color="informative400"
+      />
     ) : (
       ''
     )
@@ -97,16 +101,11 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
             data-testid="edit-ttl-grid"
           >
             <FlexItem>
-              <EuiText
-                grow
-                color="subdued"
-                size="s"
-                className={styles.subtitleText}
-              >
+              <Text color="subdued" size="s" className={styles.subtitleText}>
                 TTL:
-              </EuiText>
+              </Text>
             </FlexItem>
-            <FlexItem grow inline>
+            <FlexItem grow>
               <InlineItemEditor
                 onApply={() => applyEditTTL()}
                 onDecline={(event) => cancelEditTTl(event)}
@@ -114,7 +113,7 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
                 isLoading={loading}
                 declineOnUnmount={false}
               >
-                <EuiFieldText
+                <TextInput
                   name="ttl"
                   id="ttl"
                   className={cx(
@@ -138,8 +137,7 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
             </FlexItem>
           </Grid>
         )}
-        <EuiText
-          grow
+        <Text
           color="subdued"
           size="s"
           className={cx(styles.subtitleText, {
@@ -151,7 +149,7 @@ const KeyDetailsHeaderTTL = ({ onEditTTL }: Props) => {
           <span className={styles.ttlTextValue}>
             {ttl === '-1' ? 'No limit' : ttl}
           </span>
-        </EuiText>
+        </Text>
       </>
     </FlexItem>
   )

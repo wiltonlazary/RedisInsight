@@ -1,10 +1,3 @@
-import {
-  EuiHealth,
-  EuiModal,
-  EuiModalBody,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-} from '@elastic/eui'
 import cx from 'classnames'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -29,6 +22,9 @@ import { resetBrowserTree } from 'uiSrc/slices/app/context'
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import { AdditionalRedisModule } from 'uiSrc/slices/interfaces'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { HealthText } from 'uiSrc/components/base/text/HealthText'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { Modal } from 'uiSrc/components/base/display'
 import { FILTER_KEY_TYPE_OPTIONS } from './constants'
 
 import styles from './styles.module.scss'
@@ -65,32 +61,41 @@ const FilterKeyType = ({ modules }: Props) => {
     setTypeSelected(filter ?? ALL_KEY_TYPES_VALUE)
   }, [filter])
 
-  const options: EuiSuperSelectOption<string>[] =
-    FILTER_KEY_TYPE_OPTIONS.filter(({ featureFlag, skipIfNoModule }) => {
-      if (
-        skipIfNoModule &&
-        !modules?.some(({ name }) => name === skipIfNoModule)
-      ) {
-        return false
-      }
-      return !featureFlag || features[featureFlag]?.flag
-    }).map((item) => {
-      const { value, color, text } = item
-      return {
-        value,
-        inputDisplay: (
-          <EuiHealth color={color} className={styles.dropdownDisplay}>
-            {text}
-          </EuiHealth>
-        ),
-        dropdownDisplay: (
-          <EuiHealth color={color} className={styles.dropdownDisplay}>
-            {text}
-          </EuiHealth>
-        ),
-        'data-test-subj': `filter-option-type-${value}`,
-      }
-    })
+  const options: {
+    value: string
+    inputDisplay: JSX.Element
+    dropdownDisplay: JSX.Element
+  }[] = FILTER_KEY_TYPE_OPTIONS.filter(({ featureFlag, skipIfNoModule }) => {
+    if (
+      skipIfNoModule &&
+      !modules?.some(({ name }) => name === skipIfNoModule)
+    ) {
+      return false
+    }
+    return !featureFlag || features[featureFlag]?.flag
+  }).map((item) => {
+    const { value, color, text } = item
+    return {
+      value,
+      inputDisplay: (
+        <HealthText
+          color={color}
+          data-test-subj={`filter-option-type-${value}`}
+        >
+          {text}
+        </HealthText>
+      ),
+      dropdownDisplay: (
+        <HealthText
+          color={color}
+          data-test-subj={`filter-option-type-${value}`}
+        >
+          {text}
+        </HealthText>
+      ),
+      'data-test-subj': `filter-option-type-${value}`,
+    }
+  })
 
   options.unshift({
     value: ALL_KEY_TYPES_VALUE,
@@ -99,7 +104,7 @@ const FilterKeyType = ({ modules }: Props) => {
         All Key Types
       </div>
     ),
-    dropdownDisplay: 'All Key Types',
+    dropdownDisplay: <span>All Key Types</span>,
   })
 
   const onChangeType = (initValue: string) => {
@@ -147,17 +152,14 @@ const FilterKeyType = ({ modules }: Props) => {
           !isVersionSupported && styles.unsupported,
         )}
       >
-        {!isVersionSupported && isInfoPopoverOpen && (
-          <EuiModal
-            onClose={() => setIsInfoPopoverOpen(false)}
-            className={styles.unsupportedInfoModal}
-            data-testid="filter-not-available-modal"
-          >
-            <EuiModalBody className={styles.modalBody}>
-              <FilterNotAvailable onClose={() => setIsInfoPopoverOpen(false)} />
-            </EuiModalBody>
-          </EuiModal>
-        )}
+        <Modal
+          open={!isVersionSupported && isInfoPopoverOpen}
+          onCancel={() => setIsInfoPopoverOpen(false)}
+          className={styles.unsupportedInfoModal}
+          data-testid="filter-not-available-modal"
+          content={<FilterNotAvailable onClose={() => setIsInfoPopoverOpen(false)} />}
+          title={null}
+        />
         {!isVersionSupported && (
           <div
             role="presentation"
@@ -166,13 +168,17 @@ const FilterKeyType = ({ modules }: Props) => {
             data-testid="unsupported-btn-anchor"
           />
         )}
-        <EuiSuperSelect
-          fullWidth
-          itemClassName={cx('withColorDefinition', styles.filterKeyType)}
+        <RiSelect
           disabled={!isVersionSupported}
           options={options}
-          isOpen={isSelectOpen}
-          valueOfSelected={typeSelected}
+          valueRender={({ option, isOptionValue }) => {
+            if (isOptionValue) {
+              return option.inputDisplay
+            }
+            return option.dropdownDisplay
+          }}
+          defaultOpen={isSelectOpen}
+          value={typeSelected}
           onChange={(value: string) => onChangeType(value)}
           data-testid="select-filter-key-type"
         />

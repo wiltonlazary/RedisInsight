@@ -1,5 +1,4 @@
 import React from 'react'
-import { EuiIcon, EuiText } from '@elastic/eui'
 import { FeatureFlagComponent } from 'uiSrc/components'
 import {
   EXTERNAL_LINKS,
@@ -11,6 +10,8 @@ import styles from 'uiSrc/pages/browser/components/popover-delete/styles.module.
 import { CloudLink } from 'uiSrc/components/markdown'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
 import { OAuthSocialSource } from 'uiSrc/slices/interfaces'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { FeatureFlags } from './featureFlags'
 
 export default {
@@ -44,10 +45,13 @@ export default {
   ),
   REMOVE_LAST_ELEMENT: (fieldType: string) => (
     <div className={styles.appendInfo}>
-      <EuiIcon type="alert" style={{ marginRight: '1rem', marginTop: '4px' }} />
-      <EuiText size="s">
+      <RiIcon
+        type="ToastDangerIcon"
+        style={{ marginRight: '1rem', marginTop: '4px' }}
+      />
+      <Text size="s">
         If you remove the single {fieldType}, the whole Key will be deleted.
-      </EuiText>
+      </Text>
     </div>
   ),
   REMOVING_MULTIPLE_ELEMENTS_NOT_SUPPORT: (

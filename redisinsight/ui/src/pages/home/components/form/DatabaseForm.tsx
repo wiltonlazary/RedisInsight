@@ -1,15 +1,7 @@
-import React, { ChangeEvent } from 'react'
+import React from 'react'
 import { useSelector } from 'react-redux'
 import { FormikProps } from 'formik'
 
-import {
-  EuiFieldNumber,
-  EuiFieldPassword,
-  EuiFieldText,
-  EuiFormRow,
-  EuiIcon,
-  EuiToolTip,
-} from '@elastic/eui'
 import { BuildType } from 'uiSrc/constants/env'
 import { SECURITY_FIELD } from 'uiSrc/constants'
 import { appInfoSelector } from 'uiSrc/slices/app/info'
@@ -19,11 +11,13 @@ import {
   MAX_TIMEOUT_NUMBER,
   selectOnFocus,
   validateField,
-  validatePortNumber,
-  validateTimeoutNumber,
 } from 'uiSrc/utils'
+import { RiTooltip } from 'uiSrc/components'
 import { DbConnectionInfo } from 'uiSrc/pages/home/interfaces'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { NumericInput, PasswordInput, TextInput } from 'uiSrc/components/base/inputs'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 
 interface IShowFields {
   alias: boolean
@@ -52,7 +46,7 @@ const DatabaseForm = (props: Props) => {
   const { server } = useSelector(appInfoSelector)
 
   const AppendHostName = () => (
-    <EuiToolTip
+    <RiTooltip
       title={
         <div>
           <p>
@@ -83,8 +77,8 @@ const DatabaseForm = (props: Props) => {
         </ul>
       }
     >
-      <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-    </EuiToolTip>
+      <RiIcon type="InfoIcon" style={{ cursor: 'pointer' }} />
+    </RiTooltip>
   )
 
   const isShowPort =
@@ -96,9 +90,8 @@ const DatabaseForm = (props: Props) => {
       {showFields.alias && (
         <Row gap="m">
           <FlexItem grow>
-            <EuiFormRow label="Database Alias*">
-              <EuiFieldText
-                fullWidth
+            <FormField label="Database Alias*">
+              <TextInput
                 name="name"
                 id="name"
                 data-testid="name"
@@ -109,7 +102,7 @@ const DatabaseForm = (props: Props) => {
                 onChange={formik.handleChange}
                 disabled={isFieldDisabled('alias')}
               />
-            </EuiFormRow>
+            </FormField>
           </FlexItem>
         </Row>
       )}
@@ -118,8 +111,11 @@ const DatabaseForm = (props: Props) => {
         <Row gap="m">
           {showFields.host && (
             <FlexItem grow={4}>
-              <EuiFormRow label="Host*">
-                <EuiFieldText
+              <FormField
+                label="Host*"
+                additionalText={<AppendHostName />}
+              >
+                <TextInput
                   autoFocus={autoFocus}
                   name="ip"
                   id="host"
@@ -128,46 +124,41 @@ const DatabaseForm = (props: Props) => {
                   maxLength={200}
                   placeholder="Enter Hostname / IP address / Connection URL"
                   value={formik.values.host ?? ''}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  onChange={value => {
                     formik.setFieldValue(
                       'host',
-                      validateField(e.target.value.trim()),
+                      validateField(value.trim()),
                     )
                   }}
                   onPaste={(event: React.ClipboardEvent<HTMLInputElement>) =>
                     handlePasteHostName(onHostNamePaste, event)
                   }
                   onFocus={selectOnFocus}
-                  append={<AppendHostName />}
                   disabled={isFieldDisabled('host')}
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
           )}
           {isShowPort && (
             <FlexItem grow={2}>
-              <EuiFormRow label="Port*" helpText="Should not exceed 65535.">
-                <EuiFieldNumber
+              <FormField
+                label="Port*"
+                additionalText={`Should not exceed ${MAX_PORT_NUMBER}.`}
+              >
+                <NumericInput
+                  autoValidate
                   name="port"
                   id="port"
                   data-testid="port"
-                  style={{ width: '100%' }}
                   placeholder="Enter Port"
-                  value={formik.values.port ?? ''}
-                  maxLength={6}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    formik.setFieldValue(
-                      e.target.name,
-                      validatePortNumber(e.target.value.trim()),
-                    )
-                  }}
-                  onFocus={selectOnFocus}
-                  type="text"
+                  onChange={(value) => formik.setFieldValue('port', value)}
+                  value={Number(formik.values.port)}
                   min={0}
                   max={MAX_PORT_NUMBER}
+                  onFocus={selectOnFocus}
                   disabled={isFieldDisabled('port')}
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
           )}
         </Row>
@@ -175,30 +166,26 @@ const DatabaseForm = (props: Props) => {
 
       <Row gap="m">
         <FlexItem grow>
-          <EuiFormRow label="Username">
-            <EuiFieldText
+          <FormField label="Username">
+            <TextInput
               name="username"
               id="username"
               data-testid="username"
-              fullWidth
               maxLength={200}
               placeholder="Enter Username"
               value={formik.values.username ?? ''}
               onChange={formik.handleChange}
               disabled={isFieldDisabled('username')}
             />
-          </EuiFormRow>
+          </FormField>
         </FlexItem>
 
         <FlexItem grow>
-          <EuiFormRow label="Password">
-            <EuiFieldPassword
-              type="password"
+          <FormField label="Password">
+            <PasswordInput
               name="password"
               id="password"
               data-testid="password"
-              fullWidth
-              className="passwordField"
               maxLength={10_000}
               placeholder="Enter Password"
               value={
@@ -206,45 +193,37 @@ const DatabaseForm = (props: Props) => {
                   ? SECURITY_FIELD
                   : (formik.values.password ?? '')
               }
-              onChange={formik.handleChange}
+              onChangeCapture={formik.handleChange}
               onFocus={() => {
                 if (formik.values.password === true) {
                   formik.setFieldValue('password', '')
                 }
               }}
-              dualToggleProps={{ color: 'text' }}
               autoComplete="new-password"
               disabled={isFieldDisabled('password')}
             />
-          </EuiFormRow>
+          </FormField>
         </FlexItem>
       </Row>
 
       {showFields.timeout && (
         <Row gap="m" responsive>
           <FlexItem grow>
-            <EuiFormRow label="Timeout (s)">
-              <EuiFieldNumber
+            <FormField label="Timeout (s)">
+              <NumericInput
+                autoValidate
                 name="timeout"
                 id="timeout"
                 data-testid="timeout"
-                style={{ width: '100%' }}
                 placeholder="Enter Timeout (in seconds)"
-                value={formik.values.timeout ?? ''}
-                maxLength={7}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  formik.setFieldValue(
-                    e.target.name,
-                    validateTimeoutNumber(e.target.value.trim()),
-                  )
-                }}
-                onFocus={selectOnFocus}
-                type="text"
+                onChange={(value) => formik.setFieldValue('timeout', value)}
+                value={Number(formik.values.timeout)}
                 min={1}
                 max={MAX_TIMEOUT_NUMBER}
+                onFocus={selectOnFocus}
                 disabled={isFieldDisabled('timeout')}
               />
-            </EuiFormRow>
+            </FormField>
           </FlexItem>
           <FlexItem grow />
         </Row>

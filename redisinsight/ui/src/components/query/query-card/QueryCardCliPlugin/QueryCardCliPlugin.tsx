@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
 import { v4 as uuidv4 } from 'uuid'
-import { EuiIcon, EuiTextColor } from '@elastic/eui'
 import { pluginApi } from 'uiSrc/services/PluginAPI'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
 import {
@@ -30,6 +29,8 @@ import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { appServerInfoSelector } from 'uiSrc/slices/app/info'
 
 import { FlexItem } from 'uiSrc/components/base/layout/flex'
+import { ColorText } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -352,13 +353,13 @@ const QueryCardCliPlugin = (props: Props) => {
             <FlexItem grow className="query-card-output-response-fail">
               <span data-testid="query-card-no-module-output">
                 <span className={styles.alertIconWrapper}>
-                  <EuiIcon
-                    type="alert"
-                    color="danger"
+                  <RiIcon
+                    type="ToastDangerIcon"
+                    color="danger600"
                     style={{ display: 'inline', marginRight: 10 }}
                   />
                 </span>
-                <EuiTextColor color="danger">{error}</EuiTextColor>
+                <ColorText color="danger">{error}</ColorText>
               </span>
             </FlexItem>
           </div>

@@ -1,9 +1,10 @@
 import React from 'react'
-import { EuiIcon, EuiText } from '@elastic/eui'
 import cx from 'classnames'
 
 import { ConnectionType } from 'uiSrc/slices/interfaces'
+import { Text } from 'uiSrc/components/base/text'
 
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -21,26 +22,26 @@ const EmptyMessagesList = ({
         [styles.contentCluster]: connectionType === ConnectionType.Cluster,
       })}
     >
-      <EuiText className={styles.title}>No messages to display</EuiText>
-      <EuiText className={styles.summary}>
+      <Text className={styles.title}>No messages to display</Text>
+      <Text className={styles.summary}>
         Subscribe to the Channel to see all the messages published to your
         database
-      </EuiText>
-      <EuiText className={styles.alert}>
-        <EuiIcon type="alert" className={styles.alertIcon} />
+      </Text>
+      <Text className={styles.alert}>
+        <RiIcon type="ToastDangerIcon" className={styles.alertIcon} />
         Running in production may decrease performance and memory available
-      </EuiText>
+      </Text>
       {connectionType === ConnectionType.Cluster && isSpublishNotSupported && (
         <>
           <div className={styles.separator} />
-          <EuiText
+          <Text
             className={styles.cluster}
             data-testid="empty-messages-list-cluster"
           >
             {'Messages published with '}
             <span className={styles.badge}>SPUBLISH</span>
             {' will not appear in this channel'}
-          </EuiText>
+          </Text>
         </>
       )}
     </div>

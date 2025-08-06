@@ -1,18 +1,8 @@
-import {
-  EuiButton,
-  EuiCheckbox,
-  EuiIcon,
-  EuiPopover,
-  EuiText,
-  EuiTitle,
-  EuiToolTip,
-} from '@elastic/eui'
 import cx from 'classnames'
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 
-import RocketIcon from 'uiSrc/assets/img/rdi/rocket.svg?react'
 import {
   deployPipelineAction,
   getPipelineStatusAction,
@@ -24,9 +14,16 @@ import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { createAxiosError, pipelineToJson } from 'uiSrc/utils'
 import { addErrorNotification } from 'uiSrc/slices/app/notifications'
 import { rdiErrorMessages } from 'uiSrc/pages/rdi/constants'
+import { Text } from 'uiSrc/components/base/text'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { RiRocketIcon } from 'uiSrc/components/base/icons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -104,12 +101,12 @@ const DeployPipelineButton = ({ loading, disabled, onReset }: Props) => {
 
   return (
     <OutsideClickDetector onOutsideClick={handleClosePopover}>
-      <EuiPopover
+      <RiPopover
         closePopover={handleClosePopover}
         ownFocus
         initialFocus={false}
         className={styles.popoverAnchor}
-        panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popover)}
+        panelClassName={cx('popoverLikeTooltip', styles.popover)}
         anchorClassName={styles.popoverAnchor}
         anchorPosition="upLeft"
         isOpen={isPopoverOpen}
@@ -118,36 +115,32 @@ const DeployPipelineButton = ({ loading, disabled, onReset }: Props) => {
           scrollLock: true,
         }}
         button={
-          <EuiButton
-            fill
+          <PrimaryButton
             size="s"
-            color="secondary"
             onClick={handleClickDeploy}
-            iconType={RocketIcon}
+            icon={RiRocketIcon}
             disabled={disabled}
-            isLoading={loading}
+            loading={loading}
             data-testid="deploy-rdi-pipeline"
           >
             Deploy Pipeline
-          </EuiButton>
+          </PrimaryButton>
         }
       >
-        <EuiTitle size="xxs">
-          <span>Are you sure you want to deploy the pipeline?</span>
-        </EuiTitle>
+        <Title size="XS">Are you sure you want to deploy the pipeline?</Title>
         <Spacer size="s" />
-        <EuiText size="s">
+        <Text size="s">
           When deployed, this local configuration will overwrite any existing
           pipeline.
-        </EuiText>
+        </Text>
         <Spacer size="s" />
-        <EuiText size="s">
+        <Text size="s">
           After deployment, consider flushing the target Redis database and
           resetting the pipeline to ensure that all data is reprocessed.
-        </EuiText>
+        </Text>
         <Spacer size="s" />
         <div className={styles.checkbox}>
-          <EuiCheckbox
+          <Checkbox
             id="resetPipeline"
             name="resetPipeline"
             label="Reset"
@@ -159,19 +152,18 @@ const DeployPipelineButton = ({ loading, disabled, onReset }: Props) => {
             data-testid="reset-pipeline-checkbox"
           />
 
-          <EuiToolTip content="The pipeline will take a new snapshot of the data and process it, then continue tracking changes.">
-            <EuiIcon
-              type="iInCircle"
+          <RiTooltip content="The pipeline will take a new snapshot of the data and process it, then continue tracking changes.">
+            <RiIcon
+              type="InfoIcon"
               size="m"
               style={{ cursor: 'pointer' }}
               data-testid="reset-checkbox-info-icon"
             />
-          </EuiToolTip>
+          </RiTooltip>
         </div>
         <Row gap="m" responsive justify="end">
           <FlexItem>
-            <EuiButton
-              fill
+            <PrimaryButton
               size="s"
               color="secondary"
               className={styles.popoverBtn}
@@ -179,10 +171,10 @@ const DeployPipelineButton = ({ loading, disabled, onReset }: Props) => {
               data-testid="deploy-confirm-btn"
             >
               Deploy
-            </EuiButton>
+            </PrimaryButton>
           </FlexItem>
         </Row>
-      </EuiPopover>
+      </RiPopover>
     </OutsideClickDetector>
   )
 }

@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
-import { EuiIcon, EuiLink, EuiPopover, EuiText } from '@elastic/eui'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
+import { Text } from 'uiSrc/components/base/text'
 import {
   EXTERNAL_LINKS,
   UTM_CAMPAINGS,
   UTM_MEDIUMS,
 } from 'uiSrc/constants/links'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiPopover } from 'uiSrc/components/base'
 import styles from './styles.module.scss'
 
 const ClickableAppendInfo = () => {
@@ -17,13 +20,13 @@ const ClickableAppendInfo = () => {
   }
 
   return (
-    <EuiPopover
+    <RiPopover
       id="showPupSubExamples"
       ownFocus={false}
       button={
-        <EuiIcon
+        <RiIcon
           size="l"
-          type="iInCircle"
+          type="InfoIcon"
           style={{ cursor: 'pointer' }}
           onClick={onClick}
           data-testid="append-info-icon"
@@ -36,13 +39,12 @@ const ClickableAppendInfo = () => {
       panelPaddingSize="s"
       data-testid="pub-sub-examples"
     >
-      <EuiText color="subdued" size="s">
+      <Text color="subdued" size="s">
         Subscribe to one or more channels or patterns by entering them,
         separated by spaces.
         <br />
         Supported glob-style patterns are described&nbsp;
-        <EuiLink
-          external={false}
+        <Link
           target="_blank"
           href={getUtmExternalLink(EXTERNAL_LINKS.pubSub, {
             medium: UTM_MEDIUMS.Main,
@@ -50,9 +52,9 @@ const ClickableAppendInfo = () => {
           })}
         >
           here.
-        </EuiLink>
-      </EuiText>
-    </EuiPopover>
+        </Link>
+      </Text>
+    </RiPopover>
   )
 }
 

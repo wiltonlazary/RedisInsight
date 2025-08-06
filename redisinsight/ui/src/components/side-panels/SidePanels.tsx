@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
-import { keys } from '@elastic/eui'
+
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useLocation, useParams } from 'react-router-dom'
+import { KeyboardKeys as keys } from 'uiSrc/constants/keys'
 
 import {
   changeSelectedTab,

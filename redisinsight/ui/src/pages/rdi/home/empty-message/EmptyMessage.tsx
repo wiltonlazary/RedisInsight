@@ -1,16 +1,19 @@
-import { EuiButton, EuiIcon, EuiImage, EuiLink, EuiText } from '@elastic/eui'
 import React, { useContext } from 'react'
 
 import { EXTERNAL_LINKS, UTM_MEDIUMS } from 'uiSrc/constants/links'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
 import EmptyListDarkIcon from 'uiSrc/assets/img/rdi/empty_list_dark.svg'
 import EmptyListLightIcon from 'uiSrc/assets/img/rdi/empty_list_light.svg'
-import NewTabIcon from 'uiSrc/assets/img/rdi/new_tab.svg'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
 import { Theme } from 'uiSrc/constants'
 
+import { Text } from 'uiSrc/components/base/text'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiImage } from 'uiSrc/components/base/display'
 import styles from './styles.module.scss'
 
 const subTitleText =
@@ -28,38 +31,35 @@ const EmptyMessage = ({ onAddInstanceClick }: Props) => {
       data-testid="empty-rdi-instance-list"
     >
       <Spacer size="xl" />
-      <EuiText className={styles.title}>Redis Data Integration</EuiText>
-      <EuiImage
+      <Text className={styles.title}>Redis Data Integration</Text>
+      <RiImage
         src={theme === Theme.Dark ? EmptyListDarkIcon : EmptyListLightIcon}
         className={styles.icon}
         alt="empty"
       />
-      <EuiText className={styles.subTitle}>{subTitleText}</EuiText>
+      <Text className={styles.subTitle}>{subTitleText}</Text>
       <Row align="center" gap="m" responsive style={{ lineHeight: '20px' }}>
         <FlexItem grow>
-          <EuiButton
+          <PrimaryButton
             data-testid="empty-rdi-instance-button"
-            color="secondary"
-            fill
-            size="s"
+            size="small"
             onClick={onAddInstanceClick}
           >
             + Add RDI Endpoint
-          </EuiButton>
+          </PrimaryButton>
         </FlexItem>
         or
         <FlexItem grow>
-          <EuiLink
+          <Link
             data-testid="empty-rdi-quickstart-button"
             target="_blank"
-            external={false}
             href={getUtmExternalLink(EXTERNAL_LINKS.rdiQuickStart, {
               medium: UTM_MEDIUMS.Rdi,
               campaign: 'rdi_list',
             })}
           >
-            RDI Quickstart <EuiIcon type={NewTabIcon} />
-          </EuiLink>
+            RDI Quickstart <RiIcon type="ArrowDiagonalIcon" />
+          </Link>
         </FlexItem>
       </Row>
     </div>

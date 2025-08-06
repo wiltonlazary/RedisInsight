@@ -2,16 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory } from 'react-router-dom'
 import cx from 'classnames'
-import {
-  EuiButtonEmpty,
-  EuiFieldNumber,
-  EuiIcon,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
+import { useTheme } from '@redis-ui/styles'
 
 import { FeatureFlags, Pages } from 'uiSrc/constants'
-import { selectOnFocus, validateNumber } from 'uiSrc/utils'
+import { selectOnFocus } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { BuildType } from 'uiSrc/constants/env'
 import { ConnectionType } from 'uiSrc/slices/interfaces'
@@ -28,7 +22,11 @@ import {
   setBrowserSelectedKey,
 } from 'uiSrc/slices/app/context'
 
-import { DatabaseOverview, FeatureFlagComponent } from 'uiSrc/components'
+import {
+  DatabaseOverview,
+  FeatureFlagComponent,
+  RiTooltip,
+} from 'uiSrc/components'
 import InlineItemEditor from 'uiSrc/components/inline-item-editor'
 import { CopilotTrigger, InsightsTrigger } from 'uiSrc/components/triggers'
 import ShortInstanceInfo from 'uiSrc/components/instance-header/components/ShortInstanceInfo'
@@ -41,6 +39,11 @@ import { getConfig } from 'uiSrc/config'
 import { appReturnUrlSelector } from 'uiSrc/slices/app/url-handling'
 import UserProfile from 'uiSrc/components/instance-header/components/user-profile/UserProfile'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
+import { EditIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { NumericInput } from 'uiSrc/components/base/inputs'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import InstancesNavigationPopover from './components/instances-navigation-popover'
 import styles from './styles.module.scss'
 
@@ -52,6 +55,7 @@ export interface Props {
 }
 
 const InstanceHeader = ({ onChangeDbIndex }: Props) => {
+  const theme = useTheme()
   const {
     name = '',
     host = '',
@@ -95,8 +99,7 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
   }
 
   const goToReturnUrl = () => {
-    const fullUrl = `${returnUrlBase}${returnUrl}`
-    document.location = fullUrl
+    document.location = `${returnUrlBase}${returnUrl}`
   }
 
   const handleChangeDbIndex = () => {
@@ -129,7 +132,12 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
   }
 
   return (
-    <div className={cx(styles.container)}>
+    <div
+      className={cx(styles.container)}
+      style={{
+        borderBottom: theme.components.sideBar.collapsed.borderRight,
+      }}
+    >
       <Row
         responsive
         align="center"
@@ -143,7 +151,7 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
           >
             <div>
               <FeatureFlagComponent name={FeatureFlags.envDependent}>
-                <EuiToolTip
+                <RiTooltip
                   position="bottom"
                   content={
                     server?.buildType === BuildType.RedisStack
@@ -151,7 +159,7 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                       : 'Redis Databases'
                   }
                 >
-                  <EuiText
+                  <Text
                     className={styles.breadCrumbLink}
                     aria-label={
                       server?.buildType === BuildType.RedisStack
@@ -163,8 +171,8 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                     onKeyDown={goHome}
                   >
                     Databases
-                  </EuiText>
-                </EuiToolTip>
+                  </Text>
+                </RiTooltip>
               </FeatureFlagComponent>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -172,7 +180,7 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                 <Row align="center">
                   <FeatureFlagComponent name={FeatureFlags.envDependent}>
                     <FlexItem>
-                      <EuiText className={styles.divider}>/</EuiText>
+                      <Text className={styles.divider}>/</Text>
                     </FlexItem>
                   </FeatureFlagComponent>
                   {returnUrlBase && returnUrl && (
@@ -183,19 +191,19 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                           style={{ padding: '4px 24px 4px 0' }}
                           data-testid="return-to-sm-item"
                         >
-                          <EuiToolTip
+                          <RiTooltip
                             position="bottom"
                             content={returnUrlTooltip || returnUrlLabel}
                           >
-                            <EuiText
+                            <Text
                               className={styles.breadCrumbLink}
                               aria-label={returnUrlTooltip || returnUrlLabel}
                               onClick={goToReturnUrl}
                               onKeyDown={goToReturnUrl}
                             >
                               &#60; {returnUrlLabel}
-                            </EuiText>
-                          </EuiToolTip>
+                            </Text>
+                          </RiTooltip>
                         </FlexItem>
                       }
                     />
@@ -224,27 +232,24 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                               viewChildrenMode={false}
                               controlsClassName={styles.controls}
                             >
-                              <EuiFieldNumber
+                              <NumericInput
+                                autoSize
+                                autoValidate
+                                min={0}
                                 onFocus={selectOnFocus}
-                                onChange={(e) =>
-                                  setDbIndex(
-                                    validateNumber(e.target.value.trim()),
-                                  )
+                                onChange={(value) =>
+                                  setDbIndex(value ? value.toString() : '')
                                 }
-                                value={dbIndex}
+                                value={Number(dbIndex)}
                                 placeholder="Database Index"
-                                className={styles.input}
-                                fullWidth={false}
-                                compressed
-                                autoComplete="off"
-                                type="text"
+                                className={styles.dbIndexInput}
                                 data-testid="change-index-input"
                               />
                             </InlineItemEditor>
                           </div>
                         ) : (
-                          <EuiButtonEmpty
-                            iconType="pencil"
+                          <EmptyButton
+                            icon={EditIcon}
                             iconSide="right"
                             onClick={() => setIsDbIndexEditing(true)}
                             className={styles.buttonDbIndex}
@@ -259,13 +264,13 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                             >
                               db{db || 0}
                             </span>
-                          </EuiButtonEmpty>
+                          </EmptyButton>
                         )}
                       </div>
                     </FlexItem>
                   )}
                   <FlexItem style={{ paddingLeft: 6 }}>
-                    <EuiToolTip
+                    <RiTooltip
                       position="right"
                       anchorClassName={styles.tooltipAnchor}
                       className={styles.tooltip}
@@ -285,14 +290,14 @@ const InstanceHeader = ({ onChangeDbIndex }: Props) => {
                         />
                       }
                     >
-                      <EuiIcon
+                      <RiIcon
                         className={styles.infoIcon}
-                        type="iInCircle"
+                        type="InfoIcon"
                         size="l"
                         style={{ cursor: 'pointer' }}
                         data-testid="db-info-icon"
                       />
-                    </EuiToolTip>
+                    </RiTooltip>
                   </FlexItem>
                 </Row>
               </div>

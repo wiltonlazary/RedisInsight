@@ -1,13 +1,8 @@
-import { EuiIcon, EuiSwitch, EuiTitle } from '@elastic/eui'
 import cx from 'classnames'
 import React, { useCallback, useEffect, useState } from 'react'
 
 import { DonutChart } from 'uiSrc/components/charts'
 import { ChartData } from 'uiSrc/components/charts/donut-chart/DonutChart'
-import {
-  KeyIconSvg,
-  MemoryIconSvg,
-} from 'uiSrc/components/database-overview/components/icons'
 import { GROUP_TYPES_COLORS, GroupTypesColors } from 'uiSrc/constants'
 import {
   DEFAULT_EXTRAPOLATION,
@@ -21,6 +16,9 @@ import {
 } from 'uiSrc/utils'
 import { getPercentage, numberWithSpaces } from 'uiSrc/utils/numbers'
 
+import { SwitchInput } from 'uiSrc/components/base/inputs'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import {
   DatabaseAnalysis,
   SimpleTypeSummary,
@@ -173,22 +171,18 @@ const SummaryPerData = ({
       data-testid="summary-per-data"
     >
       <div className="section-title-wrapper">
-        <EuiTitle className="section-title">
-          <h4>SUMMARY PER DATA TYPE</h4>
-        </EuiTitle>
+        <Title size="M" className="section-title">
+          SUMMARY PER DATA TYPE
+        </Title>
         {extrapolation !== DEFAULT_EXTRAPOLATION && (
-          <EuiSwitch
-            compressed
+          <SwitchInput
             color="subdued"
             className="switch-extrapolate-results"
-            label="Extrapolate results"
+            title="Extrapolate results"
             checked={isExtrapolated}
-            onChange={(e) => {
-              setIsExtrapolated(e.target.checked)
-              onSwitchExtrapolation?.(
-                e.target.checked,
-                SectionName.SUMMARY_PER_DATA,
-              )
+            onCheckedChange={(checked) => {
+              setIsExtrapolated(checked)
+              onSwitchExtrapolation?.(checked, SectionName.SUMMARY_PER_DATA)
             }}
             data-testid="extrapolate-results"
           />
@@ -212,14 +206,12 @@ const SummaryPerData = ({
                 className={styles.chartTitle}
                 data-testid="donut-title-memory"
               >
-                <EuiIcon
-                  type={MemoryIconSvg}
+                <RiIcon
+                  type="MemoryIconIcon"
                   className={styles.icon}
                   size="m"
                 />
-                <EuiTitle size="xs">
-                  <span>Memory</span>
-                </EuiTitle>
+                <Title size="XS">Memory</Title>
               </div>
               <hr className={styles.titleSeparator} />
               <div
@@ -246,10 +238,8 @@ const SummaryPerData = ({
           title={
             <div className={styles.chartCenter}>
               <div className={styles.chartTitle} data-testid="donut-title-keys">
-                <EuiIcon type={KeyIconSvg} className={styles.icon} size="m" />
-                <EuiTitle size="xs">
-                  <span>Keys</span>
-                </EuiTitle>
+                <RiIcon type="KeyIconIcon" className={styles.icon} size="m" />
+                <Title size="XS">Keys</Title>
               </div>
               <hr className={styles.titleSeparator} />
               <div

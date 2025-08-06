@@ -1,6 +1,9 @@
 import React from 'react'
-import { EuiFormRow, EuiIcon, EuiTextArea, EuiToolTip } from '@elastic/eui'
 
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { TextArea } from 'uiSrc/components/base/inputs'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiTooltip } from 'uiSrc/components'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -9,11 +12,11 @@ export interface Props {
 }
 
 const ConnectionUrl = ({ value, onChange }: Props) => (
-  <EuiFormRow
+  <FormField
     label={
       <div className={styles.connectionUrlInfo}>
         <div>Connection URL</div>
-        <EuiToolTip
+        <RiTooltip
           title="The following connection URLs are supported:"
           className="homePage_tooltip"
           position="right"
@@ -34,23 +37,21 @@ const ConnectionUrl = ({ value, onChange }: Props) => (
             </ul>
           }
         >
-          <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-        </EuiToolTip>
+          <RiIcon type="InfoIcon" style={{ cursor: 'pointer' }} />
+        </RiTooltip>
       </div>
     }
   >
-    <EuiTextArea
+    <TextArea
       name="connectionURL"
       id="connectionURL"
       value={value}
-      onChange={onChange}
-      fullWidth
+      onChangeCapture={onChange}
       placeholder="redis://default@127.0.0.1:6379"
-      resize="none"
       style={{ height: 88 }}
       data-testid="connection-url"
     />
-  </EuiFormRow>
+  </FormField>
 )
 
 export default ConnectionUrl

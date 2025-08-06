@@ -1,4 +1,3 @@
-import { EuiFieldText, EuiIcon, EuiText, EuiToolTip } from '@elastic/eui'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
@@ -34,7 +33,11 @@ import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { RedisResponseBuffer } from 'uiSrc/slices/interfaces'
 import EditablePopover from 'uiSrc/pages/browser/modules/key-details/shared/editable-popover'
 
-import { FormatedDate } from 'uiSrc/components'
+import { FormatedDate, RiTooltip } from 'uiSrc/components'
+import { Text } from 'uiSrc/components/base/text'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import {
   ConsumerDto,
   ConsumerGroupDto,
@@ -218,22 +221,22 @@ const GroupsViewWrapper = (props: Props) => {
         const cellContent = viewName.substring(0, 200)
         const tooltipContent = formatLongName(viewName)
         return (
-          <EuiText color="subdued" size="s" style={{ maxWidth: '100%' }}>
+          <Text color="subdued" size="s" style={{ maxWidth: '100%' }}>
             <div
               style={{ display: 'flex' }}
               className="truncateText"
               data-testid={`stream-group-name-${viewName}`}
             >
-              <EuiToolTip
+              <RiTooltip
                 className={styles.tooltipName}
                 anchorClassName="truncateText"
                 position="bottom"
                 content={tooltipContent}
               >
                 <>{cellContent}</>
-              </EuiToolTip>
+              </RiTooltip>
             </div>
-          </EuiText>
+          </Text>
         )
       },
     },
@@ -275,14 +278,14 @@ const GroupsViewWrapper = (props: Props) => {
         )
 
         return (
-          <EuiText size="s" style={{ maxWidth: '100%' }}>
+          <Text size="s" style={{ maxWidth: '100%' }}>
             <div
               style={{ display: 'flex' }}
               className="truncateText"
               data-testid={`group-pending-${viewName}`}
             >
               {!!pending && (
-                <EuiToolTip
+                <RiTooltip
                   title={`${pending} Pending Messages`}
                   className={styles.tooltip}
                   anchorClassName="truncateText"
@@ -290,11 +293,11 @@ const GroupsViewWrapper = (props: Props) => {
                   content={tooltipContent}
                 >
                   <>{pending}</>
-                </EuiToolTip>
+                </RiTooltip>
               )}
               {!pending && pending}
             </div>
-          </EuiText>
+          </Text>
         )
       },
     },
@@ -320,7 +323,12 @@ const GroupsViewWrapper = (props: Props) => {
           <EditablePopover
             content={
               <div className={styles.editableCell}>
-                <EuiText color="subdued" size="s" style={{ maxWidth: '100%' }}>
+                <Text
+                  color="subdued"
+                  size="s"
+                  style={{ maxWidth: '100%' }}
+                  component="div"
+                >
                   <div
                     className="truncateText streamItem"
                     style={{ display: 'flex', maxWidth: '190px' }}
@@ -328,15 +336,15 @@ const GroupsViewWrapper = (props: Props) => {
                   >
                     <FormatedDate date={timestamp} />
                   </div>
-                </EuiText>
-                <EuiText size="s" style={{ maxWidth: '100%' }}>
+                </Text>
+                <Text size="s" style={{ maxWidth: '100%' }} component="div">
                   <div
                     className="streamItemId"
                     data-testid={`stream-group-id-${id}`}
                   >
                     {id}
                   </div>
-                </EuiText>
+                </Text>
               </div>
             }
             field={id}
@@ -355,28 +363,28 @@ const GroupsViewWrapper = (props: Props) => {
             delay={500}
             editBtnClassName={styles.editBtn}
           >
-            <>
-              <EuiFieldText
-                fullWidth
-                name="id"
-                id="id"
-                placeholder="ID*"
-                value={editValue}
-                onChange={(e: any) =>
-                  setEditValue(validateConsumerGroupId(e.target.value))
-                }
-                onBlur={() => setIsIdFocused(false)}
-                onFocus={() => setIsIdFocused(true)}
-                append={
-                  <EuiToolTip
+            <FormField
+              additionalText={
+                <RiTooltip
                     anchorClassName="inputAppendIcon"
                     position="left"
                     title="Enter Valid ID, 0 or $"
                     content={lastDeliveredIDTooltipText}
                   >
-                    <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-                  </EuiToolTip>
+                    <RiIcon type="InfoIcon" style={{ cursor: 'pointer' }} />
+                  </RiTooltip>
+              }
+            >
+              <TextInput
+                name="id"
+                id="id"
+                placeholder="ID*"
+                value={editValue}
+                onChange={value =>
+                  setEditValue(validateConsumerGroupId(value))
                 }
+                onBlur={() => setIsIdFocused(false)}
+                onFocus={() => setIsIdFocused(true)}
                 style={{ width: 240 }}
                 autoComplete="off"
                 data-testid="last-id-field"
@@ -391,7 +399,7 @@ const GroupsViewWrapper = (props: Props) => {
                   {idError}
                 </span>
               )}
-            </>
+            </FormField>
           </EditablePopover>
         )
       },

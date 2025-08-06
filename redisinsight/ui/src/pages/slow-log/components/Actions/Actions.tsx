@@ -1,11 +1,3 @@
-import {
-  EuiButton,
-  EuiButtonIcon,
-  EuiIcon,
-  EuiPopover,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
 import cx from 'classnames'
@@ -14,10 +6,20 @@ import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { DurationUnits } from 'uiSrc/constants'
 import { slowLogSelector } from 'uiSrc/slices/analytics/slowlog'
 import { AutoRefresh } from 'uiSrc/components'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { Nullable } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { EraserIcon, SettingsIcon } from 'uiSrc/components/base/icons'
+import {
+  DestructiveButton,
+  IconButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+
 import SlowLogConfig from '../SlowLogConfig'
 import styles from './styles.module.scss'
 
@@ -98,31 +100,33 @@ const Actions = (props: Props) => {
 
   const ToolTipContent = (
     <div className={styles.popoverContainer}>
-      <EuiIcon type="alert" color="danger" className={styles.warningIcon} />
+      <RiIcon
+        type="ToastDangerIcon"
+        color="attention600"
+        className={styles.warningIcon}
+      />
       <div>
-        <EuiText size="m">
+        <Text size="m" component="div">
           <h4 className={styles.popoverTitle}>
             <b>Clear Slow Log?</b>
           </h4>
-          <EuiText size="xs" color="subdued">
+          <Text size="xs" color="subdued">
             Slow Log will be cleared for&nbsp;
             <span className={styles.popoverDBName}>{name}</span>
             <br />
             NOTE: This is server configuration
-          </EuiText>
-        </EuiText>
+          </Text>
+        </Text>
         <div className={styles.popoverFooter}>
-          <EuiButton
-            fill
-            size="s"
-            color="warning"
-            iconType="eraser"
+          <DestructiveButton
+            size="small"
+            icon={EraserIcon}
             onClick={() => handleClearClick()}
             className={styles.popoverDeleteBtn}
             data-testid="reset-confirm-btn"
           >
             Clear
-          </EuiButton>
+          </DestructiveButton>
         </div>
       </div>
     </div>
@@ -144,7 +148,7 @@ const Actions = (props: Props) => {
         />
       </FlexItem>
       <FlexItem grow>
-        <EuiPopover
+        <RiPopover
           ownFocus
           anchorPosition="downRight"
           isOpen={isPopoverConfigOpen}
@@ -152,54 +156,52 @@ const Actions = (props: Props) => {
           closePopover={() => {}}
           panelClassName={cx('popover-without-top-tail', styles.configWrapper)}
           button={
-            <EuiButton
-              size="s"
-              iconType="gear"
-              color="secondary"
+            <SecondaryButton
+              size="small"
+              icon={SettingsIcon}
               aria-label="Configure"
               onClick={() => showConfigPopover()}
               data-testid="configure-btn"
             >
               Configure
-            </EuiButton>
+            </SecondaryButton>
           }
         >
           <SlowLogConfig
             closePopover={closePopoverConfig}
             onRefresh={onRefresh}
           />
-        </EuiPopover>
+        </RiPopover>
       </FlexItem>
       {!isEmptySlowLog && (
         <FlexItem grow>
-          <EuiPopover
+          <RiPopover
             anchorPosition="leftCenter"
             ownFocus
             isOpen={isPopoverClearOpen}
             closePopover={closePopoverClear}
             panelPaddingSize="m"
             button={
-              <EuiToolTip
+              <RiTooltip
                 position="left"
-                anchorClassName={styles.icon}
                 content="Clear Slow Log"
+                anchorClassName={styles.icon}
               >
-                <EuiButtonIcon
-                  iconType="eraser"
-                  color="primary"
+                <IconButton
+                  icon={EraserIcon}
                   aria-label="Clear Slow Log"
                   onClick={() => showClearPopover()}
                   data-testid="clear-btn"
                 />
-              </EuiToolTip>
+              </RiTooltip>
             }
           >
             {ToolTipContent}
-          </EuiPopover>
+          </RiPopover>
         </FlexItem>
       )}
       <FlexItem grow>
-        <EuiToolTip
+        <RiTooltip
           title="Slow Log"
           position="bottom"
           anchorClassName={styles.icon}
@@ -216,13 +218,13 @@ const Actions = (props: Props) => {
             </span>
           }
         >
-          <EuiIcon
+          <RiIcon
             className={styles.infoIcon}
-            type="iInCircle"
+            type="InfoIcon"
             style={{ cursor: 'pointer' }}
             data-testid="slow-log-tooltip-icon"
           />
-        </EuiToolTip>
+        </RiTooltip>
       </FlexItem>
     </Row>
   )

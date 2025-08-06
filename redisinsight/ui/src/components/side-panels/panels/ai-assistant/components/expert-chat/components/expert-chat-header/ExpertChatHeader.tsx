@@ -1,22 +1,15 @@
 import React, { useState } from 'react'
-import {
-  EuiButton,
-  EuiButtonEmpty,
-  EuiPopover,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import cx from 'classnames'
 
 import { useDispatch } from 'react-redux'
 import { useHistory } from 'react-router-dom'
-import BulbIcon from 'uiSrc/assets/img/bulb.svg?react'
 
 import {
   sendEventTelemetry,
   TELEMETRY_EMPTY_VALUE,
   TelemetryEvent,
 } from 'uiSrc/telemetry'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { InsightsPanelTabs, SidePanels } from 'uiSrc/slices/interfaces/insights'
 import {
   changeSelectedTab,
@@ -27,6 +20,9 @@ import {
 import { RestartChat } from 'uiSrc/components/side-panels/panels/ai-assistant/components/shared'
 
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { EmptyButton, PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { EraserIcon, LightBulbIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -66,47 +62,39 @@ const ExpertChatHeader = (props: Props) => {
   return (
     <div className={styles.header}>
       {connectedInstanceName ? (
-        <EuiToolTip
+        <RiTooltip
           content={connectedInstanceName}
           anchorClassName={styles.dbName}
         >
-          <EuiText size="xs" className="truncateText">
+          <Text size="xs" className="truncateText">
             {connectedInstanceName}
-          </EuiText>
-        </EuiToolTip>
+          </Text>
+        </RiTooltip>
       ) : (
         <span />
       )}
       <div className={styles.headerActions}>
-        <EuiToolTip
+        <RiTooltip
           content={
             isTutorialsPopoverOpen
               ? undefined
               : 'Open relevant tutorials to learn more'
           }
           anchorClassName={styles.headerBtnAnchor}
-          display="block"
           position="bottom"
         >
-          <EuiPopover
+          <RiPopover
             ownFocus
-            initialFocus={false}
-            className={styles.popoverAnchor}
-            panelClassName={cx(
-              'euiToolTip',
-              'popoverLikeTooltip',
-              styles.popover,
-            )}
+            panelClassName={cx('popoverLikeTooltip', styles.popover)}
             anchorClassName={styles.popoverAnchor}
             anchorPosition="downLeft"
             isOpen={isTutorialsPopoverOpen}
             panelPaddingSize="m"
             closePopover={() => setIsTutorialsPopoverOpen(false)}
-            focusTrapProps={{ scrollLock: true }}
             button={
-              <EuiButtonEmpty
-                iconType={BulbIcon}
-                size="xs"
+              <EmptyButton
+                icon={LightBulbIcon}
+                size="small"
                 onClick={() => setIsTutorialsPopoverOpen(true)}
                 className={cx(styles.headerBtn)}
                 data-testid="ai-expert-tutorial-btn"
@@ -114,29 +102,27 @@ const ExpertChatHeader = (props: Props) => {
             }
           >
             <>
-              <EuiText>
+              <Text>
                 Open relevant tutorials to learn more about search and query.
-              </EuiText>
+              </Text>
               <Spacer size="s" />
-              <EuiButton
-                fill
+              <PrimaryButton
                 size="s"
-                color="secondary"
                 onClick={handleOpenTutorials}
                 className={styles.openTutorialsBtn}
                 data-testid="ai-expert-open-tutorials"
               >
                 Open tutorials
-              </EuiButton>
+              </PrimaryButton>
             </>
-          </EuiPopover>
-        </EuiToolTip>
+          </RiPopover>
+        </RiTooltip>
         <RestartChat
           button={
-            <EuiButtonEmpty
+            <EmptyButton
               disabled={isClearDisabled}
-              iconType="eraser"
-              size="xs"
+              icon={EraserIcon}
+              size="small"
               className={styles.headerBtn}
               data-testid="ai-expert-restart-session-btn"
             />

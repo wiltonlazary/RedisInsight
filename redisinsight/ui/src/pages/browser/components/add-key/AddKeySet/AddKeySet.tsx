@@ -1,29 +1,22 @@
 import React, {
-  ChangeEvent,
   FormEvent,
   useEffect,
   useRef,
   useState,
 } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiPanel,
-  EuiTextColor,
-} from '@elastic/eui'
 import { Maybe, stringToBuffer } from 'uiSrc/utils'
 import { addKeyStateSelector, addSetKey } from 'uiSrc/slices/browser/keys'
 
 import AddMultipleFields from 'uiSrc/pages/browser/components/add-multiple-fields'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { CreateSetWithExpireDto } from 'apiSrc/modules/browser/set/dto'
 
 import { INITIAL_SET_MEMBER_STATE, ISetMemberState } from './interfaces'
 import { AddSetFormConfig as config } from '../constants/fields-config'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
 
 export interface Props {
   keyName: string
@@ -130,7 +123,7 @@ const AddKeySet = (props: Props) => {
     members.length === 1 && !item.name.length
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
+    <form onSubmit={onFormSubmit}>
       <AddMultipleFields
         items={members}
         isClearDisabled={isClearDisabled}
@@ -140,66 +133,35 @@ const AddKeySet = (props: Props) => {
         {(item, index) => (
           <Row align="center">
             <FlexItem grow>
-              <EuiFormRow fullWidth>
-                <EuiFieldText
-                  fullWidth
+              <FormField>
+                <TextInput
                   name={`member-${item.id}`}
                   id={`member-${item.id}`}
                   placeholder={config.member.placeholder}
                   value={item.name}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    handleMemberChange('name', item.id, e.target.value)
+                  onChange={(value) =>
+                    handleMemberChange('name', item.id, value)
                   }
-                  inputRef={
+                  ref={
                     index === members.length - 1 ? lastAddedMemberName : null
                   }
                   disabled={loading}
                   data-testid="member-name"
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
           </Row>
         )}
       </AddMultipleFields>
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          color="transparent"
-          className="flexItemNoFullWidth"
-          hasShadow={false}
-          borderRadius="none"
-          style={{ border: 'none' }}
-        >
-          <Row justify="end">
-            <FlexItem>
-              <EuiButton
-                color="secondary"
-                onClick={() => onCancel(true)}
-                className="btn-cancel btn-back"
-              >
-                <EuiTextColor>Cancel</EuiTextColor>
-              </EuiButton>
-            </FlexItem>
-            <FlexItem>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                className="btn-add"
-                isLoading={loading}
-                onClick={submitData}
-                disabled={!isFormValid || loading}
-                data-testid="add-key-set-btn"
-              >
-                Add Key
-              </EuiButton>
-            </FlexItem>
-          </Row>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-set-btn"
+      />
+    </form>
   )
 }
 

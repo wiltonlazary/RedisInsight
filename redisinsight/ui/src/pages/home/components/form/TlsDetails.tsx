@@ -1,13 +1,4 @@
 import React, { ChangeEvent, useState } from 'react'
-import {
-  EuiCheckbox,
-  EuiFieldText,
-  EuiFormRow,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-  EuiTextArea,
-  htmlIdGenerator,
-} from '@elastic/eui'
 import cx from 'classnames'
 import { FormikProps } from 'formik'
 
@@ -31,6 +22,15 @@ import { deleteCaCertificateAction } from 'uiSrc/slices/instances/caCerts'
 import { deleteClientCertAction } from 'uiSrc/slices/instances/clientCerts'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { TextArea, TextInput } from 'uiSrc/components/base/inputs'
+import {
+  RiSelect,
+  SelectValueRender,
+  RiSelectOption,
+} from 'uiSrc/components/base/forms/select/RiSelect'
+import { useGenerateId } from 'uiSrc/components/base/utils/hooks/generate-id'
 import styles from '../styles.module.scss'
 
 const suffix = '_tls_details'
@@ -40,7 +40,12 @@ export interface Props {
   caCertificates?: { id: string; name: string }[]
   certificates?: { id: number; name: string }[]
 }
-
+const valueRender: SelectValueRender = ({ option, isOptionValue }) => {
+  if (isOptionValue) {
+    return (option.dropdownDisplay ?? option.inputDisplay) as JSX.Element
+  }
+  return option.inputDisplay as JSX.Element
+}
 const TlsDetails = (props: Props) => {
   const dispatch = useDispatch()
   const { formik, caCertificates, certificates } = props
@@ -85,14 +90,16 @@ const TlsDetails = (props: Props) => {
     setActiveCertId(`${id}${suffix}`)
   }
 
-  const optionsCertsCA: EuiSuperSelectOption<string>[] = [
+  const optionsCertsCA: RiSelectOption[] = [
     {
       value: NO_CA_CERT,
-      inputDisplay: 'No CA Certificate',
+      inputDisplay: <span>No CA Certificate</span>,
+      dropdownDisplay: null,
     },
     {
       value: ADD_NEW_CA_CERT,
-      inputDisplay: 'Add new CA certificate',
+      inputDisplay: <span>Add new CA certificate</span>,
+      dropdownDisplay: null,
     },
   ]
 
@@ -118,7 +125,7 @@ const TlsDetails = (props: Props) => {
             text="will be removed from RedisInsight."
             item={cert.id}
             suffix={suffix}
-            deleting={activeCertId}
+            deleting={activeCertId ?? ''}
             closePopover={closePopover}
             updateLoading={false}
             showPopover={showPopover}
@@ -130,10 +137,11 @@ const TlsDetails = (props: Props) => {
     })
   })
 
-  const optionsCertsClient: EuiSuperSelectOption<string>[] = [
+  const optionsCertsClient: RiSelectOption[] = [
     {
       value: 'ADD_NEW',
-      inputDisplay: 'Add new certificate',
+      inputDisplay: <span>Add new certificate</span>,
+      dropdownDisplay: null,
     },
   ]
 
@@ -171,12 +179,16 @@ const TlsDetails = (props: Props) => {
     })
   })
 
+  const sslId = useGenerateId('', ' over ssl')
+  const sni = useGenerateId('', ' sni')
+  const verifyTlsId = useGenerateId('', ' verifyServerTlsCert')
+  const isTlsAuthId = useGenerateId('', ' is_tls_client_auth_required')
   return (
     <>
       <Row gap="m">
         <FlexItem grow={1}>
-          <EuiCheckbox
-            id={`${htmlIdGenerator()()} over ssl`}
+          <Checkbox
+            id={sslId}
             name="tls"
             label="Use TLS"
             checked={!!formik.values.tls}
@@ -191,8 +203,8 @@ const TlsDetails = (props: Props) => {
           <Spacer />
           <Row gap="m">
             <FlexItem grow={1}>
-              <EuiCheckbox
-                id={`${htmlIdGenerator()()} sni`}
+              <Checkbox
+                id={sni}
                 name="sni"
                 label="Use SNI"
                 checked={!!formik.values.sni}
@@ -212,23 +224,22 @@ const TlsDetails = (props: Props) => {
               <Spacer />
               <Row gap="m">
                 <FlexItem grow>
-                  <EuiFormRow label="Server Name*">
-                    <EuiFieldText
+                  <FormField label="Server Name*">
+                    <TextInput
                       name="servername"
                       id="servername"
-                      fullWidth
                       maxLength={200}
                       placeholder="Enter Server Name"
                       value={formik.values.servername ?? ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      onChange={value =>
                         formik.setFieldValue(
-                          e.target.name,
-                          validateField(e.target.value.trim()),
+                          'servername',
+                          validateField(value.trim()),
                         )
                       }
                       data-testid="sni-servername"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               </Row>
             </>
@@ -239,8 +250,8 @@ const TlsDetails = (props: Props) => {
               grow
               className={cx({ [styles.fullWidth]: formik.values.sni })}
             >
-              <EuiCheckbox
-                id={`${htmlIdGenerator()()} verifyServerTlsCert`}
+              <Checkbox
+                id={verifyTlsId}
                 name="verifyServerTlsCert"
                 label="Verify TLS Certificate"
                 checked={!!formik.values.verifyServerTlsCert}
@@ -255,19 +266,18 @@ const TlsDetails = (props: Props) => {
         <div className="boxSection">
           <Spacer />
           <Row gap="m" responsive>
-            <FlexItem grow>
-              <EuiFormRow
+            <FlexItem>
+              <FormField
                 label={`CA Certificate${
                   formik.values.verifyServerTlsCert ? '*' : ''
                 }`}
               >
-                <EuiSuperSelect
+                <RiSelect
                   name="selectedCaCertName"
                   placeholder="Select CA certificate"
-                  valueOfSelected={
-                    formik.values.selectedCaCertName ?? NO_CA_CERT
-                  }
+                  value={formik.values.selectedCaCertName ?? NO_CA_CERT}
                   options={optionsCertsCA}
+                  valueRender={valueRender}
                   onChange={(value) => {
                     formik.setFieldValue(
                       'selectedCaCertName',
@@ -276,29 +286,28 @@ const TlsDetails = (props: Props) => {
                   }}
                   data-testid="select-ca-cert"
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
 
             {formik.values.tls &&
               formik.values.selectedCaCertName === ADD_NEW_CA_CERT && (
                 <FlexItem grow>
-                  <EuiFormRow label="Name*">
-                    <EuiFieldText
+                  <FormField label="Name*">
+                    <TextInput
                       name="newCaCertName"
                       id="newCaCertName"
-                      fullWidth
                       maxLength={200}
                       placeholder="Enter CA Certificate Name"
                       value={formik.values.newCaCertName ?? ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      onChange={value =>
                         formik.setFieldValue(
-                          e.target.name,
-                          validateCertName(e.target.value),
+                          'newCaCertName',
+                          validateCertName(value),
                         )
                       }
                       data-testid="qa-ca-cert"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               )}
           </Row>
@@ -307,18 +316,16 @@ const TlsDetails = (props: Props) => {
             formik.values.selectedCaCertName === ADD_NEW_CA_CERT && (
               <Row gap="m" responsive>
                 <FlexItem grow>
-                  <EuiFormRow label="Certificate*">
-                    <EuiTextArea
+                  <FormField label="Certificate*">
+                    <TextArea
                       name="newCaCert"
                       id="newCaCert"
-                      className={styles.customScroll}
                       value={formik.values.newCaCert ?? ''}
-                      onChange={formik.handleChange}
-                      fullWidth
+                      onChangeCapture={formik.handleChange}
                       placeholder="Enter CA Certificate"
                       data-testid="new-ca-cert"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               </Row>
             )}
@@ -327,8 +334,8 @@ const TlsDetails = (props: Props) => {
       {formik.values.tls && (
         <Row responsive style={{ margin: '20px 0 20px' }}>
           <FlexItem grow>
-            <EuiCheckbox
-              id={`${htmlIdGenerator()()} is_tls_client_auth_required`}
+            <Checkbox
+              id={isTlsAuthId}
               name="tlsClientAuthRequired"
               label="Requires TLS Client Authentication"
               checked={!!formik.values.tlsClientAuthRequired}
@@ -347,40 +354,40 @@ const TlsDetails = (props: Props) => {
         >
           <Row gap="m" responsive>
             <FlexItem grow>
-              <EuiFormRow label="Client Certificate*">
-                <EuiSuperSelect
+              <FormField label="Client Certificate*">
+                <RiSelect
                   placeholder="Select certificate"
-                  valueOfSelected={formik.values.selectedTlsClientCertId}
+                  value={formik.values.selectedTlsClientCertId}
                   options={optionsCertsClient}
+                  valueRender={valueRender}
                   onChange={(value) => {
                     formik.setFieldValue('selectedTlsClientCertId', value)
                   }}
                   data-testid="select-cert"
                 />
-              </EuiFormRow>
+              </FormField>
             </FlexItem>
 
             {formik.values.tls &&
               formik.values.tlsClientAuthRequired &&
               formik.values.selectedTlsClientCertId === 'ADD_NEW' && (
                 <FlexItem grow>
-                  <EuiFormRow label="Name*">
-                    <EuiFieldText
+                  <FormField label="Name*">
+                    <TextInput
                       name="newTlsCertPairName"
                       id="newTlsCertPairName"
-                      fullWidth
                       maxLength={200}
                       placeholder="Enter Client Certificate Name"
                       value={formik.values.newTlsCertPairName ?? ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      onChange={value =>
                         formik.setFieldValue(
-                          e.target.name,
-                          validateCertName(e.target.value),
+                          'newTlsCertPairName', // same as the name prop passed a few lines above
+                          validateCertName(value),
                         )
                       }
                       data-testid="new-tsl-cert-pair-name"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               )}
           </Row>
@@ -391,36 +398,32 @@ const TlsDetails = (props: Props) => {
               <>
                 <Row gap="m" responsive>
                   <FlexItem grow>
-                    <EuiFormRow label="Certificate*">
-                      <EuiTextArea
+                    <FormField label="Certificate*">
+                      <TextArea
                         name="newTlsClientCert"
                         id="newTlsClientCert"
-                        className={styles.customScroll}
                         value={formik.values.newTlsClientCert}
-                        onChange={formik.handleChange}
+                        onChangeCapture={formik.handleChange}
                         draggable={false}
-                        fullWidth
                         placeholder="Enter Client Certificate"
                         data-testid="new-tls-client-cert"
                       />
-                    </EuiFormRow>
+                    </FormField>
                   </FlexItem>
                 </Row>
 
                 <Row gap="m" responsive>
                   <FlexItem grow>
-                    <EuiFormRow label="Private Key*">
-                      <EuiTextArea
+                    <FormField label="Private Key*">
+                      <TextArea
                         placeholder="Enter Private Key"
                         name="newTlsClientKey"
                         id="newTlsClientKey"
-                        className={styles.customScroll}
                         value={formik.values.newTlsClientKey}
-                        onChange={formik.handleChange}
-                        fullWidth
+                        onChangeCapture={formik.handleChange}
                         data-testid="new-tls-client-cert-key"
                       />
-                    </EuiFormRow>
+                    </FormField>
                   </FlexItem>
                 </Row>
               </>
