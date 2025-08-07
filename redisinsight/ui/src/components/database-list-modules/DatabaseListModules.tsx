@@ -49,8 +49,8 @@ const DatabaseListModules = React.memo((props: Props) => {
   const newModules: IDatabaseModule[] = sortModules(
     modules?.map(({ name: propName, semanticVersion = '', version = '' }) => {
       const isValidModuleKey = Object.values(RedisDefaultModules).includes(propName as RedisDefaultModules)
-      
-      const module: ModuleInfo | undefined = isValidModuleKey 
+
+      const module: ModuleInfo | undefined = isValidModuleKey
         ? DEFAULT_MODULES_INFO[propName as RedisDefaultModules]
         : undefined
       const moduleName = module?.text || propName
