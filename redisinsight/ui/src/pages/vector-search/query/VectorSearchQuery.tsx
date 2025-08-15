@@ -119,9 +119,14 @@ export const VectorSearchQuery = () => {
         />
 
         <ResizableContainer direction="horizontal">
-          <ResizablePanel id="left-panel" minSize={20} defaultSize={30}>
+          <ResizablePanel
+            id="left-panel"
+            minSize={20}
+            order={1}
+            defaultSize={isSavedQueriesOpen ? 70 : 100}
+          >
             <ResizableContainer direction="vertical">
-              <ResizablePanel id="top-panel" minSize={20} defaultSize={30}>
+              <ResizablePanel id="top-panel" minSize={10} defaultSize={30}>
                 <QueryWrapper
                   query={query}
                   activeMode={activeMode}
@@ -144,8 +149,8 @@ export const VectorSearchQuery = () => {
               <ResizablePanel
                 id="bottom-panel"
                 minSize={10}
-                maxSize={70}
-                defaultSize={80}
+                maxSize={80}
+                defaultSize={70}
               >
                 <CommandsViewWrapper
                   items={items}
@@ -178,7 +183,12 @@ export const VectorSearchQuery = () => {
                 data-test-subj="resize-btn-scripting-area-and-results"
               />
 
-              <ResizablePanel id="right-panel" minSize={20} defaultSize={30}>
+              <ResizablePanel
+                id="right-panel"
+                order={2}
+                minSize={20}
+                defaultSize={30}
+              >
                 <SavedQueriesScreen
                   onIndexChange={handleIndexChange}
                   onQueryInsert={handleQueryInsert}
