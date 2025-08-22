@@ -12,9 +12,21 @@ jest.mock('uiSrc/telemetry', () => ({
   sendEventTelemetry: jest.fn(),
 }))
 
+jest.mock('uiSrc/slices/browser/redisearch', () => ({
+  ...jest.requireActual('uiSrc/slices/browser/redisearch'),
+  redisearchListSelector: jest.fn().mockReturnValue({
+    data: [Buffer.from('idx:bikes_vss')],
+    loading: false,
+    error: '',
+  }),
+  fetchRedisearchListAction: jest
+    .fn()
+    .mockReturnValue({ type: 'FETCH_REDISEARCH_LIST' }),
+}))
+
 const DEFAULT_PROPS: VectorSearchQueryProps = {
   instanceId: INSTANCE_ID_MOCK,
-  openSavedQueriesPanel: false,
+  defaultSavedQueriesIndex: undefined,
 }
 
 const renderVectorSearchQueryComponent = (
@@ -43,7 +55,7 @@ describe('VectorSearchQuery', () => {
   it('can close the Saved Queries screen', () => {
     renderVectorSearchQueryComponent({
       ...DEFAULT_PROPS,
-      openSavedQueriesPanel: true,
+      defaultSavedQueriesIndex: faker.string.uuid(),
     })
 
     // Verify the saved queries screen is open by default
