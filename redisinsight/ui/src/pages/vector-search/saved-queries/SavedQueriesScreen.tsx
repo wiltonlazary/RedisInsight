@@ -19,9 +19,10 @@ import { TelemetryEvent } from 'uiSrc/telemetry'
 import { useRedisearchListData } from '../useRedisearchListData'
 import { collectChangedSavedQueryIndexTelemetry } from '../telemetry'
 import { PresetDataType } from '../create-index/types'
-import NoIndexesMessage from '../manage-indexes/NoIndexesMessage'
+import NoDataMessage from '../components/no-data-message/NoDataMessage'
 import { QueryCard } from './QueryCard'
 import { IndexSelect } from './IndexSelect'
+import { NoDataMessageKeys } from '../components/no-data-message/data'
 
 const mockSavedIndexes: SavedIndex[] = [
   {
@@ -124,7 +125,9 @@ export const SavedQueriesScreen = ({
             />
           )}
 
-          {!loading && !hasIndexes && <NoIndexesMessage />}
+          {!loading && !hasIndexes && (
+            <NoDataMessage variant={NoDataMessageKeys.SavedQueries} />
+          )}
 
           {selectedIndexItem?.queries.map((query) => (
             <QueryCard
