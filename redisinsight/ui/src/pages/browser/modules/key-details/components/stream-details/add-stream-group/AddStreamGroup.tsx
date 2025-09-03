@@ -1,4 +1,3 @@
-import cx from 'classnames'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
@@ -12,18 +11,23 @@ import {
   validateConsumerGroupId,
 } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import {
   PrimaryButton,
   SecondaryButton,
 } from 'uiSrc/components/base/forms/buttons'
 import { FormField } from 'uiSrc/components/base/forms/FormField'
-import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { RiTooltip } from 'uiSrc/components'
 import { TextInput } from 'uiSrc/components/base/inputs'
 import { CreateConsumerGroupsDto } from 'apiSrc/modules/browser/stream/dto'
 
-import styles from './styles.module.scss'
+import { Panel } from 'uiSrc/components/panel'
+import { Text } from 'uiSrc/components/base/text'
+import {
+  StreamGroupContent,
+  TimeStampInfoIcon,
+  TimeStampWrapper,
+} from './AddStreamGroup.styles'
 
 export interface Props {
   closePanel: (isCancelled?: boolean) => void
@@ -86,49 +90,52 @@ const AddStreamGroup = (props: Props) => {
   const showIdError = !isIdFocused && idError
 
   return (
-    <>
-      <div
-        className={styles.content}
-        data-test-subj="add-stream-groups-field-panel"
-      >
-        <FlexItem
-          className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
-          grow
-        >
-          <Row>
+    <Col gap="m">
+      <StreamGroupContent data-test-subj="add-stream-groups-field-panel">
+        <FlexItem grow>
+          <Row gap="m">
             <FlexItem grow>
-              <Row align="start">
-                <FlexItem className={styles.groupNameWrapper} grow>
+              <Row align="start" gap="m">
+                <FlexItem grow={2}>
                   <FormField>
                     <TextInput
                       name="group-name"
                       id="group-name"
                       placeholder="Enter Group Name*"
                       value={groupName}
-                      onChange={value =>
-                        setGroupName(value)
-                      }
+                      onChange={(value) => setGroupName(value)}
                       autoComplete="off"
                       data-testid="group-name-field"
                     />
                   </FormField>
                 </FlexItem>
-                <FlexItem className={styles.timestampWrapper} grow>
+                <TimeStampWrapper>
                   <FormField
                     additionalText={
-                      <RiTooltip
-                        anchorClassName="inputAppendIcon"
-                        className={styles.entryIdTooltip}
-                        position="left"
-                        title="Enter Valid ID, 0 or $"
-                        content={lastDeliveredIDTooltipText}
-                      >
-                        <RiIcon
-                          type="InfoIcon"
-                          style={{ cursor: 'pointer' }}
-                          data-testid="entry-id-info-icon"
-                        />
-                      </RiTooltip>
+                      <Row align="center" gap="s">
+                        <RiTooltip
+                          anchorClassName="inputAppendIcon"
+                          position="left"
+                          title="Enter Valid ID, 0 or $"
+                          content={lastDeliveredIDTooltipText}
+                        >
+                          <TimeStampInfoIcon data-testid="entry-id-info-icon" />
+                        </RiTooltip>
+                        {!showIdError && (
+                          <Text
+                            size="XS"
+                            color="primary"
+                            data-testid="id-help-text"
+                          >
+                            Timestamp - Sequence Number or $
+                          </Text>
+                        )}
+                        {showIdError && (
+                          <Text size="XS" color="danger" data-testid="id-error">
+                            {idError}
+                          </Text>
+                        )}
+                      </Row>
                     }
                   >
                     <TextInput
@@ -136,7 +143,7 @@ const AddStreamGroup = (props: Props) => {
                       id="id"
                       placeholder="ID*"
                       value={id}
-                      onChange={value =>
+                      onChange={(value) =>
                         setId(validateConsumerGroupId(value))
                       }
                       onBlur={() => setIsIdFocused(false)}
@@ -145,48 +152,28 @@ const AddStreamGroup = (props: Props) => {
                       data-testid="id-field"
                     />
                   </FormField>
-                  {!showIdError && (
-                    <span className={styles.idText} data-testid="id-help-text">
-                      Timestamp - Sequence Number or $
-                    </span>
-                  )}
-                  {showIdError && (
-                    <span className={styles.error} data-testid="id-error">
-                      {idError}
-                    </span>
-                  )}
-                </FlexItem>
+                </TimeStampWrapper>
               </Row>
             </FlexItem>
           </Row>
         </FlexItem>
-      </div>
-      <>
-        <Row justify="end" gap="l" style={{ padding: 18 }}>
-          <FlexItem>
-            <div>
-              <SecondaryButton
-                onClick={() => closePanel(true)}
-                data-testid="cancel-stream-groups-btn"
-              >
-                Cancel
-              </SecondaryButton>
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <div>
-              <PrimaryButton
-                onClick={submitData}
-                disabled={!isFormValid}
-                data-testid="save-groups-btn"
-              >
-                Save
-              </PrimaryButton>
-            </div>
-          </FlexItem>
-        </Row>
-      </>
-    </>
+      </StreamGroupContent>
+      <Panel justify="end" gap="m">
+        <SecondaryButton
+          onClick={() => closePanel(true)}
+          data-testid="cancel-stream-groups-btn"
+        >
+          Cancel
+        </SecondaryButton>
+        <PrimaryButton
+          onClick={submitData}
+          disabled={!isFormValid}
+          data-testid="save-groups-btn"
+        >
+          Save
+        </PrimaryButton>
+      </Panel>
+    </Col>
   )
 }
 
