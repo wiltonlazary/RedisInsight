@@ -5,17 +5,14 @@ import {
   ToastContentParams,
   ToastOptions,
 } from '@redis-ui/components'
-import styled from 'styled-components'
-import { CommonProps, Theme } from 'uiSrc/components/base/theme/types'
+
+import { CommonProps } from 'uiSrc/components/base/theme/types'
 import { CancelIcon } from 'uiSrc/components/base/icons'
-import { ColorText } from 'uiSrc/components/base/text'
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { Spacer } from '../../layout'
 
 type RiToastProps = React.ComponentProps<typeof Toast>
 export const RiToast = (props: RiToastProps) => <Toast {...props} />
-
-const StyledMessage = styled.div<{ theme: Theme }>`
-  margin-bottom: ${({ theme }) => theme.core.space.space100};
-`
 
 type RiToastType = ToastContentParams &
   CommonProps & {
@@ -37,7 +34,10 @@ export const riToast = (
     }
     toastContent.message = (
       <ColorText color={color}>
-        <StyledMessage>{message}</StyledMessage>
+        <Text size="M" variant="semiBold">
+          {message}
+        </Text>
+        <Spacer size="s" />
       </ColorText>
     )
   } else {
