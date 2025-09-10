@@ -51,7 +51,7 @@ describe('AddDataStep', () => {
   it('should render sample dataset section', () => {
     render(<AddDataStep {...defaultProps} />)
 
-    expect(screen.getByText('Select sample dataset')).toBeInTheDocument()
+    expect(screen.getByText('Select data to use')).toBeInTheDocument()
     expect(screen.getByText('Pre-set data')).toBeInTheDocument()
     expect(screen.getByText('Custom data')).toBeInTheDocument()
   })
@@ -59,7 +59,7 @@ describe('AddDataStep', () => {
   it('should render data content section', () => {
     render(<AddDataStep {...defaultProps} />)
 
-    expect(screen.getByText('Data content')).toBeInTheDocument()
+    expect(screen.getByText('Select sample data to load')).toBeInTheDocument()
     expect(screen.getByText('E-commerce Discovery')).toBeInTheDocument()
     expect(screen.getByText('Movie Recommendations')).toBeInTheDocument()
   })
@@ -110,7 +110,7 @@ describe('AddDataStep', () => {
     it('should expect custom data to be disabled', () => {
       render(<AddDataStep {...defaultProps} />)
 
-      const customDataRadio = screen.getByLabelText('Custom data')
+      const customDataRadio = screen.getByLabelText(/Custom data/i)
       expect(customDataRadio).toBeDisabled()
     })
 
@@ -165,7 +165,7 @@ describe('AddDataStep', () => {
       render(<AddDataStep {...defaultProps} />)
 
       const comingSoonTexts = screen.getAllByText('Coming soon')
-      expect(comingSoonTexts).toHaveLength(1)
+      expect(comingSoonTexts).toHaveLength(2)
     })
   })
 
@@ -176,7 +176,7 @@ describe('AddDataStep', () => {
       const presetDataRadio = screen.getByLabelText('Pre-set data')
       expect(presetDataRadio).toBeChecked()
 
-      const customDataRadio = screen.getByLabelText('Custom data')
+      const customDataRadio = screen.getByLabelText(/Custom data/i)
       expect(customDataRadio).not.toBeChecked()
     })
 
@@ -198,10 +198,10 @@ describe('AddDataStep', () => {
       expect(screen.getByText('Redis Query Engine')).toBeInTheDocument()
 
       // Sample dataset section
-      expect(screen.getByText('Select sample dataset')).toBeInTheDocument()
+      expect(screen.getByText('Select data to use')).toBeInTheDocument()
 
       // Data content section
-      expect(screen.getByText('Data content')).toBeInTheDocument()
+      expect(screen.getByText('Select sample data to load')).toBeInTheDocument()
     })
 
     it('should render all icons for search index types', () => {
@@ -224,8 +224,11 @@ describe('AddDataStep', () => {
     it('should have proper labels for radio buttons', () => {
       render(<AddDataStep {...defaultProps} />)
 
-      expect(screen.getByLabelText('Pre-set data')).toBeInTheDocument()
-      expect(screen.getByLabelText('Custom data')).toBeInTheDocument()
+      const presetDataLabel = screen.getByLabelText('Pre-set data')
+      expect(presetDataLabel).toBeInTheDocument()
+
+      const customDataLabel = screen.getByLabelText(/Custom data/i)
+      expect(customDataLabel).toBeInTheDocument()
     })
   })
 })
