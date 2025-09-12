@@ -66,18 +66,22 @@ const LoadSampleData = (props: Props) => {
         </PrimaryButton>
       }
     >
-      <Row gap="m" responsive={false} style={{ padding: 8 }}>
+      <Row gap="m" responsive={false} style={{ padding: 15 }}>
         <FlexItem>
-          <RiIcon type="ToastDangerIcon" className={styles.popoverIcon} />
+          <RiIcon
+            size="m"
+            type="ToastDangerIcon"
+            color="attention500"
+          />
         </FlexItem>
         <FlexItem>
-          <Text>Execute commands in bulk</Text>
-          <Spacer size="s" />
-          <Text color="subdued" size="s">
+          <Text variant="semiBold">Execute commands in bulk</Text>
+          <Spacer size="m" />
+          <Text size="s">
             All commands from the file will be automatically executed against
             your database. Avoid executing them in production databases.
           </Text>
-          <Spacer size="s" />
+          <Spacer size="l" />
           <Row justify="end">
             <FlexItem>
               <PrimaryButton
