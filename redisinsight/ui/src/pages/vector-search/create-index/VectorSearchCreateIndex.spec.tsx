@@ -183,11 +183,11 @@ describe('VectorSearchCreateIndex', () => {
       renderVectorSearchCreateIndexComponent()
 
       // Simulate going to the index info step
-      const buttonNext = screen.getByText('Proceed to index')
+      const buttonNext = screen.getByTestId('proceed-to-index-button')
       fireEvent.click(buttonNext)
 
       // Simulate creating the index
-      const buttonCreateIndex = screen.getByText('Create index')
+      const buttonCreateIndex = screen.getByTestId('create-index-button')
       fireEvent.click(buttonCreateIndex)
 
       expect(sendEventTelemetry).toHaveBeenCalledTimes(3)
@@ -198,5 +198,19 @@ describe('VectorSearchCreateIndex', () => {
         },
       })
     })
+  })
+
+  it('should show disabled data editing banner when on final step with preset data', () => {
+    renderVectorSearchCreateIndexComponent({ initialStep: 2 })
+
+    const banner = screen.getByTestId('disabled-data-editing-banner')
+    expect(banner).toBeInTheDocument()
+  })
+
+  it('should not show disabled data editing banner when not on final step', () => {
+    renderVectorSearchCreateIndexComponent({ initialStep: 1 })
+
+    const banner = screen.queryByTestId('disabled-data-editing-banner')
+    expect(banner).not.toBeInTheDocument()
   })
 })
