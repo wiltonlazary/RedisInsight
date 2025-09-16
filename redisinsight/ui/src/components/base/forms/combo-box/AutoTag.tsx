@@ -128,6 +128,13 @@ export const AutoTag = ({
     }
   }
 
+  const handleBlur: React.FocusEventHandler<HTMLInputElement> = (e) => {
+    const tag = (e.target as HTMLInputElement).value.trim()
+    if (tag !== null && tag.length > 0) {
+      createOption(tag)
+    }
+  }
+
   function getPlaceholder() {
     return selectedOptions?.length && selectedOptions.length > 0
       ? undefined
@@ -186,6 +193,7 @@ export const AutoTag = ({
             placeholder={getPlaceholder()}
             onChange={handleInputChange}
             onKeyDown={handleEnter}
+            onBlur={handleBlur}
             value={tag}
             data-test-subj="autoTagInput"
           />
@@ -210,7 +218,7 @@ const StyledWrapper = styled(Row)`
   position: relative;
   border: 1px solid ${({ theme }) => theme.semantic.color.border.neutral600};
   border-radius: 0.4rem;
-  padding: 0.15rem 0.5rem;
+  padding: 0 0.5rem;
   background-color: ${({ theme }) =>
     theme.semantic.color.background.neutral100};
 `
