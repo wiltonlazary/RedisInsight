@@ -54,7 +54,7 @@ export const VectorSearch = () => {
     )
   }
 
-  if (!hasRedisearch) {
+  if (loading === false && hasRedisearch === false) {
     return (
       <VectorSearchPageWrapper
         as="div"
