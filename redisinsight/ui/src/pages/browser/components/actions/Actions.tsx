@@ -6,7 +6,7 @@ import {
   TelemetryEvent,
 } from 'uiSrc/telemetry'
 import {
-  PrimaryButton,
+  Button,
   SecondaryButton,
 } from 'uiSrc/components/base/forms/buttons'
 import styles from 'uiSrc/pages/browser/components/browser-search-panel/styles.module.scss'
@@ -41,13 +41,14 @@ const Actions = ({ handleAddKeyPanel, handleBulkActionsPanel }: Props) => {
   }
 
   const AddKeyBtn = (
-    <PrimaryButton
+    <Button
+      size="m"
+      variant="secondary-fill"
       onClick={openAddKeyPanel}
-      className={styles.addKey}
       data-testid="btn-add-key"
     >
       + <span className={styles.addKeyText}>Key</span>
-    </PrimaryButton>
+    </Button>
   )
   const openBulkActions = () => {
     dispatch(setBulkActionType(BulkActionsType.Delete))
