@@ -51,7 +51,7 @@ import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 import { ButtonGroup } from 'uiSrc/components/base/forms/button-group/ButtonGroup'
 import styled from 'styled-components'
-import { ToggleButton } from '@redis-ui/components'
+import { ToggleButton } from 'uiSrc/components/base/forms/buttons'
 import { Text } from 'uiSrc/components/base/text'
 
 const HIDE_REFRESH_LABEL_WIDTH = 640

@@ -3,7 +3,7 @@ import { Chip, FormField, Input } from '@redis-ui/components'
 import cn from 'classnames'
 import styled from 'styled-components'
 import { CancelSlimIcon } from 'uiSrc/components/base/icons'
-import { CommonProps } from 'uiSrc/components/base/theme/types'
+import { CommonProps, Theme } from 'uiSrc/components/base/theme/types'
 import { Row } from 'uiSrc/components/base/layout/flex'
 import { IconButton } from 'uiSrc/components/base/forms/buttons'
 
@@ -218,7 +218,8 @@ const StyledWrapper = styled(Row)`
   position: relative;
   border: 1px solid ${({ theme }) => theme.semantic.color.border.neutral600};
   border-radius: 0.4rem;
-  padding: 0 0.5rem;
+  padding: ${({ theme }: { theme: Theme }) =>
+    `${theme.core.space.space000} ${theme.core.space.space050}`};
   background-color: ${({ theme }) =>
     theme.semantic.color.background.neutral100};
 `
