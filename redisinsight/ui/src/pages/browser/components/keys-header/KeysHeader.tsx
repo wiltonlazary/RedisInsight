@@ -1,15 +1,9 @@
 /* eslint-disable react/destructuring-assignment */
 /* eslint-disable react/no-this-in-sfc */
-import cx from 'classnames'
 import React, { Ref, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import {
-  IconType,
-  ColumnsIcon,
-  EqualIcon,
-  FoldersIcon,
-} from 'uiSrc/components/base/icons'
+import { IconType, EqualIcon, FoldersIcon } from 'uiSrc/components/base/icons'
 import KeysSummary from 'uiSrc/components/keys-summary'
 import {
   SCAN_COUNT_DEFAULT,
@@ -50,15 +44,15 @@ import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { ONBOARDING_FEATURES } from 'uiSrc/components/onboarding-features'
 import { BrowserColumns, KeyValueFormat } from 'uiSrc/constants'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { setConnectivityError } from 'uiSrc/slices/app/connectivity'
 import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
 import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 import { ButtonGroup } from 'uiSrc/components/base/forms/button-group/ButtonGroup'
 import styled from 'styled-components'
-import {TextButton} from '@redis-ui/components'
-import {Text} from 'uiSrc/components/base/text'
+import { ToggleButton } from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
 
 const HIDE_REFRESH_LABEL_WIDTH = 640
 
@@ -368,65 +362,75 @@ const KeysHeader = (props: Props) => {
                     panelClassName={styles.popoverWrapper}
                     closePopover={() => setColumnsConfigShown(false)}
                     button={
-                      <TextButton
-                        onClick={toggleColumnsConfigVisibility}
+                      <ToggleButton
+                        onPressedChange={toggleColumnsConfigVisibility}
                         className={styles.columnsButton}
                         data-testid="btn-columns-actions"
                         aria-label="columns"
+                        pressed={columnsConfigShown}
                       >
                         <RiIcon size="m" type="ColumnsIcon" />
                         <Text size="s">Columns</Text>
-                      </TextButton>
+                      </ToggleButton>
                     }
                   >
-                    <Row align="center" gap="m">
-                      <FlexItem grow>
+                    <Col gap="m">
+                      <FlexItem>
+                        <Row align="center" gap="m">
+                          <FlexItem grow>
+                            <Checkbox
+                              id="show-key-size"
+                              name="show-key-size"
+                              label="Key size"
+                              checked={shownColumns.includes(
+                                BrowserColumns.Size,
+                              )}
+                              onChange={(e) =>
+                                changeColumnsShown(
+                                  e.target.checked,
+                                  BrowserColumns.Size,
+                                )
+                              }
+                              data-testid="show-key-size"
+                              className={styles.checkbox}
+                            />
+                          </FlexItem>
+                          <FlexItem grow>
+                            <RiTooltip
+                              content="Hide the key size to avoid performance issues when working with large keys."
+                              position="top"
+                              anchorClassName="flex-row"
+                            >
+                              <RiIcon
+                                className={styles.infoIcon}
+                                type="InfoIcon"
+                                size="m"
+                                style={{ cursor: 'pointer' }}
+                                data-testid="key-size-info-icon"
+                              />
+                            </RiTooltip>
+                          </FlexItem>
+                        </Row>
+                      </FlexItem>
+                      <FlexItem>
                         <Checkbox
-                          id="show-key-size"
-                          name="show-key-size"
-                          label="Key size"
-                          checked={shownColumns.includes(BrowserColumns.Size)}
+                          id="show-ttl"
+                          name="show-ttl"
+                          label="TTL"
+                          checked={shownColumns.includes(BrowserColumns.TTL)}
                           onChange={(e) =>
                             changeColumnsShown(
                               e.target.checked,
-                              BrowserColumns.Size,
+                              BrowserColumns.TTL,
                             )
                           }
-                          data-testid="show-key-size"
-                          className={styles.checkbox}
+                          data-testid="show-ttl"
                         />
                       </FlexItem>
-                      <FlexItem grow>
-                        <RiTooltip
-                          content="Hide the key size to avoid performance issues when working with large keys."
-                          position="top"
-                          anchorClassName="flex-row"
-                        >
-                          <RiIcon
-                            className={styles.infoIcon}
-                            type="InfoIcon"
-                            size="m"
-                            style={{ cursor: 'pointer' }}
-                            data-testid="key-size-info-icon"
-                          />
-                        </RiTooltip>
-                      </FlexItem>
-                    </Row>
-                    <Checkbox
-                      id="show-ttl"
-                      name="show-ttl"
-                      label="TTL"
-                      checked={shownColumns.includes(BrowserColumns.TTL)}
-                      onChange={(e) =>
-                        changeColumnsShown(e.target.checked, BrowserColumns.TTL)
-                      }
-                      data-testid="show-ttl"
-                    />
+                    </Col>
                   </RiPopover>
                 </FlexItem>
-                <FlexItem>
-                  {ViewSwitch()}
-                </FlexItem>
+                <FlexItem>{ViewSwitch()}</FlexItem>
               </Row>
             </FlexItem>
           </Row>
