@@ -6,43 +6,9 @@
   justify-content: space-between;
   position: relative;
 
-  .addKey {
-    height: 36px !important;
-    width: 78px !important;
-    margin-left: 12px;
-
-    :global(.euiButton__text) {
-      font:
-        normal normal 500 15px/24px "Graphik",
-        sans-serif !important;
-    }
-  }
-
   .searchWrapper {
     display: flex;
     flex-grow: 1;
-  }
-}
-
-@include global.insights-open {
-  .content {
-    .addKey {
-      width: 36px !important;
-      min-width: auto !important;
-
-      .addKeyText {
-        display: none;
-      }
-
-      :global(.euiButton__content) {
-        padding: 0;
-      }
-
-      :global(.euiButton__text) {
-        font-size: 20px !important;
-        font-weight: 400 !important;
-      }
-    }
   }
 }
 
