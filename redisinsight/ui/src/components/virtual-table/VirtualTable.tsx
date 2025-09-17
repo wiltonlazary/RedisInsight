@@ -499,7 +499,7 @@ const VirtualTable = (props: IProps) => {
     <>
       {noItemsMessage && (
         <div className={styles.placeholder}>
-          <Text textAlign="center" color="subdued" size="m">
+          <Text textAlign="center" size="m">
             <div>{loading ? 'loading...' : noItemsMessage}</div>
           </Text>
         </div>
