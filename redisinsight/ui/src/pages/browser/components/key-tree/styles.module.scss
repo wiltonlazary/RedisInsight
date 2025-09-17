@@ -9,9 +9,9 @@
 
 .noKeys {
   @include eui.scrollBar;
-  overflow: auto;
 
   text-align: center;
+  margin: auto;
 }
 
 .content {
