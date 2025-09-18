@@ -18,12 +18,7 @@ import { useVectorSearchOnboarding } from '../../context/VectorSearchOnboardingC
 export const VectorSearchOnboarding = () => {
   useTelemetryMountEvent(TelemetryEvent.VECTOR_SEARCH_INITIAL_MESSAGE_DISPLAYED)
 
-  const { setOnboardingSeen, setOnboardingSeenSilent } =
-    useVectorSearchOnboarding()
-
-  useEffect(() => {
-    setOnboardingSeenSilent()
-  }, [])
+  const { setOnboardingSeen } = useVectorSearchOnboarding()
 
   return (
     <StyledVectorSearchOnboarding
@@ -38,13 +33,7 @@ export const VectorSearchOnboarding = () => {
         />
       </DismissAction>
 
-      <Content
-        grow={true}
-        direction="column"
-        justify="center"
-        align="center"
-        gap="xxl"
-      >
+      <Content grow={true} direction="column" justify="center" align="center">
         <Header />
         <Features />
         <Stepper />
