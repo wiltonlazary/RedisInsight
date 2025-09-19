@@ -13,6 +13,8 @@ import {
 import { ConfigDBStorageItem } from 'uiSrc/constants/storage'
 import { GetServerInfoResponse } from 'apiSrc/modules/server/dto/server.dto'
 import { RedisString as RedisStringAPI } from 'apiSrc/common/constants/redis-string'
+import { RiToastType } from 'uiSrc/components/base/display/toast/RiToast'
+import { ToastVariant } from '@redis-ui/components'
 
 export interface CustomError {
   details?: any[]
@@ -243,8 +245,14 @@ export interface IGlobalNotification {
 
 export interface InfiniteMessage {
   id: string
-  Inner: string | JSX.Element
+  variant?: ToastVariant
   className?: string
+  message?: RiToastType['message']
+  description?: RiToastType['description']
+  actions?: RiToastType['actions']
+  customIcon?: RiToastType['customIcon']
+  showCloseButton?: boolean
+  onClose?: () => void
 }
 
 export interface StateAppNotifications {
