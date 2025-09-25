@@ -24,6 +24,7 @@ import {
   VectorSearchScreenWrapper,
 } from '../styles'
 import {
+  collectCreateIndexErrorStepTelemetry,
   collectCreateIndexStepTelemetry,
   collectCreateIndexWizardTelemetry,
 } from '../telemetry'
@@ -36,6 +37,7 @@ import successMessages from 'uiSrc/components/notifications/success-messages'
 import { parseCustomError } from 'uiSrc/utils'
 import { Row } from 'uiSrc/components/base/layout/flex'
 import { Banner } from 'uiSrc/components/base/display'
+import { useVectorSearchOnboarding } from 'uiSrc/pages/vector-search/context/VectorSearchOnboardingContext'
 
 const stepNextButton: IStepNextButton[] = [
   {
@@ -74,6 +76,8 @@ export const VectorSearchCreateIndex = ({
   const { instanceId } = useParams<{ instanceId: string }>()
   const [step, setStep] = useState(initialStep)
 
+  const { setOnboardingSeen } = useVectorSearchOnboarding()
+
   const [createSearchIndexParameters, setCreateSearchIndexParameters] =
     useState<CreateSearchIndexParameters>({
       instanceId,
@@ -99,8 +103,16 @@ export const VectorSearchCreateIndex = ({
   const StepContent = stepContents[step]
   const onNextClick = () => {
     if (isFinalStep) {
-      createIndex(createSearchIndexParameters)
-      collectCreateIndexStepTelemetry(instanceId)
+      createIndex(
+        createSearchIndexParameters,
+        () => {
+          collectCreateIndexStepTelemetry(instanceId)
+          setOnboardingSeen()
+        },
+        () => {
+          collectCreateIndexErrorStepTelemetry(instanceId)
+        },
+      )
       return
     }
 
