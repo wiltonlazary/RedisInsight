@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux'
 import { CommandGroup } from 'uiSrc/constants'
 import { goBackFromCommand } from 'uiSrc/slices/cli/cli-settings'
 import { getDocUrlForCommand } from 'uiSrc/utils'
-import { ColorText, Text } from 'uiSrc/components/base/text'
+import { Text } from 'uiSrc/components/base/text'
 
 import { Link } from 'uiSrc/components/base/link/Link'
 import CHCommandInfo from '../components/command-helper-info'
@@ -47,9 +47,10 @@ const CommandHelper = (props: Props) => {
     return (
       <Link
         href={docUrl}
-        className={styles.link}
         target="_blank"
         data-testid="read-more"
+        variant="small-inline"
+        color="primary"
       >
         Read more
       </Link>
@@ -79,7 +80,6 @@ const CommandHelper = (props: Props) => {
               {summary && (
                 <Text
                   className={styles.summary}
-                  color="subdued"
                   data-testid="cli-helper-summary"
                 >
                   <span style={{ paddingRight: 5 }}>{summary}</span>{' '}
@@ -91,7 +91,7 @@ const CommandHelper = (props: Props) => {
                   className={styles.field}
                   data-testid="cli-helper-arguments"
                 >
-                  <Text color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Arguments:
                   </Text>
                   {argList}
@@ -99,7 +99,7 @@ const CommandHelper = (props: Props) => {
               )}
               {since && (
                 <div className={styles.field} data-testid="cli-helper-since">
-                  <Text color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Since:
                   </Text>
                   {since}
@@ -110,7 +110,7 @@ const CommandHelper = (props: Props) => {
                   className={styles.field}
                   data-testid="cli-helper-complexity"
                 >
-                  <Text color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Complexity:
                   </Text>
                   {complexity}
