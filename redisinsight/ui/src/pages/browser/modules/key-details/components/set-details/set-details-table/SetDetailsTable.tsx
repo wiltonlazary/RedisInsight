@@ -242,9 +242,8 @@ const SetDetailsTable = (props: Props) => {
 
         return (
           <Text
+            color="secondary"
             component="div"
-            color="subdued"
-            size="s"
             style={{ maxWidth: '100%', whiteSpace: 'break-spaces' }}
           >
             <div
