@@ -436,7 +436,7 @@ const VirtualTable = (props: IProps) => {
               data-testid="score-button"
               style={{ justifyContent: column.alignment }}
             >
-              <Text size="m" className={cellClass}  variant="semiBold">
+              <Text size="m" className={cellClass} variant="semiBold">
                 <span>{column.label}</span>
               </Text>
             </button>
@@ -474,6 +474,7 @@ const VirtualTable = (props: IProps) => {
             >
               <RiIcon
                 style={{ marginLeft: '4px' }}
+                size="S"
                 type={
                   sortedColumn?.order === SortOrder.DESC
                     ? 'ArrowDownIcon'
