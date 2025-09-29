@@ -52,9 +52,17 @@ const TableColumnSearchTrigger = (props: Props) => {
     }
   }
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === keys.ENTER) {
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === keys.ENTER) {
       handleApply(value)
+    }
+  }
+
+  const handleOnBlur = (event?: React.FocusEvent<HTMLInputElement>) => {
+    const target = event?.target as HTMLInputElement
+
+    if (!target.value) {
+      handleOpenState(false)
     }
   }
 
@@ -72,13 +80,14 @@ const TableColumnSearchTrigger = (props: Props) => {
       >
         <SearchInput
           onKeyDown={onKeyDown}
-          // onBlur={handleOnBlur}
+          onBlur={handleOnBlur}
           ref={setInputEl}
           name={fieldName}
           placeholder="Search"
           value={value || ''}
           onChange={handleChangeValue}
           data-testid="search"
+          style={{ width: '100%' }}
         />
       </div>
     </div>
