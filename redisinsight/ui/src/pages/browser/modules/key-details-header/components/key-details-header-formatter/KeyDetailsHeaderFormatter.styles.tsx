@@ -11,8 +11,7 @@ type KeyDetailsSelectProps = ComponentProps<typeof RiSelect> & {
 const KeyDetailsSelect = styled(RiSelect)<KeyDetailsSelectProps>`
   border: none !important;
   background-color: inherit !important;
-  color: var(--iconsDefaultColor) !important;
-  max-width: ${({ $fullWidth }) => ($fullWidth ? '100%' : '92px')};
+  max-width: 100%;
   padding-right: 18px;
   padding-left: 0;
   height: 28px;
@@ -41,8 +40,8 @@ const ControlsIcon = styled(RiIcon)`
   position: relative;
   margin-left: 3px;
   margin-top: 2px;
-  width: 20px !important;
-  height: 20px !important;
+  width: 17px !important;
+  height: 17px !important;
 
   :global(.insightsOpen) {
     @media only screen and (max-width: 1440px) {
@@ -56,11 +55,11 @@ const Container = styled.div<{
   className?: string
   children: React.ReactNode
 }>`
-  margin-right: 12px;
+  display: flex;
+  align-items: center;
   height: 30px;
   border-radius: 4px;
   transition: transform 0.3s ease;
-  width: 92px;
   overflow: hidden;
 
   &:hover {
@@ -74,15 +73,6 @@ const Container = styled.div<{
 
   [class*='TriggerContainer'] {
     height: 100%;
-  }
-
-  .selectWrapper {
-    width: 142px;
-    position: absolute;
-
-    [class*='TriggerContainer'] {
-      width: 92px;
-    }
   }
 
   &:not(.fullWidth) {
