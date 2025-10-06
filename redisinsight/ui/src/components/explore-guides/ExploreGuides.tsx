@@ -58,14 +58,13 @@ const ExploreGuides = () => {
               inverted
               tabIndex={0}
               onClick={() => handleLinkClick(tutorialId)}
-              className={styles.btn}
               data-testid={`guide-button-${tutorialId}`}
             >
               {icon in GUIDE_ICONS && (
                 <RiIcon
-                  className={styles.icon}
                   type={GUIDE_ICONS[icon]}
                   data-testid={`guide-icon-${icon}`}
+                  color="inherit"
                 />
               )}
               {title}
