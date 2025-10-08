@@ -19,6 +19,42 @@ import {
 import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { ProgressBarLoader } from 'uiSrc/components/base/display'
 import styles from './styles.module.scss'
+import styled from 'styled-components'
+import { Theme } from 'uiSrc/components/base/theme/types'
+
+interface StyledMultiSearchProps extends React.HTMLAttributes<HTMLDivElement> {
+  $isFocused: boolean
+}
+
+const StyledMultiSearch = styled.div<StyledMultiSearchProps>`
+  border: 1px solid
+    ${({ theme, $isFocused }: { theme: Theme; $isFocused: boolean }) =>
+      $isFocused
+        ? theme.components.input.states.focused.borderColor
+        : theme.components.input.states.normal.borderColor};
+  background-color: ${({ theme }: { theme: Theme }) =>
+    theme.components.input.states.normal.bgColor};
+  border-radius: 4px;
+`
+const StyledAutoSuggestions = styled.div<React.HTMLAttributes<HTMLDivElement>>`
+  background-color: ${({ theme }: { theme: Theme }) =>
+    theme.components.select.dropdown.bgColor};
+  border-color: ${({ theme }: { theme: Theme }) =>
+    theme.components.select.states.disabled.borderColor};
+`
+const StyledSuggestion = styled.li<React.HTMLAttributes<HTMLLIElement>>`
+  &:hover {
+    background: ${({ theme }: { theme: Theme }) =>
+      theme.components.select.dropdown.option.states.highlighted.bgColor};
+  }
+`
+
+const StyledClearHistory = styled.li<React.HTMLAttributes<HTMLDivElement>>`
+  &:hover {
+    background: ${({ theme }: { theme: Theme }) =>
+      theme.components.select.dropdown.option.states.highlighted.bgColor};
+  }
+`
 
 interface MultiSearchSuggestion {
   options: null | Array<{
@@ -171,7 +207,8 @@ const MultiSearch = (props: Props) => {
         role="presentation"
         data-testid="multi-search"
       >
-        <div
+        <StyledMultiSearch
+          $isFocused={isInputFocus}
           className={cx(styles.multiSearch, {
             [styles.isFocused]: isInputFocus,
           })}
@@ -198,7 +235,7 @@ const MultiSearch = (props: Props) => {
             {...rest}
           />
           {showAutoSuggestions && !!suggestionOptions?.length && (
-            <div
+            <StyledAutoSuggestions
               role="presentation"
               className={styles.autoSuggestions}
               data-testid="suggestions"
@@ -213,7 +250,7 @@ const MultiSearch = (props: Props) => {
                 {suggestionOptions?.map(
                   ({ id, option, value }, index) =>
                     value && (
-                      <li
+                      <StyledSuggestion
                         key={id}
                         className={cx(styles.suggestion, {
                           [styles.focused]: focusedItem === index,
@@ -246,11 +283,11 @@ const MultiSearch = (props: Props) => {
                           }}
                           data-testid={`remove-suggestion-item-${id}`}
                         />
-                      </li>
+                      </StyledSuggestion>
                     ),
                 )}
               </ul>
-              <div
+              <StyledClearHistory
                 role="presentation"
                 className={styles.clearHistory}
                 onClick={() =>
@@ -262,8 +299,8 @@ const MultiSearch = (props: Props) => {
               >
                 <RiIcon type="EraserIcon" style={{ marginRight: 6 }} />
                 <span>Clear history</span>
-              </div>
-            </div>
+              </StyledClearHistory>
+            </StyledAutoSuggestions>
           )}
           {(value || !!options.length) && (
             <RiTooltip content="Reset Filters" position="bottom">
@@ -306,7 +343,7 @@ const MultiSearch = (props: Props) => {
             </RiTooltip>
           )}
           {!disableSubmit && SubmitBtn()}
-        </div>
+        </StyledMultiSearch>
       </div>
     </OutsideClickDetector>
   )
