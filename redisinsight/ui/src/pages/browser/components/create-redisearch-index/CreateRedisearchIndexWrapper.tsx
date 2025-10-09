@@ -75,7 +75,7 @@ const CreateRedisearchIndexWrapper = ({
       </FlexItem>
       <Spacer size="xl" />
     </StyledHeader>
-    <HorizontalRule margin="xs" />
+    <HorizontalRule margin="xs" colorVariable="separatorColor" />
     <CreateRedisearchIndex
       onCreateIndex={onCreateIndex}
       onClosePanel={onClosePanel}

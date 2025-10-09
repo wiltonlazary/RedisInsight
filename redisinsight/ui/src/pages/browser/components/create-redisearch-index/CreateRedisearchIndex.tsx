@@ -268,7 +268,7 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
             />
           </FlexItem>
         </Row>
-        <HorizontalRule margin="s" />
+        <HorizontalRule margin="s" colorVariable="separatorColor" />
         <Col grow={false} gap="s">
           <Row align="center" gap="xs">
             <Text>Identifier</Text>
@@ -317,7 +317,7 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
           </AddMultipleFields>
         </Col>
       </StyledContent>
-      <HorizontalRule margin="xs" />
+      <HorizontalRule margin="xs" colorVariable="separatorColor" />
       <StyledFooter justify="end" gap="m">
         <FlexItem>
           <SecondaryButton
