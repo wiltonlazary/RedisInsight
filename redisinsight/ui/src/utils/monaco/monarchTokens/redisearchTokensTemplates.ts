@@ -3,6 +3,9 @@ import { curryRight } from 'lodash'
 import { Maybe } from 'uiSrc/utils'
 import { IRedisCommand } from 'uiSrc/constants'
 
+// Escape special regex characters in tokens
+const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const appendToken = (token: string, name: Maybe<string>) =>
   name ? `${token}.${name}` : token
 export const generateQuery = (
@@ -17,7 +20,7 @@ export const generateQuery = (
   ): languages.IMonarchLanguageRule =>
     args?.length
       ? [
-          `(${args?.map(({ token }) => token).join('|')})\\b`,
+          `(${args?.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`,
           { token: 'function', next: appendTokenName(tokenName) },
         ]
       : [/_/, '']

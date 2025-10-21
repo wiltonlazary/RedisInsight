@@ -5,6 +5,8 @@ import { IRedisCommand } from 'uiSrc/constants'
 
 const STRING_DOUBLE = 'string.double'
 
+const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const getRedisMonarchTokensProvider = (
   commands: IRedisCommand[],
 ): monacoEditor.languages.IMonarchLanguage => {
@@ -12,8 +14,8 @@ export const getRedisMonarchTokensProvider = (
   const searchCommands = remove(commandRedisCommands, ({ token }) =>
     token?.startsWith(ModuleCommandPrefix.RediSearch),
   )
-  const COMMON_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${commandRedisCommands.map(({ token }) => token).join('|')})\\b`
-  const SEARCH_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${searchCommands.map(({ token }) => token).join('|')})\\b`
+  const COMMON_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${commandRedisCommands.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`
+  const SEARCH_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${searchCommands.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`
 
   return {
     defaultToken: '',
