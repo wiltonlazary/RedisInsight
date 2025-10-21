@@ -5,6 +5,8 @@ import { generateQuery } from 'uiSrc/utils/monaco/monarchTokens/redisearchTokens
 import { ICommandTokenType, IRedisCommand } from 'uiSrc/constants'
 import { DefinedArgumentName } from 'uiSrc/pages/workbench/constants'
 
+const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const generateKeywords = (commands: IRedisCommand[]) =>
   commands.map(({ name }) => name)
 export const generateTokens = (
@@ -153,7 +155,7 @@ export const getBlockTokens = (
 
     if (tokensWithNextExpression.length) {
       result.push([
-        `(${tokensWithNextExpression.map(({ token }) => token).join('|')})\\b`,
+        `(${tokensWithNextExpression.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`,
         {
           token: `argument.block.${lvl}.${name}`,
           next: '@query',
@@ -163,7 +165,7 @@ export const getBlockTokens = (
 
     if (restTokens.length) {
       result.push([
-        `(${restTokens.map(({ token }) => token).join('|')})\\b`,
+        `(${restTokens.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`,
         { token: `argument.block.${lvl}.${name}`, next: '@root' },
       ])
     }
