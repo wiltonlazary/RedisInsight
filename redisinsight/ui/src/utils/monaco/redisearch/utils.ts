@@ -1,11 +1,9 @@
 import { isNumber, remove } from 'lodash'
 import { languages } from 'monaco-editor'
-import { Maybe, Nullable } from 'uiSrc/utils'
+import { Maybe, Nullable, sanitizeToken } from 'uiSrc/utils'
 import { generateQuery } from 'uiSrc/utils/monaco/monarchTokens/redisearchTokensTemplates'
 import { ICommandTokenType, IRedisCommand } from 'uiSrc/constants'
 import { DefinedArgumentName } from 'uiSrc/pages/workbench/constants'
-
-const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export const generateKeywords = (commands: IRedisCommand[]) =>
   commands.map(({ name }) => name)
@@ -155,7 +153,7 @@ export const getBlockTokens = (
 
     if (tokensWithNextExpression.length) {
       result.push([
-        `(${tokensWithNextExpression.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`,
+        `(${tokensWithNextExpression.map(({ token }) => sanitizeToken(token)).join('|')})\\b`,
         {
           token: `argument.block.${lvl}.${name}`,
           next: '@query',
@@ -165,7 +163,7 @@ export const getBlockTokens = (
 
     if (restTokens.length) {
       result.push([
-        `(${restTokens.map(({ token }) => escapeRegex(token || '')).join('|')})\\b`,
+        `(${restTokens.map(({ token }) => sanitizeToken(token)).join('|')})\\b`,
         { token: `argument.block.${lvl}.${name}`, next: '@root' },
       ])
     }
