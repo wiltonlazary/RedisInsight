@@ -2,21 +2,21 @@ import React from 'react'
 import { useSelector } from 'react-redux'
 import { capitalize } from 'lodash'
 
-import { ColorText, Text } from 'uiSrc/components/base/text'
+import { Text } from 'uiSrc/components/base/text'
 import { DatabaseListModules, RiTooltip } from 'uiSrc/components'
 import { BuildType } from 'uiSrc/constants/env'
 import { appInfoSelector } from 'uiSrc/slices/app/info'
 import { ConnectionType } from 'uiSrc/slices/interfaces'
 import { Nullable } from 'uiSrc/utils'
-import {
-  Group as ListGroup,
-  Item as ListGroupItem,
-} from 'uiSrc/components/base/layout/list'
+import { Item as ListGroupItem } from 'uiSrc/components/base/layout/list'
 import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { Endpoint } from 'apiSrc/common/models'
 import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
 
 import styles from '../styles.module.scss'
+import { DbInfoGroup } from './DbInfo.styles'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { DbInfoLabelValue } from './types'
 
 export interface Props {
   connectionType?: ConnectionType
@@ -28,6 +28,59 @@ export interface Props {
   modules: AdditionalRedisModule[]
   isFromCloud: boolean
 }
+
+export const ListGroupItemLabelValue = ({
+  label,
+  value,
+  dataTestId,
+  additionalContent,
+}: {
+  label: string
+  value: string | React.ReactNode
+  dataTestId?: string
+  additionalContent?: React.ReactNode
+}) => (
+  <ListGroupItem
+    label={
+      <Row align="center" gap="m">
+        <Text color="secondary">{label}</Text>
+        <Text color="primary" data-testid={dataTestId}>
+          {value}
+        </Text>
+        {additionalContent}
+      </Row>
+    }
+  />
+)
+
+const AppendEndpoints = ({
+  nodes,
+  host,
+  port,
+}: {
+  nodes: Endpoint[]
+  host: string
+  port: string
+}) => (
+  <RiTooltip
+    title="Host:port"
+    position="left"
+    anchorClassName={styles.anchorEndpoints}
+    content={
+      <ul className={styles.endpointsList}>
+        {nodes?.map(({ host: eHost, port: ePort }) => (
+          <li key={host + port}>
+            <Text>
+              {eHost}:{ePort};
+            </Text>
+          </li>
+        ))}
+      </ul>
+    }
+  >
+    <RiIcon type="InfoIcon" style={{ cursor: 'pointer' }} />
+  </RiTooltip>
+)
 
 const DbInfo = (props: Props) => {
   const {
@@ -43,121 +96,61 @@ const DbInfo = (props: Props) => {
 
   const { server } = useSelector(appInfoSelector)
 
-  const AppendEndpoints = () => (
-    <RiTooltip
-      title="Host:port"
-      position="left"
-      anchorClassName={styles.anchorEndpoints}
-      content={
-        <ul className={styles.endpointsList}>
-          {nodes?.map(({ host: eHost, port: ePort }) => (
-            <li key={host + port}>
-              <Text>
-                {eHost}:{ePort};
-              </Text>
-            </li>
-          ))}
-        </ul>
-      }
-    >
-      <RiIcon
-        type="InfoIcon"
-        color="informative400"
-        title=""
-        style={{ cursor: 'pointer' }}
-      />
-    </RiTooltip>
-  )
+  const dbInfo: DbInfoLabelValue[] = [
+    {
+      label: 'Connection Type:',
+      value: capitalize(connectionType),
+      dataTestId: 'connection-type',
+      hide: isFromCloud,
+    },
+    {
+      label: 'Database Name from Provider:',
+      value: nameFromProvider,
+      dataTestId: 'db-name-from-provider',
+      hide: !nameFromProvider,
+    },
+    {
+      label: 'Host:',
+      value: host,
+      dataTestId: 'db-info-host',
+      additionalContent: !!nodes?.length && (
+        <AppendEndpoints nodes={nodes} host={host} port={port} />
+      ),
+    },
+    {
+      label: 'Port:',
+      value: port,
+      dataTestId: 'db-info-port',
+      hide: (server?.buildType !== BuildType.RedisStack) && !isFromCloud,
+    },
+    {
+      label: 'Database Index:',
+      value: db?.toString(),
+      dataTestId: 'db-index',
+      hide: !db,
+    },
+    {
+      label: 'Capabilities:',
+      value: <DatabaseListModules modules={modules} />,
+      dataTestId: 'capabilities',
+      hide: !modules?.length,
+    },
+  ]
 
   return (
-    <ListGroup className={styles.dbInfoGroup} flush>
-      {!isFromCloud && (
-        <ListGroupItem
-          label={
-            <Text color="default" size="s">
-              Connection Type:
-              <ColorText
-                color="default"
-                className={styles.dbInfoListValue}
-                data-testid="connection-type"
-              >
-                {capitalize(connectionType)}
-              </ColorText>
-            </Text>
-          }
-        />
-      )}
-
-      {nameFromProvider && (
-        <ListGroupItem
-          label={
-            <Text color="default" size="s">
-              Database Name from Provider:
-              <ColorText color="default" className={styles.dbInfoListValue}>
-                {nameFromProvider}
-              </ColorText>
-            </Text>
-          }
-        />
-      )}
-      <ListGroupItem
-        label={
-          <>
-            {!!nodes?.length && <AppendEndpoints />}
-            <Text color="default" size="s">
-              Host:
-              <ColorText
-                color="default"
-                className={styles.dbInfoListValue}
-                data-testid="db-info-host"
-              >
-                {host}
-              </ColorText>
-            </Text>
-          </>
-        }
-      />
-      {(server?.buildType === BuildType.RedisStack || isFromCloud) && (
-        <ListGroupItem
-          label={
-            <Text color="default" size="s">
-              Port:
-              <ColorText
-                color="default"
-                className={styles.dbInfoListValue}
-                data-testid="db-info-port"
-              >
-                {port}
-              </ColorText>
-            </Text>
-          }
-        />
-      )}
-
-      {!!db && (
-        <ListGroupItem
-          label={
-            <Text color="default" size="s">
-              Database Index:
-              <ColorText color="default" className={styles.dbInfoListValue}>
-                {db}
-              </ColorText>
-            </Text>
-          }
-        />
-      )}
-
-      {!!modules?.length && (
-        <ListGroupItem
-          label={
-            <Text color="default" size="s">
-              Capabilities:
-              <DatabaseListModules modules={modules} />
-            </Text>
-          }
-        />
-      )}
-    </ListGroup>
+    <DbInfoGroup flush maxWidth={false}>
+      {dbInfo
+        .filter((item) => !item.hide)
+        .map((item) => (
+          <ListGroupItemLabelValue
+            key={item.label}
+            label={item.label}
+            value={item.value}
+            dataTestId={item.dataTestId}
+            additionalContent={item.additionalContent}
+          />
+        ))}
+    </DbInfoGroup>
   )
 }
 
