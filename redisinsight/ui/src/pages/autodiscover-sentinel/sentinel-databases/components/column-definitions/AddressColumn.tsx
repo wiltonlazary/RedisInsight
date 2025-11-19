@@ -7,6 +7,7 @@ import {
 import { RiTooltip } from 'uiSrc/components'
 import { type ColumnDef } from 'uiSrc/components/base/layout/table'
 import { ModifiedSentinelMaster } from 'uiSrc/slices/interfaces'
+import { ColumnDefinitionTitles } from 'uiSrc/pages/autodiscover-sentinel/constants/constants'
 
 const handleCopy = (text = '') => {
   return navigator.clipboard.writeText(text)
@@ -14,10 +15,11 @@ const handleCopy = (text = '') => {
 
 export const AddressColumn = (): ColumnDef<ModifiedSentinelMaster> => {
   return {
-    header: 'Address',
+    header: ColumnDefinitionTitles.Address,
     id: 'host',
     accessorKey: 'host',
     enableSorting: true,
+    minSize: 170,
     cell: ({
       row: {
         original: { host, port },
