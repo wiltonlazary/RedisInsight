@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { isEmpty } from 'lodash'
-import { FormikErrors, useFormik } from 'formik'
 
+import { FormikErrors, useFormik } from 'formik'
 import * as keys from 'uiSrc/constants/keys'
 import { MAX_PORT_NUMBER, validateField } from 'uiSrc/utils/validations'
 import { handlePasteHostName } from 'uiSrc/utils'
 import validationErrors from 'uiSrc/constants/validationErrors'
+
 import { ICredentialsRedisCluster } from 'uiSrc/slices/interfaces'
 
 import { MessageEnterpriceSoftware } from 'uiSrc/pages/home/components/form/Messages'
@@ -58,7 +59,7 @@ const fieldDisplayNames: Values = {
   host: 'Cluster Host',
   port: 'Cluster Port',
   username: 'Admin Username',
-  // deepcode ignore NoHardcodedPasswords: <Not a passowrd but "password" field placeholder>
+  // deepcode ignore NoHardcodedPasswords: <Not a password but "password" field placeholder>
   password: 'Admin Password',
 }
 
