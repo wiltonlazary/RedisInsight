@@ -4,6 +4,7 @@ import { Popover } from '@redis-ui/components'
 import * as keys from 'uiSrc/constants/keys'
 import { RiPopoverProps } from './types'
 import { anchorPositionMap, panelPaddingSizeMap } from './config'
+import { OutsideClickDetector } from 'uiSrc/components/base/utils'
 
 export const RiPopover = ({
   isOpen,
@@ -16,19 +17,32 @@ export const RiPopover = ({
   anchorClassName,
   panelClassName,
   maxWidth = '100%',
+  persistent,
+  customOutsideDetector,
   ...props
 }: RiPopoverProps) => (
   <Popover
     {...props}
     open={isOpen}
-    onClickOutside={closePopover}
+    onClickOutside={customOutsideDetector ? undefined : closePopover}
     onKeyDown={(event) => {
       // Close on escape press
       if (event.key === keys.ESCAPE) {
         closePopover?.(event as any)
       }
     }}
-    content={children}
+    persistent={persistent}
+    content={
+      children && customOutsideDetector ? (
+        <OutsideClickDetector
+          onOutsideClick={(event) => closePopover?.(event as any)}
+        >
+          {children as JSX.Element}
+        </OutsideClickDetector>
+      ) : (
+        children
+      )
+    }
     // Props passed to the children wrapper:
     className={panelClassName}
     maxWidth={maxWidth}
