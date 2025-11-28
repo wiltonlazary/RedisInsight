@@ -134,7 +134,7 @@ const ClusterDetailsPage = () => {
   }
 
   return (
-    <S.ClusterDetailsPageWrapper data-testid="cluster-details-page">
+    <S.ClusterDetailsPageWrapper as="div" data-testid="cluster-details-page">
       <ClusterDetailsHeader />
       <ClusterDetailsGraphics nodes={nodes} loading={loading} />
       <ClusterNodesTable nodes={nodes} />
