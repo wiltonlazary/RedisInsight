@@ -1,6 +1,7 @@
+import { sign } from 'jsonwebtoken';
 import axios, { AxiosInstance } from 'axios';
 import { plainToInstance } from 'class-transformer';
-import { Logger } from '@nestjs/common';
+import { HttpStatus, Logger } from '@nestjs/common';
 
 import { RdiClient } from 'src/modules/rdi/client/rdi.client';
 import {
@@ -66,6 +67,28 @@ export class ApiRdiClient extends RdiClient {
         rejectUnauthorized: false, // lgtm[js/disabling-certificate-validation]
       }),
     });
+  }
+
+  private async loginDev(): Promise<string> {
+    return sign({}, 'dev', { expiresIn: '1h' });
+  }
+
+  private async login(): Promise<string> {
+    try {
+      const response = await this.client.post(RdiUrl.Login, {
+        username: this.rdi.username,
+        password: this.rdi.password,
+      });
+
+      return response.data.access_token;
+    } catch (e) {
+      // If /login endpoint is not found we assume that RDI is in dev mode
+      if (e.status === HttpStatus.NOT_FOUND) {
+        return this.loginDev();
+      }
+
+      throw e;
+    }
   }
 
   async getSchema(): Promise<object> {
@@ -202,24 +225,40 @@ export class ApiRdiClient extends RdiClient {
       throw wrapRdiPipelineError(error);
     }
 
-    try {
-      const sourceConfigs = Object.keys(config.sources || {});
+    const sourceConfigs = Object.keys(config.sources || {});
 
-      if (sourceConfigs.length) {
-        await Promise.all(
-          sourceConfigs.map(async (source) => {
-            const response = await this.client.post(
-              RdiUrl.TestSourcesConnections,
-              { ...config.sources[source] },
-            );
-            sources[source] = response.data;
-          }),
-        );
-      }
-    } catch (error) {
-      // failing is expected on RDI version below 1.6.0 (1.4.3 for example)
-      this.logger.error('Failed to fetch sources', error);
+    if (sourceConfigs.length === 0) {
+      return { targets, sources };
     }
+
+    await Promise.all(
+      sourceConfigs.map(async (source) => {
+        try {
+          const response = await this.client.post(
+            RdiUrl.TestSourcesConnections,
+            { ...config.sources[source] },
+          );
+          sources[source] = response.data;
+        } catch (error: any) {
+          // Older versions of RDI (below 1.6.0) don't support testing sources connections
+          // RDI returns 405 Method Not Allowed for non existing endpoints
+          const status = error?.status;
+          if (status === 405) {
+            sources[source] = {
+              connected: false,
+              error:
+                'Testing source connections is not supported in your RDI version. Please upgrade to version 1.6.0 or later.',
+            };
+          } else {
+            // Something went wrong with testing source connection
+            sources[source] = {
+              connected: false,
+              error: 'Failed to test source connection.',
+            };
+          }
+        }
+      }),
+    );
 
     return { targets, sources };
   }
@@ -261,16 +300,16 @@ export class ApiRdiClient extends RdiClient {
 
   async connect(): Promise<void> {
     try {
-      const response = await this.client.post(RdiUrl.Login, {
-        username: this.rdi.username,
-        password: this.rdi.password,
-      });
-      const accessToken = response.data.access_token;
+      const accessToken = await this.login();
+
       const { exp } = JSON.parse(
         Buffer.from(accessToken.split('.')[1], 'base64').toString(),
       );
 
-      this.auth = { jwt: accessToken, exp };
+      this.auth = {
+        jwt: accessToken,
+        exp,
+      };
       this.client.defaults.headers.common['Authorization'] =
         `Bearer ${accessToken}`;
     } catch (e) {

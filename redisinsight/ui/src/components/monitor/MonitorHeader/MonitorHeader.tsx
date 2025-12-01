@@ -2,7 +2,6 @@ import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
 import { useParams } from 'react-router-dom'
-import { EuiButtonIcon, EuiText, EuiToolTip, EuiIcon } from '@elastic/eui'
 
 import {
   monitorSelector,
@@ -12,11 +11,20 @@ import {
   toggleMonitor,
 } from 'uiSrc/slices/cli/monitor'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import BanIcon from 'uiSrc/assets/img/monitor/ban.svg'
-import { OnboardingTour } from 'uiSrc/components'
+import { OnboardingTour, RiTooltip } from 'uiSrc/components'
 import { ONBOARDING_FEATURES } from 'uiSrc/components/onboarding-features'
 
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import {
+  PlayIcon,
+  PauseIcon,
+  DeleteIcon,
+  BannedIcon,
+} from 'uiSrc/components/base/icons'
+import { WindowControlGroup } from 'uiSrc/components/base/shared/WindowControlGroup'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -74,18 +82,18 @@ const MonitorHeader = ({ handleRunMonitor }: Props) => {
     <div className={styles.container} data-testid="monitor-header">
       <Row justify="between" align="center" style={{ height: '100%' }}>
         <FlexItem className={styles.title}>
-          <EuiIcon type="inspect" size="m" />
+          <RiIcon type="ProfilerIcon" size="m" />
           <OnboardingTour
             options={ONBOARDING_FEATURES.BROWSER_PROFILER}
             anchorPosition="upLeft"
             panelClassName={styles.profilerOnboardPanel}
           >
-            <EuiText>Profiler</EuiText>
+            <Text>Profiler</Text>
           </OnboardingTour>
         </FlexItem>
         {isStarted && (
-          <FlexItem className={styles.actions}>
-            <EuiToolTip
+          <FlexItem direction="row" className={styles.actions}>
+            <RiTooltip
               content={
                 isErrorShown || isResumeLocked
                   ? ''
@@ -95,21 +103,21 @@ const MonitorHeader = ({ handleRunMonitor }: Props) => {
               }
               anchorClassName="inline-flex"
             >
-              <EuiButtonIcon
-                iconType={
+              <IconButton
+                icon={
                   isErrorShown || isResumeLocked
-                    ? BanIcon
+                    ? BannedIcon
                     : !isPaused
-                      ? 'pause'
-                      : 'play'
+                      ? PauseIcon
+                      : PlayIcon
                 }
                 onClick={() => handleRunMonitor()}
                 aria-label="start/stop monitor"
                 data-testid="toggle-run-monitor"
                 disabled={disabledPause}
               />
-            </EuiToolTip>
-            <EuiToolTip
+            </RiTooltip>
+            <RiTooltip
               content={
                 !isStarted || !items.length ? '' : 'Clear Profiler Window'
               }
@@ -117,52 +125,21 @@ const MonitorHeader = ({ handleRunMonitor }: Props) => {
                 transparent: !isStarted || !items.length,
               })}
             >
-              <EuiButtonIcon
-                iconType="eraser"
+              <IconButton
+                icon={DeleteIcon}
                 onClick={handleClearMonitor}
                 aria-label="clear profiler"
                 data-testid="clear-monitor"
               />
-            </EuiToolTip>
+            </RiTooltip>
           </FlexItem>
         )}
         <FlexItem grow />
-        <FlexItem>
-          <EuiToolTip
-            content="Minimize"
-            position="top"
-            display="inlineBlock"
-            anchorClassName="flex-row"
-          >
-            <EuiButtonIcon
-              iconType="minus"
-              color="primary"
-              id="hide-monitor"
-              aria-label="hide monitor"
-              data-testid="hide-monitor"
-              className={styles.icon}
-              onClick={handleHideMonitor}
-            />
-          </EuiToolTip>
-        </FlexItem>
-        <FlexItem>
-          <EuiToolTip
-            content="Close"
-            position="top"
-            display="inlineBlock"
-            anchorClassName="flex-row"
-          >
-            <EuiButtonIcon
-              iconType="cross"
-              color="primary"
-              id="close-monitor"
-              aria-label="close monitor"
-              data-testid="close-monitor"
-              className={styles.icon}
-              onClick={handleCloseMonitor}
-            />
-          </EuiToolTip>
-        </FlexItem>
+        <WindowControlGroup
+          onClose={handleCloseMonitor}
+          onHide={handleHideMonitor}
+          id="monitor"
+        />
       </Row>
     </div>
   )

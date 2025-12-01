@@ -2,6 +2,7 @@ import styled, { css } from 'styled-components'
 import { CSSProperties, HTMLAttributes } from 'react'
 import { StyledPageHeader } from 'uiSrc/components/base/layout/page/page-heading.styles'
 import { StyledPageBody } from 'uiSrc/components/base/layout/page/page-body.styles'
+import { Theme } from 'uiSrc/components/base/theme/types'
 
 export const PageClassNames = {
   page: 'RI-page',
@@ -68,10 +69,7 @@ export const pageStyles: PageStyles = {
   `,
 
   row: css`
-    flex-direction: column;
-    @media only screen and (min-width: 768px) {
-      flex-direction: row;
-    }
+    flex-direction: row;
   `,
 
   // Max widths
@@ -123,7 +121,8 @@ export const StyledPage = styled.div<
   }
 >`
   display: flex;
-  background-color: var(--euiPageBackgroundColor);
+  background-color: ${({ theme }: { theme: Theme }) =>
+    theme.semantic.color.background.neutral100};
   /* Ensure Safari doesn't shrink height beyond contents */
   flex-shrink: 0;
   /* Ensure Firefox doesn't expand width beyond bounds */

@@ -1,28 +1,30 @@
-import React, { useState, useEffect } from 'react'
-import cx from 'classnames'
-import {
-  EuiInMemoryTable,
-  EuiBasicTableColumn,
-  PropertySort,
-  EuiButton,
-  EuiText,
-  EuiTitle,
-  EuiFieldSearch,
-  EuiFormRow,
-} from '@elastic/eui'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 import { sentinelSelector } from 'uiSrc/slices/instances/sentinel'
-import { ModifiedSentinelMaster } from 'uiSrc/slices/interfaces'
+import { type ModifiedSentinelMaster } from 'uiSrc/slices/interfaces'
 import MessageBar from 'uiSrc/components/message-bar/MessageBar'
+import { riToast } from 'uiSrc/components/base/display/toast'
 import { AutodiscoveryPageTemplate } from 'uiSrc/templates'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
+import { type ColumnDef, Table } from 'uiSrc/components/base/layout/table'
+
+import {
+  DatabaseContainer,
+  DatabaseWrapper,
+  EmptyState,
+  Footer,
+} from 'uiSrc/components/auto-discover'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { Header } from 'uiSrc/components/auto-discover/Header'
+import { SummaryText } from './components/Summary'
 
 export interface Props {
   countSuccessAdded: number
-  columns: EuiBasicTableColumn<ModifiedSentinelMaster>[]
+  columns: ColumnDef<ModifiedSentinelMaster>[]
   masters: ModifiedSentinelMaster[]
   onBack: () => void
   onViewDatabases: () => void
@@ -43,12 +45,9 @@ const SentinelDatabasesResult = ({
 
   const { loading } = useSelector(sentinelSelector)
 
-  const countFailAdded = masters?.length - countSuccessAdded
-
-  const sort: PropertySort = {
-    field: 'message',
-    direction: 'asc',
-  }
+  const countFailAdded = masters?.length
+    ? masters.length - countSuccessAdded
+    : 0
 
   useEffect(() => {
     if (masters.length) {
@@ -60,15 +59,15 @@ const SentinelDatabasesResult = ({
     onViewDatabases()
   }
 
-  const onQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e?.target?.value?.toLowerCase()
+  const onQueryChange = (term: string) => {
+    const value = term?.toLowerCase()
 
     const itemsTemp = masters.filter(
       (item: ModifiedSentinelMaster) =>
-        item.name?.toLowerCase().includes(value) ||
-        item.host?.toLowerCase().includes(value) ||
-        item.alias?.toLowerCase().includes(value) ||
-        item.username?.toLowerCase().includes(value) ||
+        item.name?.toLowerCase()?.includes(value) ||
+        (item.host || '')?.toLowerCase()?.includes(value) ||
+        item.alias?.toLowerCase()?.includes(value) ||
+        (item.username || '')?.toLowerCase()?.includes(value) ||
         item.port?.toString()?.includes(value) ||
         item.numberOfSlaves?.toString().includes(value),
     )
@@ -79,83 +78,62 @@ const SentinelDatabasesResult = ({
     setItems(itemsTemp)
   }
 
-  const SummaryText = () => (
-    <EuiText className={styles.subTitle} data-testid="summary">
-      <b>Summary: </b>
-      {countSuccessAdded ? (
-        <span>
-          Successfully added {countSuccessAdded}
-          {' primary group(s)'}
-          {countFailAdded ? '; ' : ' '}
-        </span>
-      ) : null}
-      {countFailAdded ? (
-        <span>
-          Failed to add {countFailAdded}
-          {' primary group(s)'}
-        </span>
-      ) : null}
-    </EuiText>
-  )
-
   return (
     <AutodiscoveryPageTemplate>
-      <div className="databaseContainer">
-        <EuiTitle size="s" className={styles.title} data-testid="title">
-          <h1>Auto-Discover Redis Sentinel Primary Groups</h1>
-        </EuiTitle>
+      <DatabaseContainer justify="start">
+        <Header
+          title="Auto-Discover Redis Sentinel Primary Groups"
+          onBack={onBack}
+          onQueryChange={onQueryChange}
+        />
 
-        <Row align="end" gap="s">
-          <FlexItem grow>
-            <MessageBar opened={!!countSuccessAdded || !!countFailAdded}>
-              <SummaryText />
-            </MessageBar>
-          </FlexItem>
-        </Row>
-        <FlexItem>
-          <EuiFormRow className={styles.searchForm}>
-            <EuiFieldSearch
-              placeholder="Search..."
-              className={styles.search}
-              onChange={onQueryChange}
-              isClearable
-              aria-label="Search"
-              data-testid="search"
+        <Spacer size="m" />
+        <DatabaseWrapper>
+          {loading ? (
+            <Col full centered>
+              <Text size="XL" variant="semiBold">
+                {message}
+              </Text>
+            </Col>
+          ) : (
+            <Table
+              rowSelectionMode={undefined}
+              columns={columns}
+              data={items}
+              defaultSorting={[{ id: 'message', desc: false }]}
+              emptyState={() => <EmptyState message={message} />}
+              stripedRows
+              paginationEnabled={items?.length > 10}
             />
-          </EuiFormRow>
-        </FlexItem>
-        <br />
-        <div className="itemList databaseList sentinelDatabaseListResult">
-          <EuiInMemoryTable
-            items={items}
-            itemId="id"
-            loading={loading}
-            message={message}
-            columns={columns}
-            sorting={{ sort }}
-            className={styles.table}
-          />
-        </div>
-      </div>
-      <div className={cx(styles.footer, 'footerAddDatabase')}>
-        <EuiButton
-          onClick={onBack}
-          color="secondary"
-          className="btn-cancel btn-back"
-          data-testid="btn-back-to-adding"
-        >
-          Back to adding databases
-        </EuiButton>
-        <EuiButton
-          fill
-          size="m"
-          onClick={handleViewDatabases}
-          color="secondary"
-          data-testid="btn-view-databases"
-        >
-          View Databases
-        </EuiButton>
-      </div>
+          )}
+        </DatabaseWrapper>
+        {!!masters?.length && (
+          <MessageBar
+            opened={!!countSuccessAdded || !!countFailAdded}
+            variant={
+              !!countFailAdded
+                ? riToast.Variant.Attention
+                : riToast.Variant.Success
+            }
+          >
+            <SummaryText
+              countSuccessAdded={countSuccessAdded}
+              countFailAdded={countFailAdded}
+            />
+          </MessageBar>
+        )}
+      </DatabaseContainer>
+      <Footer>
+        <Row justify="end">
+          <PrimaryButton
+            size="m"
+            onClick={handleViewDatabases}
+            data-testid="btn-view-databases"
+          >
+            View Databases
+          </PrimaryButton>
+        </Row>
+      </Footer>
     </AutodiscoveryPageTemplate>
   )
 }

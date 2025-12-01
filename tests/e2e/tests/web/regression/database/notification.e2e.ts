@@ -51,14 +51,14 @@ test.before(async() => {
       //  await databaseAPIRequests.deleteAllDatabasesApi();
     })
     .skip('Verify that notifications are displayed if the db will be expired soon', async t => {
-        await t.click(browserPage.NavigationPanel.workbenchButton);
+        await t.click(browserPage.NavigationTabs.workbenchButton);
         await workbenchPage.sendCommandInWorkbench('CMS.INITBYDIM');
 
         await DatabaseScripts.updateColumnValueInDBTable(dbTableParams5days);
         await t.click(browserPage.NavigationPanel.myRedisDBButton);
         await t.hover(myRedisDatabasePage.iconNotUsedDatabase);
         await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('Probabilistic data structures', 'there is no info about module');
-        await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('free trial Cloud databases will be deleted after 15 days of inactivity.', 'there is no expected info');
+        await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('free Redis Cloud databases will be deleted after 15 days of inactivity.', 'there is no expected info');
 
         await myRedisDatabasePage.clickOnDBByName(ossStandaloneConfig.databaseName);
         await t.click(browserPage.NavigationPanel.myRedisDBButton);
@@ -67,5 +67,5 @@ test.before(async() => {
 
         await t.hover(myRedisDatabasePage.iconDeletedDatabase);
         await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('Build your app with Redis Cloud', 'there is no common');
-        await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('Free trial Cloud DBs auto-delete after 15 days', 'there is no expected info');
+        await t.expect(myRedisDatabasePage.notificationUnusedDbMessage.textContent).contains('Free Redis Cloud DBs auto-delete after 15 days', 'there is no expected info');
     });

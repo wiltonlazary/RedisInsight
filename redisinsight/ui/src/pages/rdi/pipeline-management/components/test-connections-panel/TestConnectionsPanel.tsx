@@ -1,12 +1,16 @@
 import React from 'react'
-import { EuiButtonIcon, EuiText, EuiLoadingSpinner } from '@elastic/eui'
 import { useSelector } from 'react-redux'
 
 import TestConnectionsLog from 'uiSrc/pages/rdi/pipeline-management/components/test-connections-log'
 import { rdiTestConnectionsSelector } from 'uiSrc/slices/rdi/testConnections'
 
-import { Col, FlexItem } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { Text, Title } from 'uiSrc/components/base/text'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CancelSlimIcon } from 'uiSrc/components/base/icons'
+import { Loader } from 'uiSrc/components/base/display'
+import Divider from 'uiSrc/components/divider/Divider'
+import { TestConnectionContainer } from 'uiSrc/pages/rdi/pipeline-management/components/test-connections-panel/styles'
 
 interface TestConnectionPanelWrapperProps {
   onClose: () => void
@@ -17,21 +21,23 @@ const TestConnectionPanelWrapper = ({
   children,
   onClose,
 }: TestConnectionPanelWrapperProps) => (
-  <div className={styles.panel} data-testid="test-connection-panel">
-    <div className={styles.header}>
-      <EuiText className={styles.title}>Connection test results</EuiText>
-      <EuiButtonIcon
-        iconSize="m"
-        iconType="cross"
-        color="primary"
-        aria-label="close test connections panel"
-        className={styles.closeBtn}
-        onClick={onClose}
-        data-testid="close-test-connections-btn"
-      />
-    </div>
-    {children}
-  </div>
+  <TestConnectionContainer grow data-testid="test-connection-panel" gap="xxl">
+    <FlexItem>
+      <Row align="center" justify="between">
+        <Title size="L" color="primary">
+          Test connection
+        </Title>
+        <IconButton
+          icon={CancelSlimIcon}
+          aria-label="close test connections panel"
+          onClick={onClose}
+          data-testid="close-test-connections-btn"
+        />
+      </Row>
+    </FlexItem>
+    <FlexItem />
+    <FlexItem grow>{children}</FlexItem>
+  </TestConnectionContainer>
 )
 
 export interface Props {
@@ -45,14 +51,13 @@ const TestConnectionsPanel = (props: Props) => {
   if (loading) {
     return (
       <TestConnectionPanelWrapper onClose={onClose}>
-        <Col className={styles.content} centered>
+        <Col centered>
           <FlexItem>
-            <EuiText className={styles.loaderText}>Loading results...</EuiText>
+            <Text>Loading results...</Text>
           </FlexItem>
           <FlexItem>
-            <EuiLoadingSpinner
+            <Loader
               data-testid="test-connections-loader"
-              className={styles.loaderIcon}
               color="secondary"
               size="xl"
             />
@@ -65,34 +70,28 @@ const TestConnectionsPanel = (props: Props) => {
   if (!results) {
     return (
       <TestConnectionPanelWrapper onClose={onClose}>
-        <EuiText className={styles.subtitle}>
-          No results found. Please try again.
-        </EuiText>
+        <Col centered>
+          <Text>No results found. Please try again.</Text>
+        </Col>
       </TestConnectionPanelWrapper>
     )
   }
 
   return (
     <TestConnectionPanelWrapper onClose={onClose}>
-      <div className={styles.content}>
-        <EuiText
-          className={styles.subtitle}
-          style={{ marginTop: 16, marginBottom: 10 }}
-        >
-          Source connections
-        </EuiText>
-
-        <TestConnectionsLog data={results.source} />
-
-        <EuiText
-          className={styles.subtitle}
-          style={{ marginTop: 16, marginBottom: 10 }}
-        >
-          Target connections
-        </EuiText>
-
-        <TestConnectionsLog data={results.target} />
-      </div>
+      <Col gap="xxl">
+        <FlexItem>
+          <Text color="primary">Source connections</Text>
+          <TestConnectionsLog data={results.source} />
+        </FlexItem>
+        <FlexItem>
+          <Divider colorVariable="separatorColor" />
+        </FlexItem>
+        <FlexItem>
+          <Text color="primary">Target connections</Text>
+          <TestConnectionsLog data={results.target} />
+        </FlexItem>
+      </Col>
     </TestConnectionPanelWrapper>
   )
 }

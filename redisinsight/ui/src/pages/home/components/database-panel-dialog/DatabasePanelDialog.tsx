@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { EuiButtonIcon, EuiTitle } from '@elastic/eui'
-import cx from 'classnames'
+
 import { Nullable } from 'uiSrc/utils'
 import { UrlHandlingActions } from 'uiSrc/slices/interfaces/urlHandling'
 import { Instance } from 'uiSrc/slices/interfaces'
@@ -33,7 +32,12 @@ import { FormDialog } from 'uiSrc/components'
 import { ModalHeaderProvider } from 'uiSrc/contexts/ModalTitleProvider'
 import ClusterConnectionFormWrapper from 'uiSrc/pages/home/components/cluster-connection'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { ChevronLeftIcon } from 'uiSrc/components/base/icons'
+import { FooterDatabaseForm } from 'uiSrc/components/form-dialog/FooterDatabaseForm'
+import { Title } from 'uiSrc/components/base/text'
+
+import { FixedWrapper } from '../ManualConnection.styles'
 
 export interface Props {
   editMode: boolean
@@ -165,10 +169,9 @@ const DatabasePanelDialog = (props: Props) => {
       withBack && content ? (
         <Row align="center" gap="s">
           <FlexItem>
-            <EuiButtonIcon
+            <IconButton
               onClick={handleClickBack}
-              iconSize="m"
-              iconType="sortLeft"
+              icon={ChevronLeftIcon}
               aria-label="back"
               data-testid="back-btn"
             />
@@ -186,28 +189,16 @@ const DatabasePanelDialog = (props: Props) => {
     <FormDialog
       isOpen
       onClose={onClose}
-      header={
-        modalHeader ?? (
-          <EuiTitle size="s">
-            <h4>Add Database</h4>
-          </EuiTitle>
-        )
-      }
-      footer={<div id="footerDatabaseForm" />}
+      header={modalHeader ?? <Title size="L">Add database</Title>}
+      footer={<FooterDatabaseForm />}
     >
-      <div
-        className={cx(styles.bodyWrapper, 'container relative', {
-          addDbWrapper: !editMode,
-        })}
-      >
-        <div className={styles.formWrapper}>
-          <ModalHeaderProvider
-            value={{ modalHeader, setModalHeader: handleSetModalHeader }}
-          >
-            {Form()}
-          </ModalHeaderProvider>
-        </div>
-      </div>
+      <FixedWrapper>
+        <ModalHeaderProvider
+          value={{ modalHeader, setModalHeader: handleSetModalHeader }}
+        >
+          {Form()}
+        </ModalHeaderProvider>
+      </FixedWrapper>
     </FormDialog>
   )
 }

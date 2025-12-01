@@ -1,10 +1,12 @@
-import { EuiBasicTableColumn } from '@elastic/eui'
 import React from 'react'
 
 import { IClients } from 'uiSrc/slices/interfaces'
-import Accordion from '../components/accordion'
-import Panel from '../components/panel'
-import Table from '../components/table'
+import { Table, ColumnDefinition } from 'uiSrc/components/base/layout/table'
+import { Section } from '@redis-ui/components'
+import {
+  StyledRdiAnalyticsTable,
+  StyledRdiStatisticsSectionBody,
+} from 'uiSrc/pages/rdi/statistics/styles'
 
 type ClientsData = {
   id: string
@@ -15,55 +17,51 @@ type ClientsData = {
   user: string
 }
 
-const columns: EuiBasicTableColumn<ClientsData>[] = [
+const columns: ColumnDefinition<ClientsData>[] = [
   {
-    name: 'ID',
-    field: 'id',
-    sortable: true,
+    header: 'ID',
+    id: 'id',
+    accessorKey: 'id',
+    enableSorting: true,
   },
   {
-    name: 'ADDR',
-    field: 'addr',
-    sortable: true,
+    header: 'ADDR',
+    id: 'addr',
+    accessorKey: 'addr',
+    enableSorting: true,
   },
   {
-    name: 'Age',
-    field: 'ageSec',
-    sortable: true,
+    header: 'Age',
+    id: 'ageSec',
+    accessorKey: 'ageSec',
+    enableSorting: true,
   },
   {
-    name: 'Name',
-    field: 'name',
-    sortable: true,
+    header: 'Name',
+    id: 'name',
+    accessorKey: 'name',
+    enableSorting: true,
   },
   {
-    name: 'Idle',
-    field: 'idleSec',
-    sortable: true,
+    header: 'Idle',
+    id: 'idleSec',
+    accessorKey: 'idleSec',
+    enableSorting: true,
   },
   {
-    name: 'User',
-    field: 'user',
-    sortable: true,
+    header: 'User',
+    id: 'user',
+    accessorKey: 'user',
+    enableSorting: true,
   },
 ]
 
 interface Props {
   data: IClients
-  loading: boolean
-  onRefresh: () => void
-  onRefreshClicked: () => void
-  onChangeAutoRefresh: (enableAutoRefresh: boolean, refreshRate: string) => void
 }
 
-const Clients = ({
-  data,
-  loading,
-  onRefresh,
-  onRefreshClicked,
-  onChangeAutoRefresh,
-}: Props) => {
-  const clients = Object.keys(data).map((key) => {
+const Clients = ({ data }: Props) => {
+  const clients: ClientsData[] = Object.keys(data).map((key) => {
     const client = data[key]
     return {
       id: key,
@@ -72,24 +70,21 @@ const Clients = ({
   })
 
   return (
-    <Panel>
-      <Accordion
-        id="clients"
-        title="Clients"
-        hideAutoRefresh
-        loading={loading}
-        onRefresh={onRefresh}
-        onRefreshClicked={onRefreshClicked}
-        onChangeAutoRefresh={onChangeAutoRefresh}
-      >
-        <Table<ClientsData>
-          id="clients"
-          columns={columns}
-          items={clients}
-          initialSortField="id"
-        />
-      </Accordion>
-    </Panel>
+    <Section.Compose collapsible defaultOpen id="clients">
+      <Section.Header label="Clients" />
+      <StyledRdiStatisticsSectionBody
+        content={
+          <StyledRdiAnalyticsTable
+            columns={columns}
+            data={clients}
+            defaultSorting={[{ id: 'id', desc: false }]}
+          >
+            <Table.Header />
+            <Table.Body />
+          </StyledRdiAnalyticsTable>
+        }
+      />
+    </Section.Compose>
   )
 }
 

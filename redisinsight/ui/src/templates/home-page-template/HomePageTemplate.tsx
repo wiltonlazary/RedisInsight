@@ -10,8 +10,15 @@ import { FeatureFlagComponent, OAuthUserProfile } from 'uiSrc/components'
 import { OAuthSocialSource } from 'uiSrc/slices/interfaces'
 import { CopilotTrigger, InsightsTrigger } from 'uiSrc/components/triggers'
 
-import { Flex, FlexItem } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { FlexGroup, FlexItem } from 'uiSrc/components/base/layout/flex'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
+import {
+  ExplorePanelWrapper,
+  PageDefaultHeader,
+  PageWrapper,
+} from './HomePageTemplate.styles'
+import { instancesSelector as databaseInstancesSelector } from 'uiSrc/slices/instances/instances'
+import { instancesSelector as rdiInstancesSelector } from 'uiSrc/slices/rdi/instances'
 
 export interface Props {
   children: React.ReactNode
@@ -29,37 +36,45 @@ const HomePageTemplate = (props: Props) => {
     documentationChatFeature,
   ])
 
+  const { loading: instancesLoading } = useSelector(databaseInstancesSelector)
+  const { loading: rdiLoading } = useSelector(rdiInstancesSelector)
+
+  const loading = instancesLoading || rdiLoading
+
   return (
     <>
-      <div className={styles.pageDefaultHeader}>
+      {loading && (
+        <ProgressBarLoader
+          color="primary"
+          data-testid="progress-key-stream"
+          absolute
+        />
+      )}
+      <PageDefaultHeader align="center" justify="between" gap="l">
         <HomeTabs />
-        <Flex style={{ flexGrow: 0 }} gap="none" align="center">
+        <FlexGroup align="center" justify="end" gap="l">
           {isAnyChatAvailable && (
-            <FlexItem style={{ marginRight: 12 }}>
+            <FlexItem>
               <CopilotTrigger />
             </FlexItem>
           )}
-          <FlexItem grow>
+          <FlexItem>
             <InsightsTrigger source="home page" />
           </FlexItem>
           <FeatureFlagComponent
             name={[FeatureFlags.cloudSso, FeatureFlags.cloudAds]}
           >
-            <FlexItem
-              grow
-              style={{ marginLeft: 16 }}
-              data-testid="home-page-sso-profile"
-            >
+            <FlexItem data-testid="home-page-sso-profile">
               <OAuthUserProfile source={OAuthSocialSource.UserProfile} />
             </FlexItem>
           </FeatureFlagComponent>
-        </Flex>
-      </div>
-      <div className={styles.pageWrapper}>
-        <ExplorePanelTemplate panelClassName={styles.explorePanel}>
-          {children}
-        </ExplorePanelTemplate>
-      </div>
+        </FlexGroup>
+      </PageDefaultHeader>
+      <PageWrapper>
+        <ExplorePanelWrapper>
+          <ExplorePanelTemplate>{children}</ExplorePanelTemplate>
+        </ExplorePanelWrapper>
+      </PageWrapper>
     </>
   )
 }

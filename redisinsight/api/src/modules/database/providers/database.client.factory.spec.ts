@@ -29,9 +29,7 @@ import {
 } from 'src/__mocks__/redis-client';
 import { RedisClient } from 'src/modules/redis/client';
 import { ConnectionType } from 'src/modules/database/entities/database.entity';
-import {
-  RedisConnectionTimeoutException,
-} from 'src/modules/redis/exceptions/connection';
+import { RedisConnectionTimeoutException } from 'src/modules/redis/exceptions/connection';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DatabaseConnectionEvent } from 'src/modules/database/constants/events';
 import { InternalServerErrorException } from '@nestjs/common';
@@ -256,6 +254,7 @@ describe('DatabaseClientFactory', () => {
         },
       );
     });
+
     it('should throw original error and emit connection failed event for RedisConnection* errors', async () => {
       jest
         .spyOn(redisClientFactory, 'createClient')

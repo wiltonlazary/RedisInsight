@@ -22,19 +22,30 @@ const logLevels = Object.keys(mockWinstonLogger);
 jest.spyOn(WinstonModule, 'createLogger').mockReturnValue(mockWinstonLogger);
 
 const getSessionMetadata = () =>
-  plainToInstance(SessionMetadata, {
-    userId: '123',
-    sessionId: 'test-session-id',
-  });
+  plainToInstance(
+    SessionMetadata,
+    {
+      userId: '123',
+      sessionId: 'test-session-id',
+      requestMetadata: {
+        any: 'data',
+      },
+    },
+    { groups: ['security'] },
+  );
 
 const getClientMetadata = () =>
-  plainToInstance(ClientMetadata, {
-    sessionMetadata: getSessionMetadata(),
-    databaseId: 'db-123',
-    context: ClientContext.Browser,
-    uniqueId: 'unique-id',
-    db: 1,
-  });
+  plainToInstance(
+    ClientMetadata,
+    {
+      sessionMetadata: getSessionMetadata(),
+      databaseId: 'db-123',
+      context: ClientContext.Browser,
+      uniqueId: 'unique-id',
+      db: 1,
+    },
+    { groups: ['security'] },
+  );
 
 describe('AppLogger', () => {
   let logger: AppLogger;
@@ -115,7 +126,10 @@ describe('AppLogger', () => {
           ...clientMetadata,
           sessionMetadata: undefined,
         },
-        sessionMetadata: clientMetadata.sessionMetadata,
+        sessionMetadata: {
+          ...clientMetadata.sessionMetadata,
+          requestMetadata: undefined,
+        },
         data: [{ foo: 'bar' }],
         error: undefined,
       });
@@ -137,7 +151,10 @@ describe('AppLogger', () => {
       expect(mockWinstonLogger[level]).toHaveBeenCalledWith({
         message: 'Test message',
         context: 'Test context',
-        sessionMetadata,
+        sessionMetadata: {
+          ...sessionMetadata,
+          requestMetadata: undefined,
+        },
         data: [{ foo: 'bar' }],
         error: undefined,
       });
@@ -168,7 +185,10 @@ describe('AppLogger', () => {
           ...clientMetadata,
           sessionMetadata: undefined,
         },
-        sessionMetadata: clientMetadata.sessionMetadata,
+        sessionMetadata: {
+          ...clientMetadata.sessionMetadata,
+          requestMetadata: undefined,
+        },
         data: [{ foo: 'bar' }],
         error,
       });

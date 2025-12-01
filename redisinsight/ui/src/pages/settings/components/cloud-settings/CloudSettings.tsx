@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
-
-import { EuiButton, EuiLink, EuiPopover, EuiText, EuiTitle } from '@elastic/eui'
-
 import { useDispatch, useSelector } from 'react-redux'
+
+import { DeleteIcon } from 'uiSrc/components/base/icons'
 import {
   getCapiKeysAction,
   oauthCapiKeysSelector,
@@ -11,6 +10,16 @@ import {
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  DestructiveButton,
+  PrimaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiPopover } from 'uiSrc/components/base'
+import { EXTERNAL_LINKS, UTM_MEDIUMS } from 'uiSrc/constants/links'
+import { getUtmExternalLink } from 'uiSrc/utils/links'
 import UserApiKeysTable from './components/user-api-keys-table'
 
 import styles from './styles.module.scss'
@@ -45,30 +54,36 @@ const CloudSettings = () => {
 
   return (
     <div className={styles.container}>
-      <EuiTitle className={styles.title} size="xxs">
-        <span>API user keys</span>
-      </EuiTitle>
+      <Title className={styles.title} size="XS">
+        API user keys
+      </Title>
       <Spacer size="s" />
       <Row gap="m" responsive>
         <FlexItem grow>
-          <EuiText size="s" className={styles.smallText} color="subdued">
-            The list of API user keys that are stored locally in Redis Insight.{' '}
-            <br />
-            API user keys grant programmatic access to Redis Cloud. <br />
-            {'To delete API keys from Redis Cloud, '}
-            <EuiLink
+          <Text size="m" className={styles.smallText} color="primary">
+            The list of API user keys that are stored locally in Redis Insight.
+          </Text>
+          <Spacer size="xs" />
+          <Text size="m" className={styles.smallText} color="primary">
+            API user keys grant programmatic access to Redis Cloud.
+          </Text>
+          <Text size="m" className={styles.smallText} color="primary">
+            To delete API keys from Redis Cloud,
+            <Link
+              color="primary"
               target="_blank"
-              color="text"
-              external={false}
-              href="https://redis.io/redis-enterprise-cloud/overview/?utm_source=redisinsight&utm_medium=settings&utm_campaign=clear_keys"
+              href={getUtmExternalLink(EXTERNAL_LINKS.redisEnterpriseCloud, {
+                medium: UTM_MEDIUMS.Settings,
+                campaign: 'clear_keys',
+              })}
             >
               sign in to Redis Cloud
-            </EuiLink>
-            {' and delete them manually.'}
-          </EuiText>
+            </Link>
+            and delete them manually.
+          </Text>
         </FlexItem>
         <FlexItem grow={false}>
-          <EuiPopover
+          <RiPopover
             anchorPosition="downCenter"
             ownFocus
             isOpen={isDeleteOpen}
@@ -76,49 +91,44 @@ const CloudSettings = () => {
             panelPaddingSize="l"
             panelClassName={styles.deletePopover}
             button={
-              <EuiButton
-                fill
-                size="s"
-                color="secondary"
+              <PrimaryButton
+                size="small"
                 onClick={handleClickDelete}
                 disabled={loading || !data?.length}
                 data-testid="delete-key-btn"
               >
                 Remove all API keys
-              </EuiButton>
+              </PrimaryButton>
             }
           >
             <div className={styles.popoverDeleteContainer}>
-              <EuiText size="m">
+              <Text size="m" component="div">
                 <h4>All API user keys will be removed from Redis Insight.</h4>
                 {'To delete API keys from Redis Cloud, '}
-                <EuiLink
+                <Link
                   target="_blank"
                   color="text"
-                  external={false}
                   tabIndex={-1}
                   href="https://redis.io/redis-enterprise-cloud/overview/?utm_source=redisinsight&utm_medium=settings&utm_campaign=clear_keys"
                 >
                   sign in to Redis Cloud
-                </EuiLink>
+                </Link>
                 {' and delete them manually.'}
-              </EuiText>
+              </Text>
               <Spacer />
               <div className={styles.popoverFooter}>
-                <EuiButton
-                  fill
-                  size="s"
-                  color="warning"
-                  iconType="trash"
+                <DestructiveButton
+                  size="small"
+                  icon={DeleteIcon}
                   onClick={handleDeleteAllKeys}
                   className={styles.popoverDeleteBtn}
                   data-testid="delete-key-confirm-btn"
                 >
                   Remove all API keys
-                </EuiButton>
+                </DestructiveButton>
               </div>
             </div>
-          </EuiPopover>
+          </RiPopover>
         </FlexItem>
       </Row>
       <Spacer />

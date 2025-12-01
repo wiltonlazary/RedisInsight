@@ -22,58 +22,7 @@
   display: inline-block;
 }
 
-.dbInfoGroup {
-  max-width: 100% !important;
-  background-color: var(--euiColorLightestShade) !important;
-  border: 1px solid var(--separatorColor) !important;
-  padding: 10px 18px !important;
-  border-radius: 4px;
-
-  :global {
-    .euiListGroupItem__label {
-      pointer-events: none;
-      word-break: break-word;
-      white-space: initial;
-    }
-
-    .euiListGroupItem {
-      padding: 4px 0;
-      margin-top: 0 !important;
-    }
-  }
-}
-
-.dbInfoListValue {
-  margin-left: 10px;
-}
-
-.dbInfoModules {
-  padding-right: 0;
-  margin-left: 0;
-  height: 27px;
-  & > div {
-    display: inline-block;
-    line-height: 20px;
-    margin-top: 5px;
-    vertical-align: top;
-  }
-}
-
-.dbInfoModulesLabel {
-  position: relative;
-  display: inline-block !important;
-  padding-right: 0 !important;
-  width: auto;
-
-  :global(.euiListGroupItem__text) {
-    padding-right: 0 !important;
-  }
-}
-
 .anchorEndpoints {
-  position: absolute;
-  right: 12px;
-  top: 5px;
   pointer-events: auto !important;
 
   svg {
@@ -131,10 +80,6 @@
 .message {
   font-family: 'Graphik', sans-serif;
   color: var(--euiTextSubduedColor) !important;
-
-  :global(.euiTextColor), :global(.euiLink) {
-    color: currentColor !important;
-  }
 }
 
 .link {
@@ -151,20 +96,6 @@
 
 .fullWidth {
   flex-basis: 100% !important;
-}
-
-.sshPassTypeWrapper {
-  .sshPassType {
-    display: flex;
-    align-items: center;
-
-    :global {
-      .euiRadioGroup__item {
-        margin-right: 12px;
-        margin-top: 0;
-      }
-    }
-  }
 }
 
 .selectedOptionWithLongTextSupport {

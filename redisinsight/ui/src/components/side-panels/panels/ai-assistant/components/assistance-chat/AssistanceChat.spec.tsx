@@ -3,12 +3,13 @@ import { cloneDeep } from 'lodash'
 import {
   act,
   cleanup,
+  expectActionsToContain,
   fireEvent,
   mockedStore,
   mockedStoreFn,
   render,
   screen,
-  waitForEuiPopoverVisible,
+  waitForRiPopoverVisible,
 } from 'uiSrc/utils/test-utils'
 
 import {
@@ -122,7 +123,7 @@ describe('AssistanceChat', () => {
       sendQuestion(expect.objectContaining({ content: 'test' })),
     ])
 
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.AI_CHAT_MESSAGE_SENT,
       eventData: {
         chat: AiChatType.Assistance,
@@ -153,9 +154,9 @@ describe('AssistanceChat', () => {
 
     fireEvent.click(screen.getByTestId('ai-submit-message-btn'))
 
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
 
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.AI_CHAT_BOT_TERMS_DISPLAYED,
       eventData: {
         chat: AiChatType.Assistance,
@@ -167,7 +168,7 @@ describe('AssistanceChat', () => {
       fireEvent.click(screen.getByTestId('ai-accept-agreements'))
     })
 
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.AI_CHAT_BOT_TERMS_ACCEPTED,
       eventData: {
         chat: AiChatType.Assistance,
@@ -199,17 +200,17 @@ describe('AssistanceChat', () => {
 
     fireEvent.click(screen.getByTestId('ai-general-restart-session-btn'))
 
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
     await act(async () => {
       fireEvent.click(screen.getByTestId('ai-chat-restart-confirm'))
     })
 
-    expect(store.getActions()).toEqual([
+    expectActionsToContain(store.getActions(), [
       ...afterRenderActions,
       removeAssistantChatHistory(),
     ])
 
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.AI_CHAT_SESSION_RESTARTED,
       eventData: {
         chat: AiChatType.Assistance,

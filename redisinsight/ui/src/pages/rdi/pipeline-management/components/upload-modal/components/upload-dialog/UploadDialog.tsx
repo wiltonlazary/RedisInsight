@@ -1,9 +1,7 @@
-import { EuiIcon, EuiText } from '@elastic/eui'
 import React, { useState } from 'react'
 
+import { Text } from 'uiSrc/components/base/text'
 import ImportFileModal from 'uiSrc/components/import-file-modal'
-
-import styles from './styles.module.scss'
 
 export interface Props {
   onClose: () => void
@@ -16,7 +14,7 @@ export interface Props {
 }
 
 const warningMessage =
-  'If a new pipeline is uploaded, existing pipeline configuration and transformation\n' +
+  'If a new pipeline is uploaded, existing pipeline configuration and transformation' +
   'jobs will be overwritten. Changes will not be applied until the pipeline is deployed.'
 
 const UploadDialog = ({
@@ -53,22 +51,13 @@ const UploadDialog = ({
         !error ? 'Pipeline has been uploaded' : 'Failed to upload pipeline'
       }
       submitResults={
-        <div className={styles.result} data-testid="result-succeeded">
-          <EuiText color="subdued">
-            A new pipeline has been successfully uploaded.
-          </EuiText>
-        </div>
+        <Text>A new pipeline has been successfully uploaded.</Text>
       }
       loading={loading}
       data={isUploaded}
       warning={
         showWarning ? (
-          <div className={styles.warning} data-testid="input-file-warning">
-            <EuiText size="xs" color="subdued">
-              <EuiIcon type="alert" className={styles.alertIcon} />
-              {warningMessage}
-            </EuiText>
-          </div>
+          <Text data-testid="input-file-warning">{warningMessage}</Text>
         ) : null
       }
       error={error}

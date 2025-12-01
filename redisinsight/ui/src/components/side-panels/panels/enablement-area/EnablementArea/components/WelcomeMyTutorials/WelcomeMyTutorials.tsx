@@ -1,37 +1,27 @@
 import React from 'react'
-import { EuiButton, EuiPanel } from '@elastic/eui'
 
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Card } from 'uiSrc/components/base/layout'
 import CreateTutorialLink from '../CreateTutorialLink'
-
-import styles from './styles.module.scss'
+import { StyledRow, TutorialText } from './WelcomeMyTutorials.styles'
 
 export interface Props {
   handleOpenUpload: () => void
 }
 
 const WelcomeMyTutorials = ({ handleOpenUpload }: Props) => (
-  <div className={styles.wrapper} data-testid="welcome-my-tutorials">
-    <EuiPanel
-      hasBorder={false}
-      hasShadow={false}
-      className={styles.panel}
-      paddingSize="s"
-    >
-      <div className={styles.link}>
-        <CreateTutorialLink />
-      </div>
-      <EuiButton
-        className={styles.btnSubmit}
-        color="secondary"
+  <Card data-testid="welcome-my-tutorials">
+    <StyledRow justify="around">
+      <CreateTutorialLink />
+      <PrimaryButton
         size="s"
-        fill
         onClick={() => handleOpenUpload()}
         data-testid="upload-tutorial-btn"
       >
-        + Upload <span className={styles.hideText}>tutorial</span>
-      </EuiButton>
-    </EuiPanel>
-  </div>
+        + Upload <TutorialText>tutorial</TutorialText>
+      </PrimaryButton>
+    </StyledRow>
+  </Card>
 )
 
 export default WelcomeMyTutorials

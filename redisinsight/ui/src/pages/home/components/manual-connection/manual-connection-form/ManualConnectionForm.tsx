@@ -1,11 +1,10 @@
-import { EuiButtonIcon, EuiTab, EuiTabs, EuiTitle, keys } from '@elastic/eui'
 import { FormikErrors, useFormik } from 'formik'
 import { isEmpty, pick } from 'lodash'
 import React, { useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { useDispatch, useSelector } from 'react-redux'
 
-import cx from 'classnames'
+import * as keys from 'uiSrc/constants/keys'
 import { resetInstanceUpdateAction } from 'uiSrc/slices/instances/instances'
 import { ConnectionType } from 'uiSrc/slices/interfaces'
 import { BuildType } from 'uiSrc/constants/env'
@@ -25,12 +24,16 @@ import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { useModalHeader } from 'uiSrc/contexts/ModalTitleProvider'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { ChevronLeftIcon } from 'uiSrc/components/base/icons'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import TabsComponent from 'uiSrc/components/base/layout/tabs'
+import { Title } from 'uiSrc/components/base/text/Title'
 import { MANUAL_FORM_TABS, ManualFormTab } from './constants'
 import CloneConnection from './components/CloneConnection'
 import FooterActions from './components/FooterActions'
 import { AddConnection, EditConnection, EditSentinelConnection } from './forms'
 
-import styles from './styles.module.scss'
+import { ScrollableWrapper, ContentWrapper } from '../../ManualConnection.styles'
 
 export interface Props {
   formFields: DbConnectionInfo
@@ -155,18 +158,15 @@ const ManualConnectionForm = (props: Props) => {
       setModalHeader(
         <Row align="center" gap="s">
           <FlexItem>
-            <EuiButtonIcon
+            <IconButton
               onClick={handleClickBackClone}
-              iconSize="m"
-              iconType="sortLeft"
+              icon={ChevronLeftIcon}
               aria-label="back"
               data-testid="back-btn"
             />
           </FlexItem>
           <FlexItem grow>
-            <EuiTitle size="s">
-              <h4>Clone Database</h4>
-            </EuiTitle>
+            <Title size="L">Clone Database</Title>
           </FlexItem>
         </Row>,
       )
@@ -174,20 +174,11 @@ const ManualConnectionForm = (props: Props) => {
     }
 
     if (isEditMode) {
-      setModalHeader(
-        <EuiTitle size="s">
-          <h4>Edit Database</h4>
-        </EuiTitle>,
-      )
+      setModalHeader(<Title size="L">Edit Database</Title>)
       return
     }
 
-    setModalHeader(
-      <EuiTitle size="s">
-        <h4>Connection Settings</h4>
-      </EuiTitle>,
-      true,
-    )
+    setModalHeader(<Title size="L">Connection settings</Title>, true)
   }, [isEditMode, isCloneMode])
 
   useEffect(() => {
@@ -232,37 +223,27 @@ const ManualConnectionForm = (props: Props) => {
   }
 
   const Tabs = () => (
-    <EuiTabs className={cx('tabs-active-borders', styles.tabs)}>
-      {MANUAL_FORM_TABS.map(({ id, title }) => (
-        <EuiTab
-          key={id}
-          isSelected={activeTab === id}
-          onClick={() => handleTabClick(id)}
-          data-testid={`manual-form-tab-${id}`}
-        >
-          {title}
-        </EuiTab>
-      ))}
-    </EuiTabs>
+    <TabsComponent
+      tabs={MANUAL_FORM_TABS}
+      value={activeTab}
+      onChange={(id) => handleTabClick(id as ManualFormTab)}
+      data-testid="manual-form-tabs"
+    />
   )
 
   return (
-    <div
-      className={styles.container}
-      data-testid="add-db_manual"
-      style={{ height: '100%' }}
-    >
+    <ContentWrapper data-testid="add-db_manual">
       {isEditMode &&
         !isCloneMode &&
         server?.buildType !== BuildType.RedisStack && (
           <CloneConnection id={id} setIsCloneMode={setIsCloneMode} />
         )}
-      <div className={cx('getStartedForm', styles.content)} ref={formRef}>
+      <ContentWrapper as="div" ref={formRef}>
         {!isEditMode && !isFromCloud && (
           <>
             <Tabs />
             <Spacer />
-            <div className="eui-yScroll">
+            <ScrollableWrapper>
               <AddConnection
                 activeTab={activeTab}
                 formik={formik}
@@ -272,7 +253,7 @@ const ManualConnectionForm = (props: Props) => {
                 caCertificates={caCertificates}
                 buildType={buildType}
               />
-            </div>
+            </ScrollableWrapper>
           </>
         )}
         {(isEditMode || isCloneMode || isFromCloud) &&
@@ -295,7 +276,7 @@ const ManualConnectionForm = (props: Props) => {
               )}
               <Tabs />
               <Spacer />
-              <div className="eui-yScroll">
+              <ScrollableWrapper>
                 <EditConnection
                   activeTab={activeTab}
                   isCloneMode={isCloneMode}
@@ -308,7 +289,7 @@ const ManualConnectionForm = (props: Props) => {
                   caCertificates={caCertificates}
                   buildType={buildType}
                 />
-              </div>
+              </ScrollableWrapper>
             </>
           )}
         {(isEditMode || isCloneMode) &&
@@ -328,7 +309,7 @@ const ManualConnectionForm = (props: Props) => {
               )}
               <Tabs />
               <Spacer />
-              <div className="eui-yScroll">
+              <ScrollableWrapper>
                 <EditSentinelConnection
                   activeTab={activeTab}
                   isCloneMode={isCloneMode}
@@ -339,12 +320,12 @@ const ManualConnectionForm = (props: Props) => {
                   caCertificates={caCertificates}
                   db={db}
                 />
-              </div>
+              </ScrollableWrapper>
             </>
           )}
-      </div>
+      </ContentWrapper>
       <Footer />
-    </div>
+    </ContentWrapper>
   )
 }
 

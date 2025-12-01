@@ -61,7 +61,7 @@ jest.mock('uiSrc/slices/instances/instances', () => ({
   connectedInstanceSelector: jest.fn().mockReturnValue({
     id: 'instanceId',
     connectionType: 'CLUSTER',
-    provider: 'RE_CLOUD',
+    provider: 'REDIS_CLOUD',
   }),
   connectedInstanceCDSelector: jest.fn().mockReturnValue({
     free: false,
@@ -212,8 +212,8 @@ describe('SidePanels', () => {
 
     render(<SidePanels />)
     expect(
-      screen.getByTestId('recommendations-unread-count'),
-    ).toHaveTextContent('7')
+      screen.getByText(/^Tips \(7\)$/),
+    ).toBeVisible()
   })
 
   it('should call proper telemetry events on close panel', () => {
@@ -240,7 +240,7 @@ describe('SidePanels', () => {
       event: TelemetryEvent.INSIGHTS_PANEL_CLOSED,
       eventData: {
         databaseId: 'instanceId',
-        provider: 'RE_CLOUD',
+        provider: 'REDIS_CLOUD',
         page: '/pub-sub',
         tab: 'tips',
       },
@@ -266,7 +266,7 @@ describe('SidePanels', () => {
 
     render(<SidePanels />)
 
-    fireEvent.click(screen.getByTestId('explore-tab'))
+    fireEvent.mouseDown(screen.getByText(/^Tutorials$/))
 
     expect(sendEventTelemetry).toBeCalledWith({
       event: TelemetryEvent.INSIGHTS_PANEL_TAB_CHANGED,

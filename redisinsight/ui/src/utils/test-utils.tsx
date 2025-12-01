@@ -9,9 +9,13 @@ import {
   render as rtlRender,
   renderHook as rtlRenderHook,
   waitFor,
+  screen,
 } from '@testing-library/react'
 
-import { RootState, store as rootStore } from 'uiSrc/slices/store'
+import { ThemeProvider } from 'styled-components'
+import { themeLight } from '@redis-ui/styles'
+import userEvent from '@testing-library/user-event'
+import type { RootState, ReduxStore } from 'uiSrc/slices/store'
 import { initialState as initialStateInstances } from 'uiSrc/slices/instances/instances'
 import { initialState as initialStateTags } from 'uiSrc/slices/instances/tags'
 import { initialState as initialStateCaCerts } from 'uiSrc/slices/instances/caCerts'
@@ -66,12 +70,14 @@ import { initialState as initialStateAiAssistant } from 'uiSrc/slices/panels/aiA
 import { RESOURCES_BASE_URL } from 'uiSrc/services/resourcesService'
 import { apiService } from 'uiSrc/services'
 import { initialState as initialStateAppConnectivity } from 'uiSrc/slices/app/connectivity'
+import { initialState as initialStateAppDbSettings } from 'uiSrc/slices/app/db-settings'
 import { initialState as initialStateAppInit } from 'uiSrc/slices/app/init'
 import * as appFeaturesSlice from 'uiSrc/slices/app/features'
+import { setStoreRef } from './test-store'
 
 interface Options {
   initialState?: RootState
-  store?: typeof rootStore
+  store?: ReduxStore
   withRouter?: boolean
   [property: string]: any
 }
@@ -90,6 +96,7 @@ const initialStateDefault: RootState = {
     csrf: cloneDeep(initialStateAppCsrfReducer),
     init: cloneDeep(initialStateAppInit),
     connectivity: cloneDeep(initialStateAppConnectivity),
+    dbSettings: cloneDeep(initialStateAppDbSettings),
   },
   connections: {
     instances: cloneDeep(initialStateInstances),
@@ -161,6 +168,15 @@ const initialStateDefault: RootState = {
 export const mockStore = configureMockStore<RootState>([thunk])
 export const mockedStore = mockStore(initialStateDefault)
 export const mockedStoreFn = () => mockStore(initialStateDefault)
+export const createMockedStore = () => {
+  const store = mockStore(initialStateDefault)
+  setStoreRef(store)
+  return store
+}
+
+// Set the mock store reference for the dynamic store wrapper
+// This ensures that store-dynamic works correctly in tests
+setStoreRef(mockedStore)
 
 // insert root state to the render Component
 const render = (
@@ -172,8 +188,14 @@ const render = (
     ...renderOptions
   }: Options = initialStateDefault,
 ) => {
+  if (store !== mockedStore) {
+    setStoreRef(store)
+  }
+
   const Wrapper = ({ children }: { children: JSX.Element }) => (
-    <Provider store={store}>{children}</Provider>
+    <ThemeProvider theme={themeLight}>
+      <Provider store={store}>{children}</Provider>
+    </ThemeProvider>
   )
 
   const wrapper = !withRouter ? Wrapper : BrowserRouter
@@ -181,8 +203,8 @@ const render = (
   return rtlRender(ui, { wrapper, ...renderOptions })
 }
 
-const renderHook = (
-  hook: (initialProps: unknown) => unknown,
+const renderHook = <T,>(
+  hook: (initialProps: unknown) => T,
   {
     initialState,
     store = mockedStore,
@@ -190,6 +212,10 @@ const renderHook = (
     ...renderOptions
   }: Options = initialStateDefault,
 ) => {
+  if (store !== mockedStore) {
+    setStoreRef(store)
+  }
+
   const Wrapper = ({ children }: { children: JSX.Element }) => (
     <Provider store={store}>{children}</Provider>
   )
@@ -223,30 +249,53 @@ const clearStoreActions = (actions: any[]) => {
 }
 
 /**
- * Ensure the EuiToolTip being tested is open and visible before continuing
+ * Ensure the RiTooltip being tested is open and visible before continuing
  */
-const waitForEuiToolTipVisible = async (timeout = 500) => {
+const waitForRiTooltipVisible = async (timeout = 500) => {
   await waitFor(
     () => {
-      const tooltip = document.querySelector('.euiToolTipPopover')
+      const tooltip = document.querySelector(
+        '[data-radix-popper-content-wrapper]',
+      )
       expect(tooltip).toBeInTheDocument()
     },
     { timeout }, // Account for long delay on tooltips
   )
 }
 
-const waitForEuiToolTipHidden = async () => {
+const waitForRiTooltipHidden = async () => {
   await waitFor(() => {
-    const tooltip = document.querySelector('.euiToolTipPopover')
+    const tooltip = document.querySelector(
+      '[data-radix-popper-content-wrapper]',
+    )
     expect(tooltip).toBeNull()
   })
 }
 
-const waitForEuiPopoverVisible = async (timeout = 500) => {
+const waitForRiPopoverVisible = async (timeout = 500) => {
   await waitFor(
     () => {
-      const tooltip = document.querySelector('.euiPopover__panel-isOpen')
+      const tooltip = document.querySelector(
+        'div[data-radix-popper-content-wrapper]',
+      ) as HTMLElement | null
       expect(tooltip).toBeInTheDocument()
+
+      if (tooltip) {
+        // Note: during unit tests, the popover is not interactive by default so we need to enable pointer events
+        tooltip.style.pointerEvents = 'all'
+      }
+    },
+    { timeout }, // Account for long delay on popover
+  )
+}
+
+export const waitForRedisUiSelectVisible = async (timeout = 500) => {
+  await waitFor(
+    () => {
+      const element = document.querySelector(
+        '[data-radix-popper-content-wrapper]',
+      )
+      expect(element).toBeInTheDocument()
     },
     { timeout }, // Account for long delay on popover
   )
@@ -254,6 +303,13 @@ const waitForEuiPopoverVisible = async (timeout = 500) => {
 
 export const waitForStack = async (timeout = 0) => {
   await waitFor(() => {}, { timeout })
+}
+
+export const toggleAccordion = async (testId: string) => {
+  const accordion = screen.getByTestId(testId)
+  expect(accordion).toBeInTheDocument()
+  const btn = accordion.querySelector('button')
+  await userEvent.click(btn!)
 }
 
 // mock useHistory
@@ -338,7 +394,7 @@ Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
 const scrollIntoViewMock = jest.fn()
 window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
 
-const matchMediaMock = () => ({
+const matchMediaMock = (_: any) => ({
   matches: false,
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
@@ -351,6 +407,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 export const getMswResourceURL = (path: string = '') =>
   RESOURCES_BASE_URL.concat(path)
+
 export const getMswURL = (path: string = '') =>
   apiService.defaults.baseURL?.concat(
     path.startsWith('/') ? path.slice(1) : path,
@@ -390,16 +447,43 @@ export const mockFeatureFlags = (
     })
 }
 
+/**
+ * Helper function to check if expected actions are contained within actual store actions
+ * @param actualActions - The actual actions dispatched to the store
+ * @param expectedActions - The expected actions that should be present
+ */
+const expectActionsToContain = (
+  actualActions: any[],
+  expectedActions: any[],
+) => {
+  expect(actualActions).toEqual(expect.arrayContaining(expectedActions))
+}
+
+/**
+ * Helper function to check if actions are not contained within actual store actions
+ * @param actualActions - The actual actions dispatched to the store
+ * @param expectedActions - The expected actions that should not be presented
+ */
+const expectActionsToNotContain = (
+  actualActions: any[],
+  expectedActions: any[],
+) => {
+  expect(actualActions).not.toEqual(expect.arrayContaining(expectedActions))
+}
+
 // re-export everything
 export * from '@testing-library/react'
 // override render method
 export {
+  userEvent,
   initialStateDefault,
   render,
   renderHook,
   renderWithRouter,
   clearStoreActions,
-  waitForEuiToolTipVisible,
-  waitForEuiToolTipHidden,
-  waitForEuiPopoverVisible,
+  waitForRiTooltipVisible,
+  waitForRiTooltipHidden,
+  waitForRiPopoverVisible,
+  expectActionsToContain,
+  expectActionsToNotContain,
 }

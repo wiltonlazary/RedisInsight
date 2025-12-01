@@ -1,5 +1,3 @@
-import { EuiButton, EuiPanel, EuiTextColor } from '@elastic/eui'
-import cx from 'classnames'
 import { toNumber } from 'lodash'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -21,11 +19,17 @@ import {
   sendEventTelemetry,
   TelemetryEvent,
 } from 'uiSrc/telemetry'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
 import { AddStreamEntriesDto } from 'apiSrc/modules/browser/stream/dto'
 
 import StreamEntryFields from './StreamEntryFields/StreamEntryFields'
-import styles from './styles.module.scss'
+import { Panel } from 'uiSrc/components/panel'
+
+import { EntryContent } from '../../common/AddKeysContainer.styled'
 
 export interface Props {
   closePanel: (isCancelled?: boolean) => void
@@ -129,19 +133,8 @@ const AddStreamEntries = (props: Props) => {
   }
 
   return (
-    <>
-      <EuiPanel
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
-        data-test-subj="add-stream-field-panel"
-        className={cx(
-          styles.content,
-          'eui-yScroll',
-          'flexItemNoFullWidth',
-          'inlineFieldsNoSpace',
-        )}
-      >
+    <Col gap="m">
+      <EntryContent data-test-subj="add-stream-field-panel">
         <StreamEntryFields
           entryIdError={entryIdError}
           entryID={entryID}
@@ -149,42 +142,25 @@ const AddStreamEntries = (props: Props) => {
           fields={fields}
           setFields={setFields}
         />
-      </EuiPanel>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        className="flexItemNoFullWidth"
-      >
-        <Row justify="end" gap="l">
-          <FlexItem>
-            <div>
-              <EuiButton
-                color="secondary"
-                onClick={() => closePanel(true)}
-                data-testid="cancel-members-btn"
-              >
-                <EuiTextColor color="default">Cancel</EuiTextColor>
-              </EuiButton>
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <div>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                onClick={submitData}
-                disabled={!isFormValid}
-                data-testid="save-elements-btn"
-              >
-                Save
-              </EuiButton>
-            </div>
-          </FlexItem>
-        </Row>
-      </EuiPanel>
-    </>
+      </EntryContent>
+      <Panel justify="end" gap="m">
+        <SecondaryButton
+          onClick={() => closePanel(true)}
+          data-testid="cancel-members-btn"
+        >
+          Cancel
+        </SecondaryButton>
+        <PrimaryButton
+          size="m"
+          color="secondary"
+          onClick={submitData}
+          disabled={!isFormValid}
+          data-testid="save-elements-btn"
+        >
+          Save
+        </PrimaryButton>
+      </Panel>
+    </Col>
   )
 }
 

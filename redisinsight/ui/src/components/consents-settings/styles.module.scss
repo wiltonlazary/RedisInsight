@@ -1,33 +1,12 @@
 .redisIcon {
   width: 128px;
-  height: 100%;
+  height: 34px;
 }
 
-.consentsPopup.consentsPopup {
-  background-color: var(--tableRowHoverColor);
-  border-color: var(--tableRowHoverColor);
-  :global {
-    width: 601px;
-    max-width: 94vw;
-    border: 1px solid var(--euiColorPrimary) !important;
-    max-height: calc(100vh - 60px) !important;
-    height: auto;
-
-    .euiModal__closeIcon {
-      display: none;
-    }
-    .euiModal__flex {
-      max-height: calc(100vh - 60px) !important;
-    }
-  }
-
-  a {
-    color: currentColor !important;
-    text-decoration: underline;
-    &:hover {
-      text-decoration: none !important;
-    }
-  }
+.consentsPopup {
+  max-width: 94vw;
+  max-height: calc(100vh - 60px) !important;
+  height: auto;
 }
 
 .modalHeader {
@@ -54,41 +33,12 @@
   margin: 0 !important;
 }
 
-.consentsPopupTitle {
-  color: var(--euiTextSubduedColorHover);
-  font-weight: 500 !important;
-  font-size: 18px !important;
-}
-
-.switchOption {
-  color: var(--euiTextSubduedColorHover);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.smallText {
-  font: normal normal normal 14px/24px Graphik !important;
-  letter-spacing: -0.14px;
-}
-
-.label {
-  color: var(--inputTextColor) !important;
-  line-height: 24px !important;
-  font-weight: 500 !important;
-  font-size: 14px !important;
-}
-
-.title {
-  line-height: 24px !important;
-  font-size: 16px !important;
-}
-
 .overlay {
   &.overlay_dark {
-    background-image: url("uiSrc/assets/img/welcome_bg_dark.png") !important;
+    background-image: url('uiSrc/assets/img/welcome_bg_dark.png') !important;
   }
 
   &.overlay_light {
-    background-image: url("uiSrc/assets/img/welcome_bg_light.png") !important;
+    background-image: url('uiSrc/assets/img/welcome_bg_light.png') !important;
   }
 }

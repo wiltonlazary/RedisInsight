@@ -1,6 +1,6 @@
 import { monaco as monacoEditor } from 'react-monaco-editor'
 import { Nullable } from 'uiSrc/utils'
-import { ICommand } from 'uiSrc/constants'
+import { ICommand, RdiListColumn } from 'uiSrc/constants'
 import { Rdi as RdiInstanceResponse } from 'apiSrc/modules/rdi/models/rdi'
 
 // tabs for dry run job panel
@@ -185,6 +185,8 @@ export interface IStateRdiPipeline {
   jobsValidationErrors: Record<string, string[]>
   resetChecked: boolean
   schema: Nullable<object>
+  jobNameSchema: Nullable<object>
+  monacoJobsSchema: Nullable<object>
   strategies: IRdiPipelineStrategies
   changes: Record<string, FileChangeType>
   jobFunctions: monacoEditor.languages.CompletionItem[]
@@ -236,7 +238,7 @@ export interface InitialStateRdiInstances {
   loadingChanging: boolean
   errorChanging: string
   changedSuccessfully: boolean
-  isPipelineLoaded: boolean
+  shownColumns: RdiListColumn[]
 }
 
 // Rdi test target connections

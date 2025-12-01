@@ -1,14 +1,5 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
-import {
-  EuiButton,
-  EuiTextColor,
-  EuiFieldText,
-  EuiPanel,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-} from '@elastic/eui'
 
 import {
   selectedKeyDataSelector,
@@ -25,10 +16,16 @@ import {
 import { KeyTypes } from 'uiSrc/constants'
 import { stringToBuffer } from 'uiSrc/utils'
 import { AddListFormConfig as config } from 'uiSrc/pages/browser/components/add-key/constants/fields-config'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { PushElementToListDto } from 'apiSrc/modules/browser/list/dto'
 
-import styles from '../styles.module.scss'
+import { EntryContent } from '../../common/AddKeysContainer.styled'
 
 export interface Props {
   closePanel: (isCancelled?: boolean) => void
@@ -44,14 +41,16 @@ export const TAIL_DESTINATION: ListElementDestination =
 export const HEAD_DESTINATION: ListElementDestination =
   ListElementDestination.Head
 
-export const optionsDestinations: EuiSuperSelectOption<string>[] = [
+export const optionsDestinations = [
   {
     value: TAIL_DESTINATION,
     inputDisplay: 'Push to tail',
+    label: 'Push to tail',
   },
   {
     value: HEAD_DESTINATION,
     inputDisplay: 'Push to head',
+    label: 'Push to head',
   },
 ]
 
@@ -123,25 +122,18 @@ const AddListElements = (props: Props) => {
   }
 
   return (
-    <>
-      <EuiPanel
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
-        data-test-subj="add-list-field-panel"
-        className={cx(
-          styles.container,
-          'eui-yScroll',
-          'flexItemNoFullWidth',
-          'inlineFieldsNoSpace',
-        )}
-      >
-        <EuiSuperSelect
-          valueOfSelected={destination}
-          options={optionsDestinations}
-          onChange={(value) => setDestination(value as ListElementDestination)}
-          data-testid="destination-select"
-        />
+    <Col gap="m">
+      <EntryContent gap="m">
+        <FlexItem>
+          <RiSelect
+            value={destination}
+            options={optionsDestinations}
+            onChange={(value) =>
+              setDestination(value as ListElementDestination)
+            }
+            data-testid="destination-select"
+          />
+        </FlexItem>
         <AddMultipleFields
           items={elements}
           onClickRemove={onClickRemove}
@@ -149,54 +141,37 @@ const AddListElements = (props: Props) => {
           isClearDisabled={isClearDisabled}
         >
           {(item, index) => (
-            <EuiFieldText
-              fullWidth
+            <TextInput
               name={`element-${index}`}
               id={`element-${index}`}
               placeholder={config.element.placeholder}
               value={item}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                handleElementChange(e.target.value, index)
-              }
+              onChange={(value) => handleElementChange(value, index)}
               data-testid={`element-${index}`}
             />
           )}
         </AddMultipleFields>
-      </EuiPanel>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        className="flexItemNoFullWidth"
-      >
-        <Row justify="end" gap="xl">
-          <FlexItem>
-            <div>
-              <EuiButton
-                color="secondary"
-                onClick={() => closePanel(true)}
-                data-testid="cancel-members-btn"
-              >
-                <EuiTextColor color="default">Cancel</EuiTextColor>
-              </EuiButton>
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <div>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                onClick={submitData}
-                data-testid="save-elements-btn"
-              >
-                Save
-              </EuiButton>
-            </div>
-          </FlexItem>
-        </Row>
-      </EuiPanel>
-    </>
+      </EntryContent>
+      <Row justify="end" gap="m">
+        <FlexItem>
+          <div>
+            <SecondaryButton
+              onClick={() => closePanel(true)}
+              data-testid="cancel-members-btn"
+            >
+              Cancel
+            </SecondaryButton>
+          </div>
+        </FlexItem>
+        <FlexItem>
+          <div>
+            <PrimaryButton onClick={submitData} data-testid="save-elements-btn">
+              Save
+            </PrimaryButton>
+          </div>
+        </FlexItem>
+      </Row>
+    </Col>
   )
 }
 

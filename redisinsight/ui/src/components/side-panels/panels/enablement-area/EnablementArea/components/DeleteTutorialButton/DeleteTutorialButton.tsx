@@ -1,8 +1,12 @@
 import React, { useState } from 'react'
-import { EuiButton, EuiIcon, EuiPopover, EuiText } from '@elastic/eui'
 
 import { formatLongName } from 'uiSrc/utils'
 
+import { DestructiveButton } from 'uiSrc/components/base/forms/buttons'
+import { DeleteIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiPopover } from 'uiSrc/components/base'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -21,7 +25,7 @@ const DeleteTutorialButton = (props: Props) => {
   }
 
   return (
-    <EuiPopover
+    <RiPopover
       anchorPosition="rightCenter"
       ownFocus
       isOpen={isPopoverDeleteOpen}
@@ -34,34 +38,32 @@ const DeleteTutorialButton = (props: Props) => {
           onClick={handleClickDelete}
           data-testid={`delete-tutorial-icon-${id}`}
         >
-          <EuiIcon size="m" type="trash" />
+          <RiIcon size="m" type="DeleteIcon" />
         </div>
       }
       onClick={(e) => e.stopPropagation()}
       data-testid={`delete-tutorial-popover-${id}`}
     >
       <div className={styles.popoverDeleteContainer}>
-        <EuiText size="m">
+        <Text size="m" component="div">
           <h4 style={{ wordBreak: 'break-all' }}>
             <b>{formatLongName(label)}</b>
           </h4>
-          <EuiText size="s">will be deleted.</EuiText>
-        </EuiText>
+          <Text size="s">will be deleted.</Text>
+        </Text>
         <div className={styles.popoverFooter}>
-          <EuiButton
-            fill
+          <DestructiveButton
             size="s"
-            color="warning"
-            iconType="trash"
+            icon={DeleteIcon}
             onClick={onDelete}
-            isLoading={isLoading}
+            loading={isLoading}
             data-testid={`delete-tutorial-${id}`}
           >
             Delete
-          </EuiButton>
+          </DestructiveButton>
         </div>
       </div>
-    </EuiPopover>
+    </RiPopover>
   )
 }
 

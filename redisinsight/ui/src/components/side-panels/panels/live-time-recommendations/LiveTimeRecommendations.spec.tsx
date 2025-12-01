@@ -10,7 +10,7 @@ import {
   mockStore,
   render,
   screen,
-  waitForEuiPopoverVisible,
+  waitForRiPopoverVisible,
 } from 'uiSrc/utils/test-utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FeatureFlags, Pages } from 'uiSrc/constants'
@@ -40,7 +40,7 @@ jest.mock('uiSrc/slices/instances/instances', () => ({
   connectedInstanceSelector: jest.fn().mockReturnValue({
     id: 'instanceId',
     connectionType: 'CLUSTER',
-    provider: 'RE_CLOUD',
+    provider: 'REDIS_CLOUD',
   }),
 }))
 
@@ -142,7 +142,7 @@ describe('LiveTimeRecommendations', () => {
 
     fireEvent.click(screen.getByTestId('footer-db-analysis-link'))
     ;(async () => {
-      await waitForEuiPopoverVisible()
+      await waitForRiPopoverVisible()
     })()
 
     fireEvent.click(screen.getByTestId('approve-insights-db-analysis-btn'))
@@ -153,7 +153,7 @@ describe('LiveTimeRecommendations', () => {
       eventData: {
         databaseId: 'instanceId',
         total: 1,
-        provider: 'RE_CLOUD',
+        provider: 'REDIS_CLOUD',
       },
     })
     sendEventTelemetry.mockRestore()
@@ -182,7 +182,7 @@ describe('LiveTimeRecommendations', () => {
         ),
         total: 2,
         action: 'show',
-        provider: 'RE_CLOUD',
+        provider: 'REDIS_CLOUD',
       },
     })
     sendEventTelemetry.mockRestore()

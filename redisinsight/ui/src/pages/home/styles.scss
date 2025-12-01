@@ -18,27 +18,12 @@
     }
   }
 
-  .euiFormRow {
-    max-width: 100% !important;
-    padding-top: 15px;
-  }
-
   .euiRadioGroup__item {
     display: inline-block;
     vertical-align: top !important;
     margin-top: 1px !important;
     margin-bottom: 3px !important;
     margin-right: 30px !important;
-  }
-
-  .euiFormRow__fieldWrapper {
-    position: relative;
-  }
-
-  .euiFormRow__text {
-    position: relative;
-    top: -10px;
-    margin-bottom: -10px;
   }
 
   .euiFormHelpText {
@@ -114,44 +99,6 @@
   .cloudDatabaseListResult .euiTableRowCell:first-child,
   .cloudDatabaseListResult .euiTableHeaderCell:first-child {
     padding-left: 10px;
-  }
-}
-
-.homePage_tooltip {
-  width: 470px !important;
-  max-width: 470px !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  padding-left: 15px !important;
-  padding-top: 15px !important;
-
-  .euiToolTip__title {
-    padding: 5px 10px 0 !important;
-  }
-
-  p {
-    opacity: 0.8 !important;
-  }
-}
-
-.homePage_toolTipUl {
-  font-weight: 300 !important;
-  opacity: 0.85;
-  padding-bottom: 10px;
-
-  li {
-    line-height: 20px;
-  }
-
-  .dot {
-    margin-left: 10px;
-  }
-
-  .dot::before {
-    font-size: 8px;
-    padding: 0 14px;
-    content: " \25CF";
-    vertical-align: middle;
   }
 }
 

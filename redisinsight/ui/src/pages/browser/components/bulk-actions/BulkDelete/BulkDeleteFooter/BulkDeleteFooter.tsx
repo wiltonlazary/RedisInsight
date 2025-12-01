@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
-import { EuiButton, EuiIcon, EuiPopover, EuiText } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import cx from 'classnames'
 
 import {
   bulkActionsDeleteOverviewSelector,
@@ -20,10 +18,19 @@ import { BulkActionsType } from 'uiSrc/constants'
 import { getRangeForNumber, BULK_THRESHOLD_BREAKPOINTS } from 'uiSrc/utils'
 
 import { DEFAULT_SEARCH_MATCH } from 'uiSrc/constants/api'
+import {
+  DestructiveButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RefreshIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import BulkDeleteContent from '../BulkDeleteContent'
 import { isProcessedBulkAction } from '../../utils'
-
-import styles from './styles.module.scss'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import { ConfirmationPopover } from 'uiSrc/components'
+import { BulkDeleteFooterContainer } from './BulkDeleteFooter.styles'
 
 export interface Props {
   onCancel: () => void
@@ -86,89 +93,79 @@ const BulkDeleteFooter = (props: Props) => {
   }
 
   return (
-    <div className={styles.container} data-testid="bulk-actions-delete">
+    <Col data-testid="bulk-actions-delete">
       {status && <BulkDeleteContent />}
-      <div className={styles.footer}>
+      <BulkDeleteFooterContainer align="end" justify="end" gap="l">
         {!loading && (
-          <EuiButton
-            color="secondary"
+          <SecondaryButton
             onClick={handleCancel}
-            className={styles.cancelBtn}
             data-testid="bulk-action-cancel-btn"
           >
             {isProcessedBulkAction(status) ? 'Close' : 'Cancel'}
-          </EuiButton>
+          </SecondaryButton>
         )}
         {loading && (
-          <EuiButton
-            color="secondary"
+          <SecondaryButton
             onClick={handleStop}
-            className={styles.cancelBtn}
             data-testid="bulk-action-stop-btn"
           >
             Stop
-          </EuiButton>
+          </SecondaryButton>
         )}
 
         {!isProcessedBulkAction(status) && (
-          <EuiPopover
-            id="bulk-delete-warning-popover"
+          <ConfirmationPopover
             anchorPosition="upCenter"
+            ownFocus
             isOpen={isPopoverOpen}
             closePopover={() => setIsPopoverOpen(false)}
-            panelClassName={styles.panelPopover}
-            panelPaddingSize="none"
+            panelPaddingSize="m"
+            anchorClassName="deleteFieldPopover"
             button={
-              <EuiButton
-                fill
-                color="secondary"
-                isLoading={loading}
+              <PrimaryButton
+                loading={loading}
                 disabled={loading}
                 onClick={handleDeleteWarning}
                 data-testid="bulk-action-warning-btn"
               >
                 Delete
-              </EuiButton>
+              </PrimaryButton>
             }
-          >
-            <EuiText
-              color="subdued"
-              className={styles.containerPopover}
-              data-testid="bulk-action-tooltip"
-            >
-              <EuiIcon type="alert" className={styles.popoverIcon} />
-              <div className={cx(styles.popoverItem, styles.popoverItemTitle)}>
-                Are you sure you want to perform this action?
-              </div>
-              <div className={styles.popoverItem}>
-                {`All keys with ${filter ? filter?.toUpperCase() : 'all'} key type and selected pattern will be deleted.`}
-              </div>
-              <EuiButton
-                fill
+            title={'Are you sure you want to perform this action?'}
+            message={
+              'This will delete all keys matching the selected type and pattern.'
+            }
+            appendInfo={
+              <Row align="center" gap="m">
+                <RiIcon size="xl" type="ToastDangerIcon" />
+                <Text size="s">
+                  Bulk deletion may impact performance and cause memory spikes.
+                  Avoid running in production.
+                </Text>
+              </Row>
+            }
+            confirmButton={
+              <DestructiveButton
                 size="s"
-                color="warning"
-                className={styles.deleteApproveBtn}
                 onClick={handleDelete}
                 data-testid="bulk-action-apply-btn"
               >
                 Delete
-              </EuiButton>
-            </EuiText>
-          </EuiPopover>
+              </DestructiveButton>
+            }
+          />
         )}
         {isProcessedBulkAction(status) && (
-          <EuiButton
-            fill
-            iconType="refresh"
-            color="secondary"
+          <PrimaryButton
+            icon={RefreshIcon}
             onClick={handleStartNew}
             data-testid="bulk-action-start-again-btn"
           >
             Start New
-          </EuiButton>
+          </PrimaryButton>
         )}
-      </div>
-    </div>
+      </BulkDeleteFooterContainer>
+    </Col>
   )
 }
 

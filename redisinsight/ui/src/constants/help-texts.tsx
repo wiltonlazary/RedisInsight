@@ -1,5 +1,4 @@
 import React from 'react'
-import { EuiIcon, EuiText } from '@elastic/eui'
 import { FeatureFlagComponent } from 'uiSrc/components'
 import {
   EXTERNAL_LINKS,
@@ -7,11 +6,13 @@ import {
   UTM_MEDIUMS,
 } from 'uiSrc/constants/links'
 
-import styles from 'uiSrc/pages/browser/components/popover-delete/styles.module.scss'
 import { CloudLink } from 'uiSrc/components/markdown'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
 import { OAuthSocialSource } from 'uiSrc/slices/interfaces'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { FeatureFlags } from './featureFlags'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
 export default {
   REJSON_SHOULD_BE_LOADED: (
@@ -30,7 +31,7 @@ export default {
         <>
           You can also create a{' '}
           <CloudLink
-            text="free trial Redis Cloud database"
+            text="free Redis Cloud database"
             url={getUtmExternalLink(EXTERNAL_LINKS.tryFree, {
               source: UTM_MEDIUMS.App,
               campaign: UTM_CAMPAINGS.RedisJson,
@@ -42,13 +43,11 @@ export default {
       </FeatureFlagComponent>
     </>
   ),
-  REMOVE_LAST_ELEMENT: (fieldType: string) => (
-    <div className={styles.appendInfo}>
-      <EuiIcon type="alert" style={{ marginRight: '1rem', marginTop: '4px' }} />
-      <EuiText size="s">
-        If you remove the single {fieldType}, the whole Key will be deleted.
-      </EuiText>
-    </div>
+  REMOVE_LAST_ELEMENT: () => (
+    <Row align="center">
+      <RiIcon size="s" type="ToastDangerIcon" style={{ marginRight: '1rem' }} />
+      <Text size="s">Removing the last item deletes the entire key.</Text>
+    </Row>
   ),
   REMOVING_MULTIPLE_ELEMENTS_NOT_SUPPORT: (
     <>
@@ -60,7 +59,7 @@ export default {
         className="link-underline"
         rel="noreferrer"
       >
-        free up-to-date trial
+        free up-to-date
       </a>
       &nbsp;Redis database.
     </>

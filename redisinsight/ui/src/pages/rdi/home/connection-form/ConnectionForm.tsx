@@ -1,16 +1,4 @@
 import {
-  EuiButton,
-  EuiFieldPassword,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiIcon,
-  EuiTitle,
-  EuiToolTip,
-  EuiToolTipProps,
-  ToolTipPositions,
-} from '@elastic/eui'
-import {
   Field,
   FieldInputProps,
   FieldMetaProps,
@@ -20,22 +8,28 @@ import {
   FormikHelpers,
 } from 'formik'
 import React, { useEffect, useState } from 'react'
-import cx from 'classnames'
 import { isNull } from 'lodash'
 
 import ReactDOM from 'react-dom'
 import { SECURITY_FIELD } from 'uiSrc/constants'
+import { RiTooltipProps } from 'uiSrc/components'
 import { RdiInstance } from 'uiSrc/slices/interfaces'
 import { getFormUpdates, Nullable } from 'uiSrc/utils'
 import { useModalHeader } from 'uiSrc/contexts/ModalTitleProvider'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { PasswordInput, TextInput } from 'uiSrc/components/base/inputs'
+import { Title } from 'uiSrc/components/base/text/Title'
 import ValidationTooltip from './components/ValidationTooltip'
 
-import styles from './styles.module.scss'
-
 export interface AppendInfoProps
-  extends Omit<EuiToolTipProps, 'children' | 'delay' | 'position'> {
-  position?: ToolTipPositions
+  extends Omit<RiTooltipProps, 'children' | 'delay' | 'position'> {
+  position?: RiTooltipProps['position']
 }
 
 export interface ConnectionFormValues {
@@ -61,18 +55,6 @@ const getInitialValues = (
   password: values ? null : '',
 })
 
-const AppendInfo = ({ title, content, ...rest }: AppendInfoProps) => (
-  <EuiToolTip
-    anchorClassName="inputAppendIcon"
-    position="right"
-    title={title}
-    content={content}
-    {...rest}
-  >
-    <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-  </EuiToolTip>
-)
-
 const ConnectionForm = (props: Props) => {
   const { onSubmit, onCancel, editInstance, isLoading } = props
 
@@ -84,9 +66,9 @@ const ConnectionForm = (props: Props) => {
   useEffect(() => {
     setInitialFormValues(getInitialValues(editInstance))
     setModalHeader(
-      <EuiTitle size="s">
-        <h4>{editInstance ? 'Edit endpoint' : 'Add RDI endpoint'}</h4>
-      </EuiTitle>,
+      <Title size="M">
+        {editInstance ? 'Edit endpoint' : 'Add RDI endpoint'}
+      </Title>,
     )
   }, [editInstance])
 
@@ -122,35 +104,29 @@ const ConnectionForm = (props: Props) => {
     if (!footerEl) return null
 
     return ReactDOM.createPortal(
-      <Row className="footerAddDatabase" justify="between">
-        <FlexItem />
+      <Row justify="end">
         <FlexItem>
           <Row gap="m">
             <FlexItem>
-              <EuiButton
-                size="s"
-                color="secondary"
+              <SecondaryButton
                 data-testid="connection-form-cancel-button"
                 onClick={onCancel}
               >
                 Cancel
-              </EuiButton>
+              </SecondaryButton>
             </FlexItem>
             <FlexItem>
               <ValidationTooltip isValid={isValid} errors={errors}>
-                <EuiButton
+                <PrimaryButton
                   data-testid="connection-form-add-button"
                   type="submit"
-                  fill
-                  size="s"
-                  color="secondary"
-                  iconType={!isValid ? 'iInCircle' : undefined}
-                  isLoading={isLoading}
+                  icon={!isValid ? InfoIcon : undefined}
+                  loading={isLoading}
                   disabled={!isValid}
                   onClick={onSubmit}
                 >
                   {editInstance ? 'Apply Changes' : 'Add Endpoint'}
-                </EuiButton>
+                </PrimaryButton>
               </ValidationTooltip>
             </FlexItem>
           </Row>
@@ -169,110 +145,124 @@ const ConnectionForm = (props: Props) => {
       onSubmit={handleSubmit}
     >
       {({ isValid, errors, values }) => (
-        <Form className={styles.form}>
-          <EuiForm
-            component="div"
-            className="databasePanelWrapper"
-            data-testid="connection-form"
-          >
-            <div className={cx('container relative')}>
-              <EuiFormRow
-                label="RDI Alias*"
-                fullWidth
-                className={styles.withoutPadding}
-              >
-                <Field name="name">
-                  {({ field }: { field: FieldInputProps<string> }) => (
-                    <EuiFieldText
-                      data-testid="connection-form-name-input"
-                      fullWidth
-                      placeholder="Enter RDI Alias"
-                      maxLength={500}
-                      {...field}
-                    />
-                  )}
-                </Field>
-              </EuiFormRow>
-              <EuiFormRow label="URL*" fullWidth>
-                <Field name="url">
-                  {({ field }: { field: FieldInputProps<string> }) => (
-                    <EuiFieldText
-                      data-testid="connection-form-url-input"
-                      fullWidth
-                      placeholder="Enter the RDI host IP as: https://[IP-Address]"
-                      disabled={!!editInstance}
-                      append={
-                        <AppendInfo content="The RDI machine servers REST API via port 443. Ensure that Redis Insight can access the RDI host over port 443." />
-                      }
-                      {...field}
-                    />
-                  )}
-                </Field>
-              </EuiFormRow>
-              <EuiFormRow>
-                <Row gap="m">
-                  <FlexItem grow={1}>
-                    <EuiFormRow label="Username">
-                      <Field name="username">
-                        {({ field }: { field: FieldInputProps<string> }) => (
-                          <EuiFieldText
-                            data-testid="connection-form-username-input"
-                            fullWidth
-                            placeholder="Enter the RDI Redis username"
-                            maxLength={500}
-                            append={
-                              <AppendInfo content="The RDI REST API authentication is using the RDI Redis username and password." />
+        <Form>
+          <Col data-testid="connection-form" gap="l">
+            <FormField label="RDI Alias" required>
+              <Field name="name">
+                {({ field }: { field: FieldInputProps<string> }) => (
+                  <TextInput
+                    data-testid="connection-form-name-input"
+                    placeholder="Enter RDI Alias"
+                    maxLength={500}
+                    name={field.name}
+                    value={field.value}
+                    onChange={(value) =>
+                      field.onChange({ target: { name: field.name, value } })
+                    }
+                  />
+                )}
+              </Field>
+            </FormField>
+            <FormField
+              label="URL"
+              required
+              infoIconProps={{
+                content:
+                  'The RDI machine servers REST API via port 443. Ensure that Redis Insight can access the RDI host over port 443.',
+              }}
+            >
+              <Field name="url">
+                {({ field }: { field: FieldInputProps<string> }) => (
+                  <TextInput
+                    data-testid="connection-form-url-input"
+                    placeholder="Enter the RDI host IP as: https://[IP-Address]"
+                    disabled={!!editInstance}
+                    name={field.name}
+                    value={field.value}
+                    onChange={(value) =>
+                      field.onChange({ target: { name: field.name, value } })
+                    }
+                  />
+                )}
+              </Field>
+            </FormField>
+            <FormField>
+              <Row gap="xxl">
+                <FlexItem grow={2}>
+                  <FormField
+                    label="Username"
+                    infoIconProps={{
+                      content:
+                        'The RDI REST API authentication is using the RDI Redis username and password.',
+                    }}
+                  >
+                    <Field name="username">
+                      {({ field }: { field: FieldInputProps<string> }) => (
+                        <TextInput
+                          data-testid="connection-form-username-input"
+                          placeholder="Enter the RDI Redis username"
+                          maxLength={500}
+                          name={field.name}
+                          value={field.value}
+                          onChange={(value) =>
+                            field.onChange({
+                              target: { name: field.name, value },
+                            })
+                          }
+                        />
+                      )}
+                    </Field>
+                  </FormField>
+                </FlexItem>
+                <FlexItem grow={1}>
+                  <FormField
+                    infoIconProps={{
+                      content:
+                        'The RDI REST API authentication is using the RDI Redis username and password.',
+                    }}
+                    label="Password"
+                  >
+                    <Field name="password">
+                      {({
+                        field,
+                        form,
+                        meta,
+                      }: {
+                        field: FieldInputProps<string>
+                        form: FormikHelpers<string>
+                        meta: FieldMetaProps<string>
+                      }) => (
+                        <PasswordInput
+                          data-testid="connection-form-password-input"
+                          placeholder="Enter the RDI Redis password"
+                          maxLength={500}
+                          {...field}
+                          onChangeCapture={field.onChange}
+                          value={
+                            isNull(field.value) ? SECURITY_FIELD : field.value
+                          }
+                          onFocus={() => {
+                            if (isNull(field.value) && !meta.touched) {
+                              form.setFieldValue('password', '')
                             }
-                            {...field}
-                          />
-                        )}
-                      </Field>
-                    </EuiFormRow>
-                  </FlexItem>
-                  <FlexItem grow={1}>
-                    <EuiFormRow label="Password">
-                      <Field name="password">
-                        {({
-                          field,
-                          form,
-                          meta,
-                        }: {
-                          field: FieldInputProps<string>
-                          form: FormikHelpers<string>
-                          meta: FieldMetaProps<string>
-                        }) => (
-                          <EuiFieldPassword
-                            data-testid="connection-form-password-input"
-                            className={styles.passwordField}
-                            fullWidth
-                            placeholder="Enter the RDI Redis password"
-                            maxLength={500}
-                            {...field}
-                            value={
-                              isNull(field.value) ? SECURITY_FIELD : field.value
-                            }
-                            onFocus={() => {
-                              if (isNull(field.value) && !meta.touched) {
-                                form.setFieldValue('password', '')
-                              }
-                            }}
-                            append={
-                              <AppendInfo content="The RDI REST API authentication is using the RDI Redis username and password." />
-                            }
-                          />
-                        )}
-                      </Field>
-                    </EuiFormRow>
-                  </FlexItem>
-                </Row>
-              </EuiFormRow>
-            </div>
-            <Footer
-              isValid={isValid}
-              errors={errors}
-              onSubmit={() => handleSubmit(values)}
-            />
-          </EuiForm>
+                          }}
+                        />
+                      )}
+                    </Field>
+                  </FormField>
+                </FlexItem>
+              </Row>
+            </FormField>
+            <FlexItem grow>
+              <Col justify="end">
+                <Footer
+                  isValid={isValid}
+                  errors={errors}
+                  onSubmit={() => handleSubmit(values)}
+                />
+              </Col>
+            </FlexItem>
+          </Col>
         </Form>
       )}
     </Formik>

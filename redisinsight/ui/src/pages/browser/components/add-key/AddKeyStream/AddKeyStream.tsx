@@ -1,6 +1,5 @@
 import React, { FormEvent, useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { EuiButton, EuiForm, EuiPanel, EuiTextColor } from '@elastic/eui'
 import { addStreamKey } from 'uiSrc/slices/browser/keys'
 import {
   entryIdRegex,
@@ -10,9 +9,8 @@ import {
 } from 'uiSrc/utils'
 import { AddStreamFormConfig as config } from 'uiSrc/pages/browser/components/add-key/constants/fields-config'
 import { StreamEntryFields } from 'uiSrc/pages/browser/modules/key-details/components/stream-details/add-stream-entity'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
 import { CreateStreamDto } from 'apiSrc/modules/browser/stream/dto'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
 
 import styles from './styles.module.scss'
 
@@ -86,11 +84,7 @@ const AddKeyStream = (props: Props) => {
   }
 
   return (
-    <EuiForm
-      className={styles.container}
-      component="form"
-      onSubmit={onFormSubmit}
-    >
+    <form className={styles.container} onSubmit={onFormSubmit}>
       <StreamEntryFields
         entryID={entryID}
         entryIdError={entryIdError}
@@ -98,48 +92,14 @@ const AddKeyStream = (props: Props) => {
         setFields={setFields}
         setEntryID={setEntryID}
       />
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          color="transparent"
-          className="flexItemNoFullWidth"
-          hasShadow={false}
-          borderRadius="none"
-          style={{ border: 'none' }}
-        >
-          <Row justify="end">
-            <FlexItem>
-              <div>
-                <EuiButton
-                  color="secondary"
-                  onClick={() => onCancel(true)}
-                  className="btn-cancel btn-back"
-                >
-                  <EuiTextColor>Cancel</EuiTextColor>
-                </EuiButton>
-              </div>
-            </FlexItem>
-            <FlexItem>
-              <div>
-                <EuiButton
-                  fill
-                  size="m"
-                  color="secondary"
-                  className="btn-add"
-                  onClick={submitData}
-                  disabled={!isFormValid}
-                  data-testid="add-key-hash-btn"
-                >
-                  Add Key
-                </EuiButton>
-              </div>
-            </FlexItem>
-          </Row>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        disabled={!isFormValid}
+        actionTestId="add-key-hash-btn"
+      />
+    </form>
   )
 }
 

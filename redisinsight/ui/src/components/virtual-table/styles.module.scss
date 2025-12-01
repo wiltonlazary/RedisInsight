@@ -13,10 +13,6 @@ $footerHeight: 38px;
   overflow-y: hidden !important;
 }
 
-.progress {
-  z-index: 2;
-}
-
 .container {
   position: relative;
   height: 100%;
@@ -106,9 +102,6 @@ $footerHeight: 38px;
   :global(.table-row-selected) {
     background: var(--browserComponentActive) !important;
 
-    * {
-      color: var(--euiColorFullShade) !important;
-    }
 
     & > div:first-of-type {
       border-left: 3px solid transparent;

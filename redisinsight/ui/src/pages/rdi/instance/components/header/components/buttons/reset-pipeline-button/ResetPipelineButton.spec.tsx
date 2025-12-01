@@ -1,6 +1,12 @@
 import React from 'react'
 
-import { fireEvent, render, screen, waitFor } from 'uiSrc/utils/test-utils'
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from 'uiSrc/utils/test-utils'
 import ResetPipelineButton, { PipelineButtonProps } from './ResetPipelineButton'
 
 const mockedProps: PipelineButtonProps = {
@@ -17,10 +23,12 @@ describe('ResetPipelineButton', () => {
   it('should show reset info text when hovered', async () => {
     render(<ResetPipelineButton {...mockedProps} />)
 
-    fireEvent.mouseOver(screen.getByTestId('reset-pipeline-btn'))
-    await waitFor(() => screen.getByText(/flushing the target Redis database/))
+    fireEvent.focus(screen.getByTestId('reset-pipeline-btn'))
+    await waitFor(() =>
+      screen.getAllByText(/flushing the target Redis database/),
+    )
     expect(
-      screen.getByText(/flushing the target Redis database/),
+      screen.getAllByText(/flushing the target Redis database/)[0],
     ).toBeInTheDocument()
   })
 
@@ -44,7 +52,7 @@ describe('ResetPipelineButton', () => {
     const onClick = jest.fn()
     render(<ResetPipelineButton {...mockedProps} loading onClick={onClick} />)
 
-    fireEvent.click(screen.getByTestId('reset-pipeline-btn'))
+    userEvent.click(screen.getByTestId('reset-pipeline-btn'))
     expect(onClick).not.toHaveBeenCalled()
   })
 })

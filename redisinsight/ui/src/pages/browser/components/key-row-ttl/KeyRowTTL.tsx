@@ -1,14 +1,10 @@
 import React from 'react'
 import cx from 'classnames'
-import {
-  EuiLoadingContent,
-  EuiText,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
 import { isUndefined } from 'lodash'
 
+import { RiTooltip } from 'uiSrc/components'
 import { LoadingContent } from 'uiSrc/components/base/layout'
+import { ColorText, Text } from 'uiSrc/components/base/text'
 import {
   Maybe,
   truncateNumberToDuration,
@@ -38,23 +34,23 @@ const KeyRowTTL = (props: Props) => {
   }
   if (ttl === -1) {
     return (
-      <EuiTextColor
+      <ColorText
         className={cx(styles.keyTTL, 'moveOnHoverKey', {
           hide: deletePopoverId === rowId,
         })}
-        color="subdued"
+        color="secondary"
         data-testid={`ttl-${nameString}`}
       >
         No limit
-      </EuiTextColor>
+      </ColorText>
     )
   }
   return (
-    <EuiText
+    <Text
       className={cx(styles.keyTTL, 'moveOnHoverKey', {
         hide: deletePopoverId === rowId,
       })}
-      color="subdued"
+      color="secondary"
       size="s"
     >
       <div
@@ -62,7 +58,7 @@ const KeyRowTTL = (props: Props) => {
         className="truncateText"
         data-testid={`ttl-${nameString}`}
       >
-        <EuiToolTip
+        <RiTooltip
           title="Time to Live"
           className={styles.tooltip}
           anchorClassName="truncateText"
@@ -76,9 +72,9 @@ const KeyRowTTL = (props: Props) => {
           }
         >
           <>{truncateNumberToFirstUnit(ttl)}</>
-        </EuiToolTip>
+        </RiTooltip>
       </div>
-    </EuiText>
+    </Text>
   )
 }
 

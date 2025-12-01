@@ -1,27 +1,24 @@
-import { EuiBasicTableColumn } from '@elastic/eui'
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
 import { ModifiedSentinelMaster } from 'uiSrc/slices/interfaces'
 import { cleanup, fireEvent, render, screen } from 'uiSrc/utils/test-utils'
+import { ColumnDef } from 'uiSrc/components/base/layout/table'
 import SentinelDatabases, { Props } from './SentinelDatabases'
 
 const mockedProps = mock<Props>()
 
 let mastersMock: ModifiedSentinelMaster[]
-let columnsMock: EuiBasicTableColumn<ModifiedSentinelMaster>[]
+let columnsMock: ColumnDef<ModifiedSentinelMaster>[]
 
 beforeEach(() => {
   cleanup()
 
   columnsMock = [
     {
-      field: 'name',
-      className: 'column_name',
-      name: 'Master group',
-      dataType: 'string',
-      sortable: true,
-      width: '170px',
-      truncateText: true,
+      header: 'Master group',
+      id: 'name',
+      accessorKey: 'name',
+      enableSorting: true,
     },
   ]
 
@@ -29,7 +26,7 @@ beforeEach(() => {
     {
       name: 'mymaster',
       host: 'localhost',
-      port: 6379,
+      port: '6379',
       alias: 'alias',
       numberOfSlaves: 0,
     },
@@ -42,6 +39,7 @@ describe('SentinelDatabases', () => {
       render(
         <SentinelDatabases
           {...instance(mockedProps)}
+          selection={[]}
           columns={columnsMock}
           masters={mastersMock}
         />,
@@ -53,6 +51,7 @@ describe('SentinelDatabases', () => {
     render(
       <SentinelDatabases
         {...instance(mockedProps)}
+        selection={[]}
         columns={columnsMock}
         masters={[]}
       />,
@@ -68,6 +67,7 @@ describe('SentinelDatabases', () => {
     render(
       <SentinelDatabases
         {...instance(mockedProps)}
+        selection={[]}
         columns={columnsMock}
         masters={mastersMock}
       />,
@@ -79,6 +79,7 @@ describe('SentinelDatabases', () => {
     render(
       <SentinelDatabases
         {...instance(mockedProps)}
+        selection={[]}
         columns={columnsMock}
         masters={mastersMock}
       />,
@@ -96,6 +97,7 @@ describe('SentinelDatabases', () => {
     render(
       <SentinelDatabases
         {...instance(mockedProps)}
+        selection={[]}
         columns={columnsMock}
         masters={mastersMock}
       />,

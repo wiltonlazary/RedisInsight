@@ -22,7 +22,7 @@
 .accordion {
   margin-top: 0 !important;
 
-  :global(.euiCollapsibleNavGroup__children) {
+  :global(.RI-collapsible-nav-group-content) {
     padding: 24px 30px 12px !important;
   }
 }
@@ -80,10 +80,8 @@
 
       .euiFieldText,
       .euiFieldNumber,
-      .euiFieldPassword,
       .euiSelect,
-      .euiSuperSelectControl,
-      .euiTextArea {
+      .euiSuperSelectControl {
         background-color: var(--browserTableRowEven) !important;
       }
     }

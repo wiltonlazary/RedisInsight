@@ -37,6 +37,7 @@ import { FormValues } from '../UploadTutorialForm/UploadTutorialForm'
 import Group from '../Group'
 import InternalLink from '../InternalLink'
 import PlainText from '../PlainText'
+import { Col } from 'uiSrc/components/base/layout/flex'
 import UploadTutorialForm from '../UploadTutorialForm'
 import WelcomeMyTutorials from '../WelcomeMyTutorials'
 
@@ -148,7 +149,7 @@ const Navigation = (props: Props) => {
     } = item
 
     const paddingsStyle = {
-      paddingLeft: `${padding + level * 14}px`,
+      paddingLeft: `${padding + level * 0}px`, // Note: Using the accordion component, we don't need to manually increase padding for nested items anymore
       paddingRight: `${padding}px`,
     }
     const currentSourcePath =
@@ -161,8 +162,6 @@ const Navigation = (props: Props) => {
       case EnablementAreaComponent.Group:
         return (
           <Group
-            buttonClassName={level === 0 ? styles.baseGroup : ''}
-            triggerStyle={paddingsStyle}
             id={id}
             label={label}
             actions={actions}
@@ -181,16 +180,14 @@ const Navigation = (props: Props) => {
             {...args}
           >
             {isCustomTutorials && actions?.includes(EAItemActions.Create) && (
-              <div className={styles.customTuturoialsForm}>
+              <div>
                 {!isCreateOpen && children?.length === 0 && (
-                  <div>
+                  <Col gap="l">
                     <WelcomeMyTutorials
                       handleOpenUpload={() => setIsCreateOpen(true)}
                     />
-                    <div className={styles.uploadWarningContainer}>
-                      <UploadWarning />
-                    </div>
-                  </div>
+                    <UploadWarning />
+                  </Col>
                 )}
                 {isCreateOpen && (
                   <UploadTutorialForm
@@ -242,6 +239,8 @@ const Navigation = (props: Props) => {
 
   return (
     <ListGroup
+      style={{ padding: 5 }}
+      gap="m"
       maxWidth="false"
       data-testid="enablementArea-treeView"
       flush

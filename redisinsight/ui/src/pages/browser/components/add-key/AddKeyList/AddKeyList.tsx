@@ -1,30 +1,23 @@
-import React, { ChangeEvent, FormEvent, useState, useEffect } from 'react'
+import React, { FormEvent, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-
-import {
-  EuiButton,
-  EuiTextColor,
-  EuiForm,
-  EuiPanel,
-  EuiFieldText,
-  EuiSuperSelect,
-} from '@elastic/eui'
 
 import { Maybe, stringToBuffer } from 'uiSrc/utils'
 import { addKeyStateSelector, addListKey } from 'uiSrc/slices/browser/keys'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
+import {
+  optionsDestinations,
+  TAIL_DESTINATION,
+} from 'uiSrc/pages/browser/modules/key-details/components/list-details/add-list-elements/AddListElements'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { Spacer } from 'uiSrc/components/base/layout'
 import {
   CreateListWithExpireDto,
   ListElementDestination,
 } from 'apiSrc/modules/browser/list/dto'
 
 import { AddListFormConfig as config } from '../constants/fields-config'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
 import AddMultipleFields from '../../add-multiple-fields'
-import {
-  optionsDestinations,
-  TAIL_DESTINATION,
-} from 'uiSrc/pages/browser/modules/key-details/components/list-details/add-list-elements/AddListElements'
 
 export interface Props {
   keyName: string
@@ -89,13 +82,14 @@ const AddKeyList = (props: Props) => {
   }
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
-      <EuiSuperSelect
-        valueOfSelected={destination}
+    <form onSubmit={onFormSubmit}>
+      <RiSelect
+        value={destination}
         options={optionsDestinations}
         onChange={(value) => setDestination(value as ListElementDestination)}
         data-testid="destination-select"
       />
+      <Spacer size="m" />
       <AddMultipleFields
         items={elements}
         onClickRemove={onClickRemove}
@@ -103,58 +97,26 @@ const AddKeyList = (props: Props) => {
         isClearDisabled={isClearDisabled}
       >
         {(item, index) => (
-          <EuiFieldText
-            fullWidth
+          <TextInput
             name={`element-${index}`}
             id={`element-${index}`}
             placeholder={config.element.placeholder}
             value={item}
             disabled={loading}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              handleElementChange(e.target.value, index)
-            }
+            onChange={(value) => handleElementChange(value, index)}
             data-testid={`element-${index}`}
           />
         )}
       </AddMultipleFields>
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          style={{ border: 'none' }}
-          color="transparent"
-          hasShadow={false}
-          borderRadius="none"
-        >
-          <Row justify="end">
-            <FlexItem>
-              <EuiButton
-                color="secondary"
-                onClick={() => onCancel(true)}
-                className="btn-cancel btn-back"
-              >
-                <EuiTextColor>Cancel</EuiTextColor>
-              </EuiButton>
-            </FlexItem>
-            <FlexItem>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                className="btn-add"
-                isLoading={loading}
-                onClick={submitData}
-                disabled={!isFormValid || loading}
-                data-testid="add-key-list-btn"
-              >
-                Add Key
-              </EuiButton>
-            </FlexItem>
-          </Row>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-list-btn"
+      />
+    </form>
   )
 }
 

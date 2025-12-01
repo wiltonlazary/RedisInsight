@@ -5,7 +5,7 @@ import {
   fireEvent,
   render,
   screen,
-  waitForEuiToolTipVisible,
+  waitForRiTooltipVisible,
 } from 'uiSrc/utils/test-utils'
 
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
@@ -18,8 +18,22 @@ jest.mock('uiSrc/telemetry', () => ({
 
 const mockedProps = mock<Props>()
 const daysToMs = (days: number) => days * 60 * 60 * 24 * 1000
+let mockDate: Date
 
 describe('DbStatus', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+
+    // Set up fake timers
+    jest.useFakeTimers()
+    mockDate = new Date('2024-11-22T12:00:00Z')
+    jest.setSystemTime(mockDate)
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it('should render', () => {
     expect(render(<DbStatus {...mockedProps} />)).toBeTruthy()
   })
@@ -101,14 +115,14 @@ describe('DbStatus', () => {
     )
 
     await act(async () => {
-      fireEvent.mouseOver(
+      fireEvent.focus(
         screen.getByTestId(`database-status-${WarningTypes.TryDatabase}-1`),
       )
     })
 
-    await waitForEuiToolTipVisible(1_000)
+    await waitForRiTooltipVisible(1_000)
 
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.CLOUD_NOT_USED_DB_NOTIFICATION_VIEWED,
       eventData: {
         capability: expect.any(String),

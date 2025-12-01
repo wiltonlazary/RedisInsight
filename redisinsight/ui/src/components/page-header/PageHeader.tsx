@@ -1,5 +1,4 @@
 import React from 'react'
-import { EuiButtonEmpty, EuiTitle } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory } from 'react-router-dom'
 
@@ -9,18 +8,20 @@ import { resetDataRedisCloud } from 'uiSrc/slices/instances/cloud'
 import { resetDataRedisCluster } from 'uiSrc/slices/instances/cluster'
 import { resetDataSentinel } from 'uiSrc/slices/instances/sentinel'
 
-import Logo from 'uiSrc/assets/img/logo.svg?react'
-
 import { CopilotTrigger, InsightsTrigger } from 'uiSrc/components/triggers'
 import { FeatureFlagComponent, OAuthUserProfile } from 'uiSrc/components'
 import { OAuthSocialSource } from 'uiSrc/slices/interfaces'
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import { isAnyFeatureEnabled } from 'uiSrc/utils/features'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
+import { RedisLogoFullIcon } from 'uiSrc/components/base/icons'
 import styles from './PageHeader.module.scss'
+import { ColorText } from 'uiSrc/components/base/text'
 
 interface Props {
-  title: string
+  title?: string
   subtitle?: string
   children?: React.ReactNode
   showInsights?: boolean
@@ -57,11 +58,13 @@ const PageHeader = (props: Props) => {
     <div className={cx(styles.pageHeader, className)}>
       <div className={styles.pageHeaderTop}>
         <div>
-          <EuiTitle size="s" className={styles.title} data-testid="page-title">
-            <h1>
-              <b data-testid="page-header-title">{title}</b>
-            </h1>
-          </EuiTitle>
+          {title && (
+            <Title size="L" data-testid="page-title">
+              <ColorText variant="semiBold" data-testid="page-header-title">
+                {title}
+              </ColorText>
+            </Title>
+          )}
           {subtitle ? <span data-testid="page-subtitle">{subtitle}</span> : ''}
         </div>
         {children ? <>{children}</> : ''}
@@ -89,13 +92,13 @@ const PageHeader = (props: Props) => {
           </Row>
         ) : (
           <div className={styles.pageHeaderLogo}>
-            <EuiButtonEmpty
+            <EmptyButton
               aria-label="redisinsight"
               onClick={goHome}
               onKeyDown={goHome}
               className={styles.logo}
               tabIndex={0}
-              iconType={Logo}
+              icon={RedisLogoFullIcon}
               data-testid="redis-logo-home"
             />
           </div>

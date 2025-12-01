@@ -1,9 +1,9 @@
 import React from 'react'
 import { useSelector } from 'react-redux'
-import { EuiToolTip } from '@elastic/eui'
 import { DATETIME_FORMATTER_DEFAULT, TimezoneOption } from 'uiSrc/constants'
 import { userSettingsConfigSelector } from 'uiSrc/slices/user/user-settings'
 import { formatTimestamp } from 'uiSrc/utils'
+import { RiTooltip } from 'uiSrc/components'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -20,9 +20,9 @@ const FormatedDate = ({ date }: Props) => {
   const formatedDate = formatTimestamp(date, dateFormat, timezone)
 
   return (
-    <EuiToolTip anchorClassName={styles.text} content={formatedDate}>
+    <RiTooltip anchorClassName={styles.text} content={formatedDate}>
       <span>{formatedDate}</span>
-    </EuiToolTip>
+    </RiTooltip>
   )
 }
 

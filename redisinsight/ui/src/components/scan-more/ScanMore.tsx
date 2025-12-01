@@ -1,8 +1,13 @@
 import React from 'react'
 import { isNull } from 'lodash'
-import { EuiButton, EuiIcon, EuiToolTip } from '@elastic/eui'
+import styled from 'styled-components'
 
 import { SCAN_COUNT_DEFAULT } from 'uiSrc/constants/api'
+import { RiTooltip } from 'uiSrc/components'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { TextButton } from '@redis-ui/components'
+import { Text } from 'uiSrc/components/base/text'
+import { Theme } from 'uiSrc/components/base/theme/types'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -21,25 +26,23 @@ export interface Props {
 const WARNING_MESSAGE =
   'Scanning additional keys may decrease performance and memory available.'
 
+const ScanMoreButton = styled(TextButton)`
+  color: ${({ theme }: { theme: Theme }) => theme.semantic.color.text.primary400} !important;
+  line-height: inherit;
+`
+
 const ScanMore = ({
-  fill = true,
   withAlert = true,
   scanned = 0,
   totalItemsCount = 0,
   loading,
-  style,
   loadMoreItems,
   nextCursor,
 }: Props) => (
   <>
     {(scanned || isNull(totalItemsCount)) && nextCursor !== '0' && (
-      <EuiButton
-        fill={fill}
-        size="s"
-        color="secondary"
-        style={style ?? { marginLeft: 25, height: 26 }}
+      <ScanMoreButton
         disabled={loading}
-        className={styles.btn}
         onClick={() =>
           loadMoreItems?.({
             stopIndex: SCAN_COUNT_DEFAULT - 1,
@@ -48,17 +51,17 @@ const ScanMore = ({
         }
         data-testid="scan-more"
       >
+        <Text size="s">Scan more</Text>
         {withAlert && (
-          <EuiToolTip
+          <RiTooltip
             content={WARNING_MESSAGE}
             position="top"
-            display="inlineBlock"
+            anchorClassName={styles.anchor}
           >
-            <EuiIcon type="iInCircle" />
-          </EuiToolTip>
+            <RiIcon color="primary400" size="m" type="InfoIcon" />
+          </RiTooltip>
         )}
-        Scan more
-      </EuiButton>
+      </ScanMoreButton>
     )}
   </>
 )

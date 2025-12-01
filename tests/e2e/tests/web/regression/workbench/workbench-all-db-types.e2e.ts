@@ -20,8 +20,7 @@ const verifyCommandsInWorkbench = async(): Promise<void> => {
         'FT.SEARCH idx *'
     ];
 
-    await t.click(myRedisDatabasePage.NavigationPanel.browserButton);
-    await t.click(browserPage.NavigationPanel.workbenchButton);
+    await t.click(browserPage.NavigationTabs.workbenchButton);
     // Send commands
     await workbenchPage.sendCommandInWorkbench(commandForSend1);
     await workbenchPage.sendCommandInWorkbench(commandForSend2);
@@ -43,7 +42,7 @@ fixture `Work with Workbench in all types of databases`
 test
     .meta({ rte: rte.reCloud })
     .before(async() => {
-        await databaseHelper.acceptLicenseTermsAndAddRECloudDatabase(cloudDatabaseConfig);
+        await databaseHelper.acceptLicenseTermsAndAddRedisCloudDatabase(cloudDatabaseConfig);
     })
     .after(async() => {
         // Delete database

@@ -1,8 +1,10 @@
-import cx from 'classnames'
-import { EuiFlexGroup, EuiFlexItem, EuiIcon, EuiToolTip } from '@elastic/eui'
 import React, { CSSProperties, ReactNode } from 'react'
+import cx from 'classnames'
 import styles from 'uiSrc/components/database-overview/styles.module.scss'
 import { IMetric } from 'uiSrc/components/database-overview/components/OverviewMetrics/OverviewMetrics'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiTooltip } from 'uiSrc/components'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 
 export interface OverviewItemProps {
   children: ReactNode
@@ -16,16 +18,15 @@ export const OverviewItem = ({
   id,
   style,
 }: OverviewItemProps) => (
-  <EuiFlexItem
+  <FlexItem
     className={cx(styles.overviewItem, className)}
     key={id}
     data-test-subj={id}
     data-testid={id}
-    grow={false}
     style={style}
   >
     {children}
-  </EuiFlexItem>
+  </FlexItem>
 )
 
 const MetricItem = (
@@ -37,27 +38,20 @@ const MetricItem = (
   const { className = '', content, icon, id, tooltipContent, style } = props
   return (
     <OverviewItem id={id} className={className} style={style}>
-      <EuiToolTip
+      <RiTooltip
         position="bottom"
         className={styles.tooltip}
         content={tooltipContent}
       >
-        <EuiFlexGroup
-          gutterSize="none"
-          responsive={false}
-          alignItems="center"
-          justifyContent="center"
-        >
+        <Row gap="none" responsive={false} align="center" justify="center">
           {icon && (
-            <EuiFlexItem grow={false} className={styles.icon}>
-              <EuiIcon size="m" type={icon} className={styles.icon} />
-            </EuiFlexItem>
+            <FlexItem className={styles.icon}>
+              <RiIcon size="m" type={icon} className={styles.icon} />
+            </FlexItem>
           )}
-          <EuiFlexItem grow={false} className={styles.overviewItemContent}>
-            {content}
-          </EuiFlexItem>
-        </EuiFlexGroup>
-      </EuiToolTip>
+          <FlexItem className={styles.overviewItemContent}>{content}</FlexItem>
+        </Row>
+      </RiTooltip>
     </OverviewItem>
   )
 }

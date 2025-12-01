@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
-import { EuiProgress, EuiText } from '@elastic/eui'
 import { CellMeasurerCache } from 'react-virtualized'
+
+import { Text } from 'uiSrc/components/base/text'
 import { RedisResponseBuffer, RedisString } from 'uiSrc/slices/interfaces'
 
 import {
@@ -240,9 +241,9 @@ const SetDetailsTable = (props: Props) => {
         const cellContent = value?.substring?.(0, 200) ?? value
 
         return (
-          <EuiText
-            color="subdued"
-            size="s"
+          <Text
+            color="secondary"
+            component="div"
             style={{ maxWidth: '100%', whiteSpace: 'break-spaces' }}
           >
             <div
@@ -261,7 +262,7 @@ const SetDetailsTable = (props: Props) => {
                 position="left"
               />
             </div>
-          </EuiText>
+          </Text>
         )
       },
     },
@@ -289,9 +290,7 @@ const SetDetailsTable = (props: Props) => {
               handleDeleteItem={handleDeleteMember}
               handleButtonClick={handleRemoveIconClick}
               testid={`set-remove-btn-${member}`}
-              appendInfo={
-                length === 1 ? HelpTexts.REMOVE_LAST_ELEMENT('Member') : null
-              }
+              appendInfo={length === 1 ? HelpTexts.REMOVE_LAST_ELEMENT() : null}
             />
           </div>
         )
@@ -321,18 +320,8 @@ const SetDetailsTable = (props: Props) => {
         styles.container,
       )}
     >
-      {loading && (
-        <EuiProgress
-          color="primary"
-          size="xs"
-          position="absolute"
-          data-testid="progress-key-set"
-        />
-      )}
-
       <VirtualTable
         autoHeight
-        hideProgress
         expandable
         selectable={false}
         keyName={key}

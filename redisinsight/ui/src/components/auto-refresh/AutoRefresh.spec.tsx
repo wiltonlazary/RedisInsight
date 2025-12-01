@@ -1,6 +1,13 @@
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
-import { fireEvent, screen, render, act } from 'uiSrc/utils/test-utils'
+import {
+  userEvent,
+  fireEvent,
+  screen,
+  render,
+  act,
+  waitForRiPopoverVisible,
+} from 'uiSrc/utils/test-utils'
 import { localStorageService } from 'uiSrc/services'
 import AutoRefresh, { Props } from './AutoRefresh'
 import { DEFAULT_REFRESH_RATE } from './utils'
@@ -56,7 +63,7 @@ describe('AutoRefresh', () => {
     render(<AutoRefresh {...instance(mockedProps)} onRefresh={onRefresh} />)
 
     fireEvent.click(screen.getByTestId('refresh-btn'))
-    expect(onRefresh).toBeCalled()
+    expect(onRefresh).toHaveBeenCalled()
   })
 
   it('refresh text should contain "Last refresh" time with disabled auto-refresh', async () => {
@@ -71,8 +78,9 @@ describe('AutoRefresh', () => {
   it('refresh text should contain "Auto-refresh" time with enabled auto-refresh', async () => {
     render(<AutoRefresh {...instance(mockedProps)} displayText />)
 
-    fireEvent.click(screen.getByTestId('auto-refresh-config-btn'))
-    fireEvent.click(screen.getByTestId('auto-refresh-switch'))
+    await userEvent.click(screen.getByTestId('auto-refresh-config-btn'))
+    await waitForRiPopoverVisible()
+    await userEvent.click(screen.getByTestId('auto-refresh-switch'))
 
     expect(screen.getByTestId('refresh-message-label')).toHaveTextContent(
       /Auto refresh:/i,
@@ -152,8 +160,9 @@ describe('AutoRefresh', () => {
       const onRefresh = jest.fn()
       render(<AutoRefresh {...instance(mockedProps)} onRefresh={onRefresh} />)
 
-      fireEvent.click(screen.getByTestId('auto-refresh-config-btn'))
-      fireEvent.click(screen.getByTestId('auto-refresh-switch'))
+      await userEvent.click(screen.getByTestId('auto-refresh-config-btn'))
+      await waitForRiPopoverVisible()
+      await userEvent.click(screen.getByTestId('auto-refresh-switch'))
       fireEvent.click(screen.getByTestId('refresh-rate'))
 
       fireEvent.change(screen.getByTestId(INLINE_ITEM_EDITOR), {
@@ -161,22 +170,23 @@ describe('AutoRefresh', () => {
       })
       expect(screen.getByTestId(INLINE_ITEM_EDITOR)).toHaveValue('1')
 
-      screen.getByTestId(/apply-btn/).click()
+      await userEvent.click(screen.getByTestId(/apply-btn/))
+      // screen.getByTestId(/apply-btn/).click()
 
       await act(async () => {
         await new Promise((r) => setTimeout(r, 1300))
       })
-      expect(onRefresh).toBeCalledTimes(1)
+      expect(onRefresh).toHaveBeenCalledTimes(1)
 
       await act(async () => {
         await new Promise((r) => setTimeout(r, 1300))
       })
-      expect(onRefresh).toBeCalledTimes(2)
+      expect(onRefresh).toHaveBeenCalledTimes(2)
 
       await act(async () => {
         await new Promise((r) => setTimeout(r, 1300))
       })
-      expect(onRefresh).toBeCalledTimes(3)
+      expect(onRefresh).toHaveBeenCalledTimes(3)
     })
 
     it('should respect minimumRefreshRate when setting refresh rate', async () => {
@@ -258,8 +268,9 @@ describe('AutoRefresh', () => {
       <AutoRefresh {...instance(mockedProps)} onRefresh={onRefresh} />,
     )
 
-    fireEvent.click(screen.getByTestId('auto-refresh-config-btn'))
-    fireEvent.click(screen.getByTestId('auto-refresh-switch'))
+    await userEvent.click(screen.getByTestId('auto-refresh-config-btn'))
+    await waitForRiPopoverVisible()
+    await userEvent.click(screen.getByTestId('auto-refresh-switch'))
     fireEvent.click(screen.getByTestId('refresh-rate'))
     fireEvent.change(screen.getByTestId(INLINE_ITEM_EDITOR), {
       target: { value: '1' },
@@ -269,7 +280,7 @@ describe('AutoRefresh', () => {
 
     screen.getByTestId(/apply-btn/).click()
 
-    await act(() => {
+    await act(async () => {
       rerender(
         <AutoRefresh
           {...instance(mockedProps)}
@@ -282,14 +293,14 @@ describe('AutoRefresh', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 1300))
     })
-    expect(onRefresh).toBeCalledTimes(0)
+    expect(onRefresh).toHaveBeenCalledTimes(0)
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 1300))
     })
-    expect(onRefresh).toBeCalledTimes(0)
+    expect(onRefresh).toHaveBeenCalledTimes(0)
 
-    await act(() => {
+    await act(async () => {
       rerender(
         <AutoRefresh
           {...instance(mockedProps)}
@@ -302,7 +313,7 @@ describe('AutoRefresh', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 1300))
     })
-    expect(onRefresh).toBeCalledTimes(1)
+    expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
   it('refresh tooltip text should contain disabled refresh button reason message when button disabled', async () => {
@@ -310,15 +321,15 @@ describe('AutoRefresh', () => {
     render(
       <AutoRefresh
         {...instance(mockedProps)}
-        disabled={true}
+        disabled
         disabledRefreshButtonMessage={tooltipText}
       />,
     )
 
-    fireEvent.mouseOver(screen.getByTestId('refresh-btn'))
+    fireEvent.focus(screen.getByTestId('refresh-btn'))
     await screen.findByTestId('refresh-tooltip')
     expect(screen.getByTestId('refresh-tooltip')).toHaveTextContent(
-      new RegExp(`^${tooltipText}$`),
+      new RegExp(`^${tooltipText}`),
     )
   })
 })

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Expose, Transform, Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import config from 'src/utils/config';
 import { CaCertificate } from 'src/modules/certificate/models/ca-certificate';
 import { ClientCertificate } from 'src/modules/certificate/models/client-certificate';
@@ -135,7 +135,7 @@ export class Database {
 
   @ApiPropertyOptional({
     description: 'The redis database hosting provider',
-    example: HostingProvider.RE_CLOUD,
+    example: HostingProvider.REDIS_CLOUD,
   })
   @Expose()
   @IsOptional()

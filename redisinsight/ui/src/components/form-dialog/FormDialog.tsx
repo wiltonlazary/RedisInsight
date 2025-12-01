@@ -1,14 +1,12 @@
 import React from 'react'
-import {
-  EuiModal,
-  EuiModalBody,
-  EuiModalFooter,
-  EuiModalHeader,
-  EuiModalHeaderTitle,
-} from '@elastic/eui'
-import { Nullable } from 'uiSrc/utils'
 
-import styles from './styles.module.scss'
+import { Nullable } from 'uiSrc/utils'
+import { CancelIcon } from 'uiSrc/components/base/icons'
+import { Modal } from 'uiSrc/components/base/display'
+import {
+  StyledFormDialogContent,
+  StyledFormDialogContentBody,
+} from './FormDialog.styles'
 
 export interface Props {
   isOpen: boolean
@@ -25,13 +23,20 @@ const FormDialog = (props: Props) => {
   if (!isOpen) return null
 
   return (
-    <EuiModal className={`${styles.modal} ${className}`} onClose={onClose}>
-      <EuiModalHeader>
-        <EuiModalHeaderTitle id="formModalHeader">{header}</EuiModalHeaderTitle>
-      </EuiModalHeader>
-      <EuiModalBody>{children}</EuiModalBody>
-      <EuiModalFooter>{footer}</EuiModalFooter>
-    </EuiModal>
+    <Modal.Compose open={isOpen}>
+      <StyledFormDialogContent
+        persistent
+        className={className}
+        onCancel={onClose}
+      >
+        <Modal.Content.Close icon={CancelIcon} onClick={onClose} />
+        <Modal.Content.Header.Compose>
+          <Modal.Content.Header.Title>{header}</Modal.Content.Header.Title>
+        </Modal.Content.Header.Compose>
+        <StyledFormDialogContentBody content={children} />
+        <Modal.Content.Footer.Compose>{footer}</Modal.Content.Footer.Compose>
+      </StyledFormDialogContent>
+    </Modal.Compose>
   )
 }
 

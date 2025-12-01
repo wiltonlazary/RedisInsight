@@ -1,20 +1,22 @@
 import React, { useState } from 'react'
-import { EuiLink, EuiPopover } from '@elastic/eui'
 import { useHistory, useLocation, useParams } from 'react-router-dom'
 import cx from 'classnames'
 import { isNull } from 'lodash'
 import { getRedirectionPage } from 'uiSrc/utils/routing'
 import DatabaseNotOpened from 'uiSrc/components/messages/database-not-opened'
 
+import { Link, RiLinkProps } from 'uiSrc/components/base/link/Link'
+import { RiPopover } from 'uiSrc/components/base'
 import styles from './styles.module.scss'
 
 export interface Props {
   url: string
   text: string
+  size?: RiLinkProps['size']
 }
 
 const RedisInsightLink = (props: Props) => {
-  const { url, text } = props
+  const { url, text, size } = props
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const { instanceId } = useParams<{ instanceId: string }>()
@@ -36,34 +38,28 @@ const RedisInsightLink = (props: Props) => {
   }
 
   return (
-    <EuiPopover
+    <RiPopover
       ownFocus
-      initialFocus={false}
-      className={styles.popoverAnchor}
-      panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popover)}
+      panelClassName={cx('popoverLikeTooltip', styles.popover)}
       anchorClassName={styles.popoverAnchor}
       anchorPosition="upLeft"
       isOpen={isPopoverOpen}
       panelPaddingSize="m"
       closePopover={() => setIsPopoverOpen(false)}
-      focusTrapProps={{
-        scrollLock: true,
-      }}
       button={
-        <EuiLink
-          color="text"
-          external={false}
+        <Link
+          variant="inline"
+          size={size}
           href="/"
           onClick={handleLinkClick}
-          className={styles.link}
           data-testid="redisinsight-link"
         >
           {text}
-        </EuiLink>
+        </Link>
       }
     >
       <DatabaseNotOpened />
-    </EuiPopover>
+    </RiPopover>
   )
 }
 

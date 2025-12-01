@@ -2,62 +2,62 @@ import {
   DATABASE_LIST_MODULES_TEXT,
   RedisDefaultModules,
 } from 'uiSrc/slices/interfaces'
-import RedisAIDark from 'uiSrc/assets/img/modules/RedisAIDark.svg'
-import RedisAILight from 'uiSrc/assets/img/modules/RedisAILight.svg'
-import RedisBloomDark from 'uiSrc/assets/img/modules/RedisBloomDark.svg'
-import RedisBloomLight from 'uiSrc/assets/img/modules/RedisBloomLight.svg'
-import RedisGearsDark from 'uiSrc/assets/img/modules/RedisGearsDark.svg'
-import RedisGearsLight from 'uiSrc/assets/img/modules/RedisGearsLight.svg'
-import RedisGraphDark from 'uiSrc/assets/img/modules/RedisGraphDark.svg'
-import RedisGraphLight from 'uiSrc/assets/img/modules/RedisGraphLight.svg'
-import RedisGears2Dark from 'uiSrc/assets/img/modules/RedisGears2Dark.svg'
-import RedisGears2Light from 'uiSrc/assets/img/modules/RedisGears2Light.svg'
-import RedisJSONDark from 'uiSrc/assets/img/modules/RedisJSONDark.svg'
-import RedisJSONLight from 'uiSrc/assets/img/modules/RedisJSONLight.svg'
-import RedisTimeSeriesDark from 'uiSrc/assets/img/modules/RedisTimeSeriesDark.svg'
-import RedisTimeSeriesLight from 'uiSrc/assets/img/modules/RedisTimeSeriesLight.svg'
-import RedisSearchDark from 'uiSrc/assets/img/modules/RedisSearchDark.svg'
-import RedisSearchLight from 'uiSrc/assets/img/modules/RedisSearchLight.svg'
+import { AllIconsType } from 'uiSrc/components/base/icons/RiIcon'
 
-const rediSearchIcons = {
-  iconDark: RedisSearchDark,
-  iconLight: RedisSearchLight,
+// Define the type for each module info entry
+export interface ModuleInfo {
+  iconDark: AllIconsType
+  iconLight: AllIconsType
+  text: string
 }
 
-export const DEFAULT_MODULES_INFO = {
+// Define the type for the entire modules info object
+export type ModulesInfoType = {
+  [Key in RedisDefaultModules]: ModuleInfo
+}
+
+const rediSearchIcons: {
+  iconDark: AllIconsType
+  iconLight: AllIconsType
+} = {
+  iconDark: 'QuerySearchIcon',
+  iconLight: 'QuerySearchIcon',
+}
+
+export const DEFAULT_MODULES_INFO: ModulesInfoType = {
   [RedisDefaultModules.AI]: {
-    iconDark: RedisAIDark,
-    iconLight: RedisAILight,
+    iconDark: 'RedisAiIcon',
+    iconLight: 'RedisAiIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.AI],
   },
   [RedisDefaultModules.Bloom]: {
-    iconDark: RedisBloomDark,
-    iconLight: RedisBloomLight,
+    iconDark: 'ProbabilisticIcon',
+    iconLight: 'ProbabilisticIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.Bloom],
   },
   [RedisDefaultModules.Gears]: {
-    iconDark: RedisGearsDark,
-    iconLight: RedisGearsLight,
+    iconDark: 'RedisGearsIcon',
+    iconLight: 'RedisGearsIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.Gears],
   },
   [RedisDefaultModules.Graph]: {
-    iconDark: RedisGraphDark,
-    iconLight: RedisGraphLight,
+    iconDark: 'RedisGraphIcon',
+    iconLight: 'RedisGraphIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.Graph],
   },
   [RedisDefaultModules.RedisGears]: {
-    iconDark: RedisGearsDark,
-    iconLight: RedisGearsLight,
+    iconDark: 'RedisGearsIcon',
+    iconLight: 'RedisGearsIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.RedisGears],
   },
   [RedisDefaultModules.RedisGears2]: {
-    iconDark: RedisGears2Dark,
-    iconLight: RedisGears2Light,
+    iconDark: 'RedisGears2DarkIcon',
+    iconLight: 'RedisGears2LightIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.RedisGears2],
   },
   [RedisDefaultModules.ReJSON]: {
-    iconDark: RedisJSONDark,
-    iconLight: RedisJSONLight,
+    iconDark: 'JsonIcon',
+    iconLight: 'JsonIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.ReJSON],
   },
   [RedisDefaultModules.Search]: {
@@ -77,8 +77,8 @@ export const DEFAULT_MODULES_INFO = {
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.FTL],
   },
   [RedisDefaultModules.TimeSeries]: {
-    iconDark: RedisTimeSeriesDark,
-    iconLight: RedisTimeSeriesLight,
+    iconDark: 'TimeSeriesIcon',
+    iconLight: 'TimeSeriesIcon',
     text: DATABASE_LIST_MODULES_TEXT[RedisDefaultModules.TimeSeries],
   },
 }

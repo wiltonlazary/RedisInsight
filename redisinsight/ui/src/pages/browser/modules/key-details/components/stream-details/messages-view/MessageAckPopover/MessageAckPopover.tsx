@@ -1,7 +1,11 @@
 import React from 'react'
-import { EuiText, EuiPopover, EuiButton } from '@elastic/eui'
 
-import styles from './styles.module.scss'
+import {
+  DestructiveButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { HorizontalSpacer } from 'uiSrc/components/base/layout'
+import ConfirmationPopover from 'uiSrc/components/confirmation-popover'
 
 export interface Props {
   id: string
@@ -20,47 +24,39 @@ const AckPopover = (props: Props) => {
     acknowledge = () => {},
   } = props
   return (
-    <EuiPopover
+    <ConfirmationPopover
       key={id}
+      title={id}
+      message="will be acknowledged and removed from the pending messages list"
       anchorPosition="leftCenter"
       ownFocus
       isOpen={isOpen}
       closePopover={closePopover}
       panelPaddingSize="m"
       anchorClassName="ackMessagePopover"
-      panelClassName={styles.popoverWrapper}
-      button={
-        <EuiButton
+      confirmButton={
+        <DestructiveButton
           size="s"
-          color="secondary"
-          aria-label="Acknowledge pending message"
-          onClick={showPopover}
-          className={styles.ackBtn}
-          data-testid="acknowledge-btn"
+          onClick={() => acknowledge(id)}
+          data-testid="acknowledge-submit"
         >
-          ACK
-        </EuiButton>
+          Acknowledge
+        </DestructiveButton>
       }
-    >
-      <div className={styles.popover}>
-        <EuiText size="m">
-          <b>{id}</b>
-          <br />
-          will be acknowledged and removed from the pending messages list
-        </EuiText>
-        <div className={styles.popoverFooter}>
-          <EuiButton
-            fill
+      button={
+        <>
+          <SecondaryButton
             size="s"
-            color="warning"
-            onClick={() => acknowledge(id)}
-            data-testid="acknowledge-submit"
+            aria-label="Acknowledge pending message"
+            onClick={showPopover}
+            data-testid="acknowledge-btn"
           >
-            Acknowledge
-          </EuiButton>
-        </div>
-      </div>
-    </EuiPopover>
+            ACK
+          </SecondaryButton>
+          <HorizontalSpacer size="s" />
+        </>
+      }
+    />
   )
 }
 

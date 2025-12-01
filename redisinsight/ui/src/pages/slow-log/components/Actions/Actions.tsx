@@ -1,25 +1,22 @@
-import {
-  EuiButton,
-  EuiButtonIcon,
-  EuiIcon,
-  EuiPopover,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
-import cx from 'classnames'
 import { useParams } from 'react-router-dom'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { DurationUnits } from 'uiSrc/constants'
 import { slowLogSelector } from 'uiSrc/slices/analytics/slowlog'
 import { AutoRefresh } from 'uiSrc/components'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { Nullable } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { EraserIcon, SettingsIcon } from 'uiSrc/components/base/icons'
+import { IconButton, PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+
 import SlowLogConfig from '../SlowLogConfig'
-import styles from './styles.module.scss'
+import { StyledInfoIconWrapper } from './Actions.styles'
+import { ClearSlowLogModal } from '../ClearSlowLogModal/ClearSlowLogModal'
 
 export interface Props {
   width: number
@@ -43,15 +40,15 @@ const Actions = (props: Props) => {
   const { name = '' } = useSelector(connectedInstanceSelector)
   const { loading, lastRefreshTime } = useSelector(slowLogSelector)
 
-  const [isPopoverClearOpen, setIsPopoverClearOpen] = useState(false)
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false)
   const [isPopoverConfigOpen, setIsPopoverConfigOpen] = useState(false)
 
-  const showClearPopover = () => {
-    setIsPopoverClearOpen((isPopoverClearOpen) => !isPopoverClearOpen)
+  const showClearModal = () => {
+    setIsClearModalOpen((isClearModalOpen) => !isClearModalOpen)
   }
 
-  const closePopoverClear = () => {
-    setIsPopoverClearOpen(false)
+  const closeClearModal = () => {
+    setIsClearModalOpen(false)
   }
   const showConfigPopover = () => {
     setIsPopoverConfigOpen((isPopoverConfigOpen) => !isPopoverConfigOpen)
@@ -59,11 +56,6 @@ const Actions = (props: Props) => {
 
   const closePopoverConfig = () => {
     setIsPopoverConfigOpen(false)
-  }
-
-  const handleClearClick = () => {
-    onClear()
-    closePopoverClear()
   }
 
   const handleEnableAutoRefresh = (
@@ -96,113 +88,69 @@ const Actions = (props: Props) => {
     }
   }
 
-  const ToolTipContent = (
-    <div className={styles.popoverContainer}>
-      <EuiIcon type="alert" color="danger" className={styles.warningIcon} />
-      <div>
-        <EuiText size="m">
-          <h4 className={styles.popoverTitle}>
-            <b>Clear Slow Log?</b>
-          </h4>
-          <EuiText size="xs" color="subdued">
-            Slow Log will be cleared for&nbsp;
-            <span className={styles.popoverDBName}>{name}</span>
-            <br />
-            NOTE: This is server configuration
-          </EuiText>
-        </EuiText>
-        <div className={styles.popoverFooter}>
-          <EuiButton
-            fill
-            size="s"
-            color="warning"
-            iconType="eraser"
-            onClick={() => handleClearClick()}
-            className={styles.popoverDeleteBtn}
-            data-testid="reset-confirm-btn"
-          >
-            Clear
-          </EuiButton>
-        </div>
-      </div>
-    </div>
-  )
-
   return (
-    <Row className={styles.actions} gap="s" align="center">
-      <FlexItem grow={5} style={{ alignItems: 'flex-end' }}>
+    <Row gap="s" align="center">
+      <FlexItem>
         <AutoRefresh
           postfix="slowlog"
           loading={loading}
           displayText={width > HIDE_REFRESH_LABEL_WIDTH}
           lastRefreshTime={lastRefreshTime}
-          containerClassName={styles.refreshContainer}
           onRefresh={() => onRefresh()}
           onEnableAutoRefresh={handleEnableAutoRefresh}
           onChangeAutoRefreshRate={handleChangeAutoRefreshRate}
           testid="slowlog"
         />
       </FlexItem>
-      <FlexItem grow>
-        <EuiPopover
+
+      <FlexItem>
+        <RiPopover
           ownFocus
           anchorPosition="downRight"
           isOpen={isPopoverConfigOpen}
           panelPaddingSize="m"
           closePopover={() => {}}
-          panelClassName={cx('popover-without-top-tail', styles.configWrapper)}
           button={
-            <EuiButton
-              size="s"
-              iconType="gear"
-              color="secondary"
+            <PrimaryButton
+              size="small"
+              icon={SettingsIcon}
               aria-label="Configure"
               onClick={() => showConfigPopover()}
               data-testid="configure-btn"
             >
               Configure
-            </EuiButton>
+            </PrimaryButton>
           }
         >
           <SlowLogConfig
             closePopover={closePopoverConfig}
             onRefresh={onRefresh}
           />
-        </EuiPopover>
+        </RiPopover>
       </FlexItem>
+
       {!isEmptySlowLog && (
-        <FlexItem grow>
-          <EuiPopover
-            anchorPosition="leftCenter"
-            ownFocus
-            isOpen={isPopoverClearOpen}
-            closePopover={closePopoverClear}
-            panelPaddingSize="m"
-            button={
-              <EuiToolTip
-                position="left"
-                anchorClassName={styles.icon}
-                content="Clear Slow Log"
-              >
-                <EuiButtonIcon
-                  iconType="eraser"
-                  color="primary"
-                  aria-label="Clear Slow Log"
-                  onClick={() => showClearPopover()}
-                  data-testid="clear-btn"
-                />
-              </EuiToolTip>
-            }
-          >
-            {ToolTipContent}
-          </EuiPopover>
-        </FlexItem>
+        <>
+          <IconButton
+            icon={EraserIcon}
+            aria-label="Clear Slow Log"
+            onClick={() => showClearModal()}
+            data-testid="clear-btn"
+          />
+
+          <ClearSlowLogModal
+            name={name}
+            isOpen={isClearModalOpen}
+            onClose={closeClearModal}
+            onClear={onClear}
+          />
+        </>
       )}
-      <FlexItem grow>
-        <EuiToolTip
+
+      <FlexItem>
+        <RiTooltip
           title="Slow Log"
           position="bottom"
-          anchorClassName={styles.icon}
           content={
             <span data-testid="slowlog-tooltip-text">
               Slow Log is a list of slow operations for your Redis instance.
@@ -216,13 +164,10 @@ const Actions = (props: Props) => {
             </span>
           }
         >
-          <EuiIcon
-            className={styles.infoIcon}
-            type="iInCircle"
-            style={{ cursor: 'pointer' }}
-            data-testid="slow-log-tooltip-icon"
-          />
-        </EuiToolTip>
+          <StyledInfoIconWrapper>
+            <RiIcon type="InfoIcon" data-testid="slow-log-tooltip-icon" />
+          </StyledInfoIconWrapper>
+        </RiTooltip>
       </FlexItem>
     </Row>
   )

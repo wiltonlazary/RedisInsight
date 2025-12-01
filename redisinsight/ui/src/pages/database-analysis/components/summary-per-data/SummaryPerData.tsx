@@ -1,13 +1,7 @@
-import { EuiIcon, EuiSwitch, EuiTitle } from '@elastic/eui'
-import cx from 'classnames'
 import React, { useCallback, useEffect, useState } from 'react'
 
 import { DonutChart } from 'uiSrc/components/charts'
 import { ChartData } from 'uiSrc/components/charts/donut-chart/DonutChart'
-import {
-  KeyIconSvg,
-  MemoryIconSvg,
-} from 'uiSrc/components/database-overview/components/icons'
 import { GROUP_TYPES_COLORS, GroupTypesColors } from 'uiSrc/constants'
 import {
   DEFAULT_EXTRAPOLATION,
@@ -20,13 +14,28 @@ import {
   Nullable,
 } from 'uiSrc/utils'
 import { getPercentage, numberWithSpaces } from 'uiSrc/utils/numbers'
-
+import { Title } from 'uiSrc/components/base/text/Title'
+import { RiIcon, AllIconsType } from 'uiSrc/components/base/icons/RiIcon'
 import {
   DatabaseAnalysis,
   SimpleTypeSummary,
 } from 'apiSrc/modules/database-analysis/models'
 
-import styles from './styles.module.scss'
+import {
+  ChartsWrapper,
+  LabelTooltip,
+  PreloaderCircle,
+  TitleSeparator,
+  TooltipPercentage,
+  Wrapper,
+} from './SummaryPerData.styles'
+import {
+  Section,
+  SectionTitleWrapper,
+  SwitchExtrapolateResults,
+} from 'uiSrc/pages/database-analysis/components/styles'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
 
 export interface Props {
   data: Nullable<DatabaseAnalysis>
@@ -35,9 +44,47 @@ export interface Props {
   onSwitchExtrapolation?: (value: boolean, section: SectionName) => void
 }
 
+interface DonutChartTitleProps {
+  icon: AllIconsType
+  title: string
+  value: string | number
+  testId: string
+}
+
+const DonutChartTitle = ({
+  icon,
+  title,
+  value,
+  testId,
+}: DonutChartTitleProps) => (
+  <Col align="center" grow={false} gap="xs">
+    <Row align="center" gap="m" data-testid={`donut-title-${testId}`}>
+      <RiIcon type={icon} size="m" />
+      <Title size="XS">{title}</Title>
+    </Row>
+    <TitleSeparator />
+    <Text
+      component="div"
+      variant="semiBold"
+      data-testid={`total-${testId}-value`}
+    >
+      {String(value)}
+    </Text>
+  </Col>
+)
+
 const widthResponsiveSize = 1024
 const CHART_WITH_LABELS_WIDTH = 432
 const CHART_WIDTH = 320
+const getChartData = (t: SimpleTypeSummary): ChartData => ({
+  value: t.total,
+  name: getGroupTypeDisplay(t.type),
+  color:
+    t.type in GROUP_TYPES_COLORS
+      ? GROUP_TYPES_COLORS[t.type as GroupTypesColors]
+      : 'var(--defaultTypeColor)',
+  meta: { ...t },
+})
 
 const SummaryPerData = ({
   data,
@@ -50,16 +97,6 @@ const SummaryPerData = ({
   const [keysData, setKeysData] = useState<ChartData[]>([])
   const [isExtrapolated, setIsExtrapolated] = useState<boolean>(true)
   const [hideLabelTitle, setHideLabelTitle] = useState(false)
-
-  const getChartData = (t: SimpleTypeSummary) => ({
-    value: t.total,
-    name: getGroupTypeDisplay(t.type),
-    color:
-      t.type in GROUP_TYPES_COLORS
-        ? GROUP_TYPES_COLORS[t.type as GroupTypesColors]
-        : 'var(--defaultTypeColor)',
-    meta: { ...t },
-  })
 
   const updateChartSize = () => {
     setHideLabelTitle(globalThis.innerWidth < widthResponsiveSize)
@@ -79,84 +116,61 @@ const SummaryPerData = ({
 
   useEffect(() => {
     if (data && totalMemory && totalKeys) {
-      setMemoryData(totalMemory.types?.map(getChartData) as ChartData[])
-      setKeysData(totalKeys.types?.map(getChartData) as ChartData[])
+      setMemoryData(totalMemory.types?.map(getChartData))
+      setKeysData(totalKeys.types?.map(getChartData))
     }
   }, [data])
 
   const renderMemoryTooltip = useCallback(
     ({ value, name }: ChartData) => (
-      <div className={styles.labelTooltip} data-testid="tooltip-memory">
-        <b>
-          <span
-            className={styles.tooltipKeyType}
-            data-testid="tooltip-key-type"
-          >
-            {name}:{' '}
-          </span>
-          <span
-            className={styles.tooltipPercentage}
-            data-testid="tooltip-key-percent"
-          >
-            {getPercentage(value, totalMemory?.total)}%
-          </span>
-          <span data-testid="tooltip-total-memory">
-            (&thinsp;
-            {extrapolate(
-              value,
-              { extrapolation, apply: isExtrapolated },
-              (val: number) => formatBytes(val, 3, false) as string,
-            )}
-            &thinsp;)
-          </span>
-        </b>
-      </div>
+      <LabelTooltip data-testid="tooltip-memory">
+        <span data-testid="tooltip-key-type">{name}: </span>
+        <TooltipPercentage data-testid="tooltip-key-percent">
+          {getPercentage(value, totalMemory?.total)}%
+        </TooltipPercentage>
+        <span data-testid="tooltip-total-memory">
+          (&thinsp;
+          {extrapolate(
+            value,
+            { extrapolation, apply: isExtrapolated },
+            (val: number) => formatBytes(val, 3, false) as string,
+          )}
+          &thinsp;)
+        </span>
+      </LabelTooltip>
     ),
     [totalMemory, extrapolation, isExtrapolated],
   )
 
   const renderKeysTooltip = useCallback(
     ({ name, value }: ChartData) => (
-      <div className={styles.labelTooltip} data-testid="tooltip-keys">
-        <b>
-          <span
-            className={styles.tooltipKeyType}
-            data-testid="tooltip-key-type"
-          >
-            {name}:{' '}
-          </span>
-          <span
-            className={styles.tooltipPercentage}
-            data-testid="tooltip-key-percent"
-          >
-            {getPercentage(value, totalKeys?.total)}%
-          </span>
-          <span data-testid="tooltip-total-keys">
-            (&thinsp;
-            {extrapolate(
-              value,
-              { extrapolation, apply: isExtrapolated },
-              (val: number) => numberWithSpaces(Math.round(val)),
-            )}
-            &thinsp;)
-          </span>
-        </b>
-      </div>
+      <LabelTooltip data-testid="tooltip-keys">
+        <span data-testid="tooltip-key-type">{name}: </span>
+        <TooltipPercentage data-testid="tooltip-key-percent">
+          {getPercentage(value, totalKeys?.total)}%
+        </TooltipPercentage>
+        <span data-testid="tooltip-total-keys">
+          (&thinsp;
+          {extrapolate(
+            value,
+            { extrapolation, apply: isExtrapolated },
+            (val: number) => numberWithSpaces(Math.round(val)),
+          )}
+          &thinsp;)
+        </span>
+      </LabelTooltip>
     ),
     [totalKeys, extrapolation, isExtrapolated],
   )
 
   if (loading) {
     return (
-      <div className={styles.wrapper}>
-        <div
-          className={cx(styles.chartsWrapper, styles.loadingWrapper)}
-          data-testid="summary-per-data-loading"
-        >
-          <div className={styles.preloaderCircle} />
-          <div className={styles.preloaderCircle} />
-        </div>
-      </div>
+      <Wrapper>
+        <ChartsWrapper $isLoading data-testid="summary-per-data-loading">
+          <PreloaderCircle />
+          <PreloaderCircle />
+        </ChartsWrapper>
+      </Wrapper>
     )
   }
 
@@ -168,36 +182,22 @@ const SummaryPerData = ({
   }
 
   return (
-    <div
-      className={cx('section', styles.wrapper)}
-      data-testid="summary-per-data"
-    >
-      <div className="section-title-wrapper">
-        <EuiTitle className="section-title">
-          <h4>SUMMARY PER DATA TYPE</h4>
-        </EuiTitle>
+    <Section data-testid="summary-per-data">
+      <SectionTitleWrapper>
+        <Title size="M">SUMMARY PER DATA TYPE</Title>
         {extrapolation !== DEFAULT_EXTRAPOLATION && (
-          <EuiSwitch
-            compressed
-            color="subdued"
-            className="switch-extrapolate-results"
-            label="Extrapolate results"
+          <SwitchExtrapolateResults
+            title="Extrapolate results"
             checked={isExtrapolated}
-            onChange={(e) => {
-              setIsExtrapolated(e.target.checked)
-              onSwitchExtrapolation?.(
-                e.target.checked,
-                SectionName.SUMMARY_PER_DATA,
-              )
+            onCheckedChange={(checked) => {
+              setIsExtrapolated(checked)
+              onSwitchExtrapolation?.(checked, SectionName.SUMMARY_PER_DATA)
             }}
             data-testid="extrapolate-results"
           />
         )}
-      </div>
-      <div
-        className={cx('section-content', styles.chartsWrapper)}
-        data-testid="summary-per-data-charts"
-      >
+      </SectionTitleWrapper>
+      <ChartsWrapper $isSection data-testid="summary-per-data-charts">
         <DonutChart
           name="memory"
           data={memoryData}
@@ -207,32 +207,16 @@ const SummaryPerData = ({
           config={{ radius: 94 }}
           renderTooltip={renderMemoryTooltip}
           title={
-            <div className={styles.chartCenter}>
-              <div
-                className={styles.chartTitle}
-                data-testid="donut-title-memory"
-              >
-                <EuiIcon
-                  type={MemoryIconSvg}
-                  className={styles.icon}
-                  size="m"
-                />
-                <EuiTitle size="xs">
-                  <span>Memory</span>
-                </EuiTitle>
-              </div>
-              <hr className={styles.titleSeparator} />
-              <div
-                className={styles.centerCount}
-                data-testid="total-memory-value"
-              >
-                {extrapolate(
-                  totalMemory?.total || 0,
-                  { extrapolation, apply: isExtrapolated },
-                  (val: number) => formatBytes(val || 0, 3) as string,
-                )}
-              </div>
-            </div>
+            <DonutChartTitle
+              icon="MemoryIconIcon"
+              title="Memory"
+              testId="memory"
+              value={extrapolate(
+                totalMemory?.total || 0,
+                { extrapolation, apply: isExtrapolated },
+                (val: number) => formatBytes(val || 0, 3) as string,
+              )}
+            />
           }
         />
         <DonutChart
@@ -244,30 +228,21 @@ const SummaryPerData = ({
           config={{ radius: 94 }}
           renderTooltip={renderKeysTooltip}
           title={
-            <div className={styles.chartCenter}>
-              <div className={styles.chartTitle} data-testid="donut-title-keys">
-                <EuiIcon type={KeyIconSvg} className={styles.icon} size="m" />
-                <EuiTitle size="xs">
-                  <span>Keys</span>
-                </EuiTitle>
-              </div>
-              <hr className={styles.titleSeparator} />
-              <div
-                className={styles.centerCount}
-                data-testid="total-keys-value"
-              >
-                {extrapolate(
-                  totalKeys?.total || 0,
-                  { extrapolation, apply: isExtrapolated },
-                  (val: number) =>
-                    numberWithSpaces(Math.round(val) || 0) as string,
-                )}
-              </div>
-            </div>
+            <DonutChartTitle
+              icon="KeyIconIcon"
+              title="Keys"
+              testId="keys"
+              value={extrapolate(
+                totalKeys?.total || 0,
+                { extrapolation, apply: isExtrapolated },
+                (val: number) =>
+                  numberWithSpaces(Math.round(val) || 0) as string,
+              )}
+            />
           }
         />
-      </div>
-    </div>
+      </ChartsWrapper>
+    </Section>
   )
 }
 

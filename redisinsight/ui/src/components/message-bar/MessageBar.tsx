@@ -1,40 +1,42 @@
-import React, { useEffect, useState } from 'react'
-import { EuiButtonIcon } from '@elastic/eui'
-
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import React, { useEffect } from 'react'
+import { riToast, RiToaster } from 'uiSrc/components/base/display/toast'
+import { ONE_HOUR } from 'uiSrc/components/notifications/constants'
 
 export interface Props {
   children?: React.ReactElement
   opened: boolean
+  variant?: typeof riToast.Variant.Success | typeof riToast.Variant.Attention
 }
 
-const MessageBar = ({ children, opened }: Props) => {
-  const [isOpen, setIsOpen] = useState(false)
+export const MessageBar = ({
+  children,
+  opened,
+  variant = riToast.Variant.Success,
+}: Props) => {
   useEffect(() => {
-    setIsOpen(opened)
-  }, [opened])
+    if (!opened) {
+      return
+    }
 
-  return isOpen ? (
-    <div className={styles.inner}>
-      <div className={styles.containerWrapper}>
-        <Row centered className={styles.container} gap="l">
-          <FlexItem grow className={styles.text}>
-            {children}
-          </FlexItem>
-          <FlexItem className={styles.cross}>
-            <EuiButtonIcon
-              iconType="cross"
-              color="primary"
-              aria-label="Close"
-              onClick={() => setIsOpen(false)}
-              data-testid="close-button"
-            />
-          </FlexItem>
-        </Row>
-      </div>
-    </div>
-  ) : null
+    riToast(
+      {
+        message: children,
+      },
+      {
+        variant,
+        containerId: 'autodiscovery-message-bar',
+      },
+    )
+  }, [opened, variant])
+
+  return (
+    <RiToaster
+      data-testid="autodiscovery-message-bar"
+      containerId="autodiscovery-message-bar"
+      autoClose={ONE_HOUR}
+      position="top-center"
+    />
+  )
 }
 
 export default MessageBar

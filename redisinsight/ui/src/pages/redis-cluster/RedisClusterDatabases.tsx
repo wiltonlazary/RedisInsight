@@ -1,38 +1,35 @@
 import React, { useEffect, useState } from 'react'
-import {
-  EuiBasicTableColumn,
-  EuiButton,
-  EuiFieldSearch,
-  EuiFormRow,
-  EuiInMemoryTable,
-  EuiPopover,
-  EuiTableSelectionType,
-  EuiText,
-  EuiTitle,
-  EuiToolTip,
-  PropertySort,
-} from '@elastic/eui'
-import cx from 'classnames'
-import { map } from 'lodash'
-import { useSelector } from 'react-redux'
-import { Maybe } from 'uiSrc/utils'
-import { InstanceRedisCluster } from 'uiSrc/slices/interfaces'
-import { clusterSelector } from 'uiSrc/slices/instances/cluster'
+import type { Maybe } from 'uiSrc/utils'
+import { RiTooltip } from 'uiSrc/components/base'
+import type { InstanceRedisCluster } from 'uiSrc/slices/interfaces'
 import validationErrors from 'uiSrc/constants/validationErrors'
 import { AutodiscoveryPageTemplate } from 'uiSrc/templates'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import {
+  type ColumnDef,
+  type RowSelectionState,
+  Table,
+} from 'uiSrc/components/base/layout/table'
+import {
+  DatabaseContainer,
+  DatabaseWrapper,
+  EmptyState,
+  Footer,
+  Header,
+} from 'uiSrc/components/auto-discover'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { CancelButton } from './components'
 
 interface Props {
-  columns: EuiBasicTableColumn<InstanceRedisCluster>[]
+  columns: ColumnDef<InstanceRedisCluster>[]
   onClose: () => void
   onBack: () => void
   onSubmit: (uids: Maybe<number>[]) => void
-}
-
-interface IPopoverProps {
-  isPopoverOpen: boolean
+  instances: InstanceRedisCluster[]
+  loading: boolean
 }
 
 const loadingMsg = 'loading...'
@@ -40,19 +37,32 @@ const notFoundMsg = 'Not found'
 const noResultsMessage =
   'Your Redis Enterprise Cluster has no databases available.'
 
+function getSubtitle(items: InstanceRedisCluster[]) {
+  if (!items.length) {
+    return null
+  }
+
+  return `These are the ${items.length > 1 ? 'databases ' : 'database '}
+in your Redis Enterprise Cluster. Select the
+${items.length > 1 ? ' databases ' : ' database '} that you want
+to add.`
+}
+
+const hasSelection = (selection: RowSelectionState) =>
+  Object.values(selection).some(Boolean)
 const RedisClusterDatabases = ({
   columns,
   onClose,
   onBack,
   onSubmit,
+  instances,
+  loading,
 }: Props) => {
   const [items, setItems] = useState<InstanceRedisCluster[]>([])
   const [message, setMessage] = useState(loadingMsg)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
 
-  const [selection, setSelection] = useState<InstanceRedisCluster[]>([])
-
-  const { data: instances, loading } = useSelector(clusterSelector)
+  const [selection, setSelection] = useState<RowSelectionState>({})
 
   useEffect(() => {
     if (instances !== null) {
@@ -66,13 +76,12 @@ const RedisClusterDatabases = ({
     }
   }, [instances])
 
-  const sort: PropertySort = {
-    field: 'name',
-    direction: 'asc',
-  }
-
   const handleSubmit = () => {
-    onSubmit(map(selection, 'uid'))
+    // Map rowSelection state to the selected items list using uid as row id
+    const selected = Object.entries(selection)
+      .filter(([_uid, isSelected]) => Boolean(isSelected))
+      .map(([uid]) => Number(uid))
+    onSubmit(selected)
   }
 
   const showPopover = () => {
@@ -83,15 +92,14 @@ const RedisClusterDatabases = ({
     setIsPopoverOpen(false)
   }
 
-  const isSubmitDisabled = () => selection.length < 1
+  const isSubmitDisabled = () => !hasSelection(selection)
 
-  const selectionValue: EuiTableSelectionType<InstanceRedisCluster> = {
-    onSelectionChange: (selected: InstanceRedisCluster[]) =>
-      setSelection(selected),
+  const onSelectionChange = (selection: RowSelectionState) => {
+    setSelection(selection)
   }
 
-  const onQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e?.target?.value?.toLowerCase()
+  const onQueryChange = (term: string) => {
+    const value = term?.toLowerCase()
     const itemsTemp =
       instances?.filter(
         (item: InstanceRedisCluster) =>
@@ -106,118 +114,39 @@ const RedisClusterDatabases = ({
     setItems(itemsTemp)
   }
 
-  const CancelButton = ({ isPopoverOpen: popoverIsOpen }: IPopoverProps) => (
-    <EuiPopover
-      anchorPosition="upCenter"
-      isOpen={popoverIsOpen}
-      closePopover={closePopover}
-      panelClassName={styles.panelCancelBtn}
-      panelPaddingSize="l"
-      button={
-        <EuiButton
-          onClick={showPopover}
-          color="secondary"
-          className="btn-cancel"
-          data-testid="btn-back"
-        >
-          Cancel
-        </EuiButton>
-      }
-    >
-      <EuiText size="m">
-        <p>
-          Your changes have not been saved.&#10;&#13; Do you want to proceed to
-          the list of databases?
-        </p>
-      </EuiText>
-      <br />
-      <div>
-        <EuiButton
-          fill
-          size="s"
-          color="warning"
-          onClick={onClose}
-          data-testid="btn-back-proceed"
-        >
-          Proceed
-        </EuiButton>
-      </div>
-    </EuiPopover>
-  )
-
   return (
     <AutodiscoveryPageTemplate>
-      <div className="databaseContainer">
-        <EuiTitle size="s" className={styles.title} data-testid="title">
-          <h1>Auto-Discover Redis Enterprise Databases</h1>
-        </EuiTitle>
-        <Row align="end" responsive gap="s">
-          <FlexItem grow>
-            {!!items.length && (
-              <EuiText color="subdued" className={styles.subTitle}>
-                <span>
-                  These are the {items.length > 1 ? 'databases ' : 'database '}
-                  in your Redis Enterprise Cluster. Select the
-                  {items.length > 1 ? ' databases ' : ' database '} that you
-                  want to add.
-                </span>
-              </EuiText>
-            )}
-          </FlexItem>
-          <FlexItem>
-            <EuiFormRow className={styles.searchForm}>
-              <EuiFieldSearch
-                placeholder="Search..."
-                className={styles.search}
-                onChange={onQueryChange}
-                isClearable
-                aria-label="Search"
-                data-testid="search"
-              />
-            </EuiFormRow>
-          </FlexItem>
-        </Row>
-        <br />
-        <div
-          className={cx(
-            'itemList databaseList clusterDatabaseList',
-            styles.databaseListWrapper,
-          )}
-        >
-          <EuiInMemoryTable
-            items={items}
-            itemId="uid"
-            loading={loading}
-            message={message}
+      <DatabaseContainer>
+        <Header
+          title="Auto-Discover Redis Enterprise Databases"
+          onBack={onBack}
+          onQueryChange={onQueryChange}
+          subTitle={getSubtitle(items)}
+        />
+        <Spacer size="m" />
+        <DatabaseWrapper>
+          <Table
             columns={columns}
-            sorting={{ sort }}
-            selection={selectionValue}
-            className={cx(styles.table, { [styles.tableEmpty]: !items.length })}
-            isSelectable
+            data={items}
+            rowSelectionMode="multiple"
+            getRowId={(row) => `${row.uid}`}
+            onRowSelectionChange={onSelectionChange}
+            defaultSorting={[{ id: 'name', desc: false }]}
+            paginationEnabled={items.length > 10}
+            stripedRows
+            emptyState={() => <EmptyState message={message} />}
           />
-          {!items.length && (
-            <EuiText className={styles.noDatabases}>{message}</EuiText>
-          )}
-        </div>
-      </div>
-      <div
-        className={cx(
-          styles.footer,
-          'footerAddDatabase',
-          styles.footerClusterDatabases,
-        )}
-      >
-        <EuiButton
-          onClick={onBack}
-          color="secondary"
-          className="btn-cancel btn-back"
-          data-testid="btn-back-to-adding"
-        >
-          Back to adding databases
-        </EuiButton>
-        <div className={styles.footerButtonsGroup}>
-          <CancelButton isPopoverOpen={isPopoverOpen} />
-          <EuiToolTip
+        </DatabaseWrapper>
+      </DatabaseContainer>
+      <Footer>
+        <Row justify="end" gap="m">
+          <CancelButton
+            isPopoverOpen={isPopoverOpen}
+            onShowPopover={showPopover}
+            onClosePopover={closePopover}
+            onProceed={onClose}
+          />
+          <RiTooltip
             position="top"
             anchorClassName="euiToolTip__btn-disabled"
             title={
@@ -227,27 +156,24 @@ const RedisClusterDatabases = ({
             }
             content={
               isSubmitDisabled() ? (
-                <span className="euiToolTip__content">
-                  {validationErrors.NO_DBS_SELECTED}
-                </span>
+                <span>{validationErrors.NO_DBS_SELECTED}</span>
               ) : null
             }
           >
-            <EuiButton
-              fill
+            <PrimaryButton
               size="m"
               disabled={isSubmitDisabled()}
               onClick={handleSubmit}
-              isLoading={loading}
+              loading={loading}
               color="secondary"
-              iconType={isSubmitDisabled() ? 'iInCircle' : undefined}
+              icon={isSubmitDisabled() ? InfoIcon : undefined}
               data-testid="btn-add-databases"
             >
               Add selected Databases
-            </EuiButton>
-          </EuiToolTip>
-        </div>
-      </div>
+            </PrimaryButton>
+          </RiTooltip>
+        </Row>
+      </Footer>
     </AutodiscoveryPageTemplate>
   )
 }

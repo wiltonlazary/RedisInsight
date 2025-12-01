@@ -22,19 +22,41 @@ on:
         description: SSH Debug
         type: boolean
         default: false
-
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Backend build to run tests over
+        type: string
+        default: 'local'
+      redis_client:
+        description: Library to use for redis connection
+        type: string
+        default: 'ioredis'
+      report:
+        description: Send report for test run to slack
+        type: boolean
+        default: false
+      short_rte_list:
+        description: Use short rte list
+        type: boolean
+        default: false
+      debug:
+        description: SSH Debug
+        type: boolean
+        default: false
 env:
   SLACK_AUDIT_REPORT_KEY: ${{ secrets.SLACK_AUDIT_REPORT_KEY }}
   SLACK_AUDIT_REPORT_CHANNEL: ${{ secrets.SLACK_AUDIT_REPORT_CHANNEL }}
   TEST_MEDIUM_DB_DUMP: ${{ secrets.TEST_MEDIUM_DB_DUMP }}
   TEST_BIG_DB_DUMP: ${{ secrets.TEST_BIG_DB_DUMP }}
   REPORT_NAME: 'report-it'
+  #  Disabled RTE for now. Need to prepare reasonable dataset to not take so much time for tests.
+  #  "oss-st-big": "OSS Standalone v6 and all modules and predefined amount of data inside (~3-4M)",
   ITESTS_NAMES: |
     {
       "oss-st-5": "OSS Standalone v5",
       "oss-st-5-pass": "OSS Standalone v5 with admin pass required",
       "oss-st-6": "OSS Standalone v6 and all modules",
-      "oss-st-big": "OSS Standalone v6 and all modules and predefined amount of data inside (~3-4M)",
       "mods-preview": "OSS Standalone and all preview modules",
       "oss-st-6-tls": "OSS Standalone v6 with TLS enabled",
       "oss-st-6-tls-auth": "OSS Standalone v6 with TLS auth required",
@@ -132,18 +154,81 @@ jobs:
           cp ./redisinsight/api/test/test-runs/coverage/test-run-result.xml ./itest/results/${{ matrix.rte }}.result.xml
           cp ./redisinsight/api/test/test-runs/coverage/test-run-coverage.json ./itest/coverages/${{ matrix.rte }}.coverage.json
 
+      - name: Process test results
+        if: always()
+        run: |
+          mkdir -p itest/coverages && mkdir -p itest/results
+
+          cp ./redisinsight/api/test/test-runs/coverage/test-run-result.json ./itest/results/${{ matrix.rte }}.result.json
+          cp ./redisinsight/api/test/test-runs/coverage/test-run-result.xml ./itest/results/${{ matrix.rte }}.result.xml
+          cp ./redisinsight/api/test/test-runs/coverage/test-run-coverage.json ./itest/coverages/${{ matrix.rte }}.coverage.json
+
       - name: Upload coverage files as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverages-${{ matrix.rte }}
-          path: itest/coverages
+          path: ./itest/coverages
 
-      - name: Send report to Slack
-        if: inputs.report && always()
+      - name: Debug and validate test result XML
+        if: always()
         run: |
-          ITEST_NAME=${{ matrix.rte }} node ./.github/itest-results.js
-          curl -H "Content-type: application/json" --data @itests.report.json -H "Authorization: Bearer $SLACK_TEST_REPORT_KEY" -X POST https://slack.com/api/chat.postMessage
+          echo "=== Checking source coverage directory ==="
+          ls -la ./redisinsight/api/test/test-runs/coverage/ || echo "Source coverage directory doesn't exist"
+
+          echo "=== Checking test result files ==="
+          ls -la ./itest/results/ || echo "Results directory doesn't exist"
+
+          echo "=== Current working directory ==="
+          pwd
+          ls -la .
+
+          XML_FILE="./itest/results/${{ matrix.rte }}.result.xml"
+          SOURCE_XML="./redisinsight/api/test/test-runs/coverage/test-run-result.xml"
+
+          echo "=== Checking source XML file ==="
+          if [ -f "$SOURCE_XML" ]; then
+            echo "✅ Source XML found: $SOURCE_XML"
+            echo "Source file size: $(wc -c < "$SOURCE_XML") bytes"
+          else
+            echo "❌ Source XML not found: $SOURCE_XML"
+          fi
+
+          if [ -f "$XML_FILE" ]; then
+            echo "=== XML file found: $XML_FILE ==="
+            echo "File size: $(wc -c < "$XML_FILE") bytes"
+            echo "Line count: $(wc -l < "$XML_FILE") lines"
+
+            echo "=== First 20 lines of XML ==="
+            head -20 "$XML_FILE"
+
+            echo "=== Last 10 lines of XML ==="
+            tail -10 "$XML_FILE"
+
+            echo "=== Checking XML validity ==="
+            if command -v xmllint >/dev/null 2>&1; then
+              if xmllint --noout "$XML_FILE" 2>/dev/null; then
+                echo "✅ XML is well-formed"
+              else
+                echo "❌ XML is malformed"
+                xmllint --noout "$XML_FILE" 2>&1 || true
+              fi
+            else
+              echo "xmllint not available, skipping XML validation"
+            fi
+
+            echo "=== Basic XML structure check ==="
+            if grep -q "<testsuites" "$XML_FILE" && grep -q "</testsuites>" "$XML_FILE"; then
+              echo "✅ XML has testsuites root element"
+            else
+              echo "❌ XML missing testsuites root element"
+            fi
+
+          else
+            echo "❌ XML file not found: $XML_FILE"
+            echo "Available files in ./itest/results/:"
+            ls -la ./itest/results/ 2>/dev/null || echo "Directory doesn't exist"
+          fi
 
       - name: Generate test results
         uses: dorny/test-reporter@v1
@@ -151,11 +236,11 @@ jobs:
         if: always()
         with:
           name: 'Test results: IT (${{ matrix.rte }}) tests'
-          path: itest/results/*.result.xml
-          reporter: jest-junit
+          path: ./itest/results/*.result.xml
+          reporter: java-junit
           list-tests: 'failed'
           list-suites: 'failed'
-          fail-on-error: 'false'
+          fail-on-error: 'true'
 
       - name: Add link to report in the workflow summary
         if: always()

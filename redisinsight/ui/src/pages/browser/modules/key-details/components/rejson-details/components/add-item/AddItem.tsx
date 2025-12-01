@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import cx from 'classnames'
-import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiForm,
-  keys,
-} from '@elastic/eui'
 import { useSelector } from 'react-redux'
+import styled from 'styled-components'
 
+import * as keys from 'uiSrc/constants/keys'
 import { rejsonDataSelector } from 'uiSrc/slices/browser/rejson'
 import { checkExistingPath } from 'uiSrc/utils/rejson'
 import FieldMessage from 'uiSrc/components/field-message/FieldMessage'
@@ -16,11 +12,19 @@ import { FlexItem } from 'uiSrc/components/base/layout/flex'
 import { WindowEvent } from 'uiSrc/components/base/utils/WindowEvent'
 import { FocusTrap } from 'uiSrc/components/base/utils/FocusTrap'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { CancelSlimIcon, CheckThinIcon } from 'uiSrc/components/base/icons'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import ConfirmOverwrite from './ConfirmOverwrite'
 import { isValidJSON, isValidKey, parseJsonData, wrapPath } from '../../utils'
 import { JSONErrors } from '../../constants'
 
 import styles from '../../styles.module.scss'
+
+const ControlsWrapper = styled.div.attrs({ className: styles.controls })`
+  height: 34px;
+  min-height: 34px;
+`
 
 export interface Props {
   isPair: boolean
@@ -92,35 +96,33 @@ const AddItem = (props: Props) => {
         <div>
           <WindowEvent event="keydown" handler={(e) => handleOnEsc(e)} />
           <FocusTrap>
-            <EuiForm
-              component="form"
+            <form
               className="relative"
               onSubmit={(e) => handleFormSubmit(e)}
               style={{ display: 'flex' }}
               noValidate
             >
               {isPair && (
-                <FlexItem grow inline>
-                  <EuiFieldText
+                <FlexItem grow>
+                  <TextInput
                     name="newRootKey"
                     value={key}
-                    isInvalid={!!error}
+                    error={error || undefined}
                     placeholder="Enter JSON key"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setKey(e.target.value)
+                    onChange={setKey
                     }
                     data-testid="json-key"
                   />
                 </FlexItem>
               )}
-              <FlexItem grow inline>
-                <EuiFieldText
+              <FlexItem grow>
+                <TextInput
                   name="newValue"
                   value={value}
                   placeholder="Enter JSON value"
-                  isInvalid={!!error}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setValue(e.target.value)
+                  error={error || undefined}
+                  onChange={value =>
+                    setValue(value)
                   }
                   data-testid="json-value"
                 />
@@ -130,33 +132,33 @@ const AddItem = (props: Props) => {
                 onCancel={() => setIsConfirmationVisible(false)}
                 onConfirm={confirmApply}
               >
-                <div className={cx(styles.controls)}>
-                  <EuiButtonIcon
-                    iconSize="m"
-                    iconType="cross"
+                <ControlsWrapper>
+                  <IconButton
+                    size="M"
+                    icon={CancelSlimIcon}
                     color="primary"
                     aria-label="Cancel editing"
                     className={styles.declineBtn}
                     onClick={() => onCancel?.()}
                   />
 
-                  <EuiButtonIcon
-                    iconSize="m"
-                    iconType="check"
+                  <IconButton
+                    size="M"
+                    icon={CheckThinIcon}
                     color="primary"
                     type="submit"
                     aria-label="Apply"
                     className={styles.applyBtn}
                     data-testid="apply-btn"
                   />
-                </div>
+                </ControlsWrapper>
               </ConfirmOverwrite>
-            </EuiForm>
+            </form>
             {!!error && (
               <div className={cx(styles.errorMessage)}>
                 <FieldMessage
                   scrollViewOnAppear
-                  icon="alert"
+                  icon="ToastDangerIcon"
                   testID="edit-json-error"
                 >
                   {error}

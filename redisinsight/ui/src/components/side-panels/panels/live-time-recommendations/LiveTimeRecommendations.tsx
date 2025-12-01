@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
-import {
-  EuiLink,
-  EuiText,
-  EuiIcon,
-  EuiToolTip,
-  EuiCheckbox,
-  EuiTextColor,
-} from '@elastic/eui'
 import { remove } from 'lodash'
+import styled from 'styled-components'
 
 import { FeatureFlags, DEFAULT_DELIMITER, Pages } from 'uiSrc/constants'
 import {
@@ -33,15 +26,40 @@ import { ConnectionType } from 'uiSrc/slices/interfaces'
 import { createNewAnalysis } from 'uiSrc/slices/analytics/dbAnalysis'
 import { comboBoxToArray } from 'uiSrc/utils'
 
-import InfoIcon from 'uiSrc/assets/img/icons/help_illus.svg'
-
 import { EXTERNAL_LINKS } from 'uiSrc/constants/links'
-import GithubSVG from 'uiSrc/assets/img/github.svg?react'
-import { FeatureFlagComponent, LoadingContent } from 'uiSrc/components'
+import {
+  FeatureFlagComponent,
+  LoadingContent,
+  RiTooltip,
+} from 'uiSrc/components'
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import Recommendation from './components/recommendation'
 import WelcomeScreen from './components/welcome-screen'
 import PopoverRunAnalyze from './components/popover-run-analyze'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { Link } from 'uiSrc/components/base/link/Link'
+
 import styles from './styles.module.scss'
+
+const FooterLink = styled.button<{
+  onClick?: () => void
+  'data-testid'?: string
+  children?: React.ReactNode
+}>`
+  font:
+    normal normal 400 12px/14px Graphik,
+    sans-serif !important;
+  padding: 2px 0 0;
+  margin: 0;
+  text-decoration: underline !important;
+  :hover {
+    text-decoration: none !important;
+  }
+`
 
 const LiveTimeRecommendations = () => {
   const { provider, connectionType } = useSelector(connectedInstanceSelector)
@@ -138,56 +156,56 @@ const LiveTimeRecommendations = () => {
   }
 
   const renderHeader = () => (
-    <div className={styles.actions}>
-      <div>
-        <EuiTextColor className={styles.boldText}>Our Tips</EuiTextColor>
-        <EuiToolTip
+    <Row align="center" justify="between" className={styles.actions}>
+      <Row align="center" gap="m">
+        <ColorText variant="semiBold">Our Tips</ColorText>
+        <RiTooltip
           position="bottom"
-          anchorClassName={styles.tooltipAnchor}
           className={styles.tooltip}
+          anchorClassName={styles.tooltipAnchor}
           content={
-            <>
+            <Text size="s">
               Tips will help you improve your database.
-              <br />
+              <Spacer size="s" />
               New tips appear while you work with your database, including how
               to improve performance and optimize memory usage.
               <FeatureFlagComponent name={FeatureFlags.envDependent}>
                 <>
-                  <br />
+                  <Spacer size="s" />
                   Eager for more tips? Run Database Analysis to get started.
                 </>
               </FeatureFlagComponent>
-            </>
+            </Text>
           }
         >
-          <EuiIcon
+          <RiIcon
             className={styles.infoIcon}
-            type="iInCircle"
-            size="s"
+            type="InfoIcon"
+            size="m"
             data-testid="recommendations-info-icon"
           />
-        </EuiToolTip>
+        </RiTooltip>
         <FeatureFlagComponent name={FeatureFlags.envDependent}>
-          <EuiLink
-            external={false}
+          <Link
+            variant="inline"
+            size="M"
             href={EXTERNAL_LINKS.githubRepo}
             target="_blank"
-            style={{ marginLeft: 6 }}
             data-testid="github-repo-btn"
           >
-            <EuiIcon
+            <RiIcon
               className={styles.githubIcon}
               aria-label="redis insight github repository"
-              type={GithubSVG}
-              size="s"
+              type="GithubIcon"
+              size="m"
               data-testid="github-repo-icon"
             />
-          </EuiLink>
+          </Link>
         </FeatureFlagComponent>
-      </div>
+      </Row>
 
       {isShowHiddenDisplayed && (
-        <EuiCheckbox
+        <Checkbox
           id="showHidden"
           name="showHidden"
           label="Show hidden"
@@ -198,7 +216,7 @@ const LiveTimeRecommendations = () => {
           aria-label="checkbox show hidden"
         />
       )}
-    </div>
+    </Row>
   )
 
   return (
@@ -216,8 +234,12 @@ const LiveTimeRecommendations = () => {
       {instanceId && (
         <FeatureFlagComponent name={FeatureFlags.envDependent}>
           <div className={styles.footer}>
-            <EuiIcon className={styles.footerIcon} size="m" type={InfoIcon} />
-            <EuiText className={styles.text}>
+            <RiIcon
+              className={styles.footerIcon}
+              size="m"
+              type="MessageInfoIcon"
+            />
+            <Text className={styles.text}>
               {'Run '}
               <PopoverRunAnalyze
                 isShowPopover={isShowApproveRun}
@@ -229,16 +251,15 @@ const LiveTimeRecommendations = () => {
                     : ANALYZE_TOOLTIP_MESSAGE
                 }
               >
-                <EuiLink
-                  className={styles.link}
+                <FooterLink
                   onClick={() => setIsShowApproveRun(true)}
                   data-testid="footer-db-analysis-link"
                 >
                   Database Analysis
-                </EuiLink>
+                </FooterLink>
               </PopoverRunAnalyze>
               {' to get more tips'}
-            </EuiText>
+            </Text>
           </div>
         </FeatureFlagComponent>
       )}

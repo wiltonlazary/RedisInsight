@@ -1,8 +1,9 @@
 import React from 'react'
 import cx from 'classnames'
 import { isNull } from 'lodash'
-import { EuiText, EuiTextColor } from '@elastic/eui'
 import { useSelector } from 'react-redux'
+
+import { Text, ColorText } from 'uiSrc/components/base/text'
 
 import { numberWithSpaces, nullableNumberWithSpaces } from 'uiSrc/utils/numbers'
 import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
@@ -11,6 +12,7 @@ import { KeyTreeSettings } from 'uiSrc/pages/browser/components/key-tree'
 
 import ScanMore from '../scan-more'
 import styles from './styles.module.scss'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
   loading: boolean
@@ -52,69 +54,74 @@ const KeysSummary = (props: Props) => {
   return (
     <>
       {(!!totalItemsCount || isNull(totalItemsCount)) && (
-        <div className={styles.content} data-testid="keys-summary">
-          <EuiText size="xs">
-            {!!scanned && (
-              <>
-                <EuiTextColor className="eui-alignMiddle">
-                  <b>
-                    {'Results: '}
-                    <span data-testid="keys-number-of-results">
-                      {numberWithSpaces(resultsLength)}
-                    </span>
-                    {'. '}
-                  </b>
-                  <EuiTextColor color="subdued">
-                    {'Scanned '}
-                    <span data-testid="keys-number-of-scanned">
-                      {notAccurateScanned}
-                      {numberWithSpaces(scannedDisplay)}
-                    </span>
-                    {' / '}
-                    <span data-testid="keys-total">
-                      {nullableNumberWithSpaces(totalItemsCount)}
-                    </span>
-                    <span
-                      className={cx([
-                        styles.loading,
-                        { [styles.loadingShow]: loading },
-                      ])}
-                    />
-                  </EuiTextColor>
-                </EuiTextColor>
-                {showScanMore && (
-                  <ScanMore
-                    withAlert
-                    fill={false}
-                    style={scanMoreStyle}
-                    scanned={scanned}
-                    totalItemsCount={totalItemsCount}
-                    loading={loading}
-                    loadMoreItems={loadMoreItems}
-                    nextCursor={nextCursor}
+        <Row align="center" gap="l" data-testid="keys-summary">
+          {!!scanned && (
+            <FlexItem>
+              <Row gap="s">
+                <ColorText size="s" variant="semiBold" component="span">
+                  {'Results: '}
+                  <span data-testid="keys-number-of-results">
+                    {numberWithSpaces(resultsLength)}
+                  </span>
+                  {'. '}
+                </ColorText>
+                <ColorText size="s" color="secondary" component="span">
+                  {'Scanned '}
+                  <span data-testid="keys-number-of-scanned">
+                    {notAccurateScanned}
+                    {numberWithSpaces(scannedDisplay)}
+                  </span>
+                  {' / '}
+                  <span data-testid="keys-total">
+                    {nullableNumberWithSpaces(totalItemsCount)}
+                  </span>
+                  <span
+                    className={cx([
+                      styles.loading,
+                      { [styles.loadingShow]: loading },
+                    ])}
                   />
-                )}
-              </>
-            )}
-
-            {!scanned && (
-              <EuiText size="xs">
-                <b>
-                  {'Total: '}
-                  {nullableNumberWithSpaces(totalItemsCount)}
-                </b>
-              </EuiText>
-            )}
-          </EuiText>
-          {viewType === KeyViewType.Tree && (
-            <KeyTreeSettings loading={loading} />
+                </ColorText>
+              </Row>
+            </FlexItem>
           )}
-        </div>
+          {!scanned && (
+            <FlexItem>
+              <Text size="s" variant="semiBold" component="span">
+                {'Total: '}
+                {nullableNumberWithSpaces(totalItemsCount)}
+              </Text>
+            </FlexItem>
+          )}
+          {showScanMore && (
+            <FlexItem>
+              <ScanMore
+                withAlert
+                fill={false}
+                style={scanMoreStyle}
+                scanned={scanned}
+                totalItemsCount={totalItemsCount}
+                loading={loading}
+                loadMoreItems={loadMoreItems}
+                nextCursor={nextCursor}
+              />
+            </FlexItem>
+          )}
+          {viewType === KeyViewType.Tree && (
+            <FlexItem>
+              <KeyTreeSettings loading={loading} />
+            </FlexItem>
+          )}
+        </Row>
       )}
       {loading && !totalItemsCount && !isNull(totalItemsCount) && (
-        <EuiText size="xs" data-testid="scanning-text">
-          Scanning...
-        </EuiText>
+        <Row align="center">
+          <FlexItem>
+            <Text size="s" data-testid="scanning-text">
+              Scanning...
+            </Text>
+          </FlexItem>
+        </Row>
       )}
     </>
   )

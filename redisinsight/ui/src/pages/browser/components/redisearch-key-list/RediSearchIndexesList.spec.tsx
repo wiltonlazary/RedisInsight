@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash'
+import { merge } from 'lodash'
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
 import { useSelector } from 'react-redux'
@@ -7,12 +7,16 @@ import {
   cleanup,
   clearStoreActions,
   fireEvent,
+  initialStateDefault,
   mockedStore,
+  mockStore,
   render,
   screen,
+  userEvent,
 } from 'uiSrc/utils/test-utils'
 import {
   loadList,
+  loadListSuccess,
   redisearchListSelector,
   setSelectedIndex,
 } from 'uiSrc/slices/browser/redisearch'
@@ -24,11 +28,25 @@ import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { changeSearchMode, fetchKeys } from 'uiSrc/slices/browser/keys'
 import { BrowserStorageItem } from 'uiSrc/constants'
 import RediSearchIndexesList, { Props } from './RediSearchIndexesList'
+import { INSTANCE_ID_MOCK } from 'uiSrc/mocks/handlers/instances/instancesHandlers'
+import { setStoreRef } from 'uiSrc/utils/test-store'
+import { REDISEARCH_LIST_DATA_MOCK } from 'uiSrc/mocks/handlers/browser/redisearchHandlers'
 
 let store: typeof mockedStore
 beforeEach(() => {
   cleanup()
-  store = cloneDeep(mockedStore)
+  store = mockStore(
+    merge({}, initialStateDefault, {
+      connections: {
+        instances: {
+          connectedInstance: {
+            id: INSTANCE_ID_MOCK,
+          },
+        },
+      },
+    }),
+  )
+  setStoreRef(store)
   store.clearActions()
 })
 
@@ -73,6 +91,10 @@ jest.mock('uiSrc/services', () => ({
   },
 }))
 
+const renderRediSearchIndexesList = (props: Props) => {
+  return render(<RediSearchIndexesList {...props} />, { store })
+}
+
 describe('RediSearchIndexesList', () => {
   beforeEach(() => {
     const state: any = store.getState()
@@ -108,9 +130,7 @@ describe('RediSearchIndexesList', () => {
   })
 
   it('should render', () => {
-    expect(
-      render(<RediSearchIndexesList {...instance(mockedProps)} />),
-    ).toBeTruthy()
+    expect(renderRediSearchIndexesList(instance(mockedProps))).toBeTruthy()
     const searchInput = screen.getByTestId('select-search-mode')
     expect(searchInput).toBeInTheDocument()
   })
@@ -122,9 +142,7 @@ describe('RediSearchIndexesList', () => {
       modules: [],
     }))
 
-    expect(
-      render(<RediSearchIndexesList {...instance(mockedProps)} />),
-    ).toBeTruthy()
+    expect(renderRediSearchIndexesList(instance(mockedProps))).toBeTruthy()
 
     const expectedActions = [
       changeSearchMode(SearchMode.Pattern),
@@ -135,16 +153,14 @@ describe('RediSearchIndexesList', () => {
       clearStoreActions(expectedActions),
     )
 
-    expect(localStorageService.set).toBeCalledWith(
+    expect(localStorageService.set).toHaveBeenCalledWith(
       BrowserStorageItem.browserSearchMode,
       SearchMode.Pattern,
     )
   })
 
   it('"loadList" should be called after render', () => {
-    const { rerender } = render(
-      <RediSearchIndexesList {...instance(mockedProps)} />,
-    )
+    const { rerender } = renderRediSearchIndexesList(instance(mockedProps))
 
     ;(connectedInstanceSelector as jest.Mock).mockImplementation(() => ({
       host: '123.23.1.1',
@@ -159,19 +175,17 @@ describe('RediSearchIndexesList', () => {
     )
   })
 
-  it('"onCreateIndex" should be called after click Create Index', () => {
+  it('"onCreateIndex" should be called after click Create Index', async () => {
     const onCreateIndexMock = jest.fn()
-    const { queryByText } = render(
-      <RediSearchIndexesList
-        {...instance(mockedProps)}
-        onCreateIndex={onCreateIndexMock}
-      />,
-    )
+    const { findByText } = renderRediSearchIndexesList({
+      ...instance(mockedProps),
+      onCreateIndex: onCreateIndexMock,
+    })
 
-    fireEvent.click(screen.getByTestId('select-search-mode'))
-    fireEvent.click(queryByText('Create Index') || document)
+    await userEvent.click(screen.getByTestId('select-search-mode'))
+    await userEvent.click((await findByText('Create Index')) || document)
 
-    expect(onCreateIndexMock).toBeCalled()
+    expect(onCreateIndexMock).toHaveBeenCalled()
   })
 
   it('"setSelectedIndex" and "loadKeys" should be called after select Index', async () => {
@@ -186,25 +200,27 @@ describe('RediSearchIndexesList', () => {
       selectedIndex: null,
     })
 
-    const { queryByText } = render(
-      <RediSearchIndexesList {...instance(mockedProps)} />,
-    )
+    const { queryByText } = renderRediSearchIndexesList(instance(mockedProps))
 
     ;(connectedInstanceSelector as jest.Mock).mockImplementation(() => ({
       host: '123.123.1.1',
       modules: [{ name: RedisDefaultModules.Search }],
     }))
 
-    fireEvent.click(screen.getByTestId('select-search-mode'))
-    fireEvent.click(queryByText(bufferToString(index)) || document)
+    await userEvent.click(screen.getByTestId('select-search-mode'))
+    await userEvent.click(queryByText(bufferToString(index)) || document)
 
-    const expectedActions = [setSelectedIndex(index), loadList()]
+    const expectedActions = [
+      setSelectedIndex(index),
+      loadList(),
+      loadListSuccess(REDISEARCH_LIST_DATA_MOCK.indexes),
+    ]
 
     expect(clearStoreActions(store.getActions())).toEqual(
       clearStoreActions(expectedActions),
     )
 
-    expect(fetchKeysMock).toBeCalled()
+    expect(fetchKeysMock).toHaveBeenCalled()
   })
 
   it('should load indexes after click on refresh', () => {
@@ -213,7 +229,7 @@ describe('RediSearchIndexesList', () => {
       modules: [{ name: RedisDefaultModules.Search }],
     }))
 
-    render(<RediSearchIndexesList {...instance(mockedProps)} />)
+    renderRediSearchIndexesList(instance(mockedProps))
 
     const afterRenderActions = [...store.getActions()]
 

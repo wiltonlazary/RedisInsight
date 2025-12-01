@@ -10,8 +10,8 @@ import {
   fireEvent,
   render,
   screen,
-  waitForEuiPopoverVisible,
-  waitForEuiToolTipVisible,
+  waitForRiPopoverVisible,
+  waitForRiTooltipVisible,
 } from 'uiSrc/utils/test-utils'
 
 import RecommendationVoting, { Props } from './RecommendationVoting'
@@ -55,7 +55,7 @@ describe('RecommendationVoting', () => {
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('not useful-vote-btn'))
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
 
     expect(
       document.querySelector('[data-test-subj="github-repo-link"]'),
@@ -74,9 +74,9 @@ describe('RecommendationVoting', () => {
     render(<RecommendationVoting {...instance(mockedProps)} />)
 
     await act(async () => {
-      fireEvent.mouseOver(screen.getByTestId('not useful-vote-btn'))
+      fireEvent.focus(screen.getByTestId('not useful-vote-btn'))
     })
-    await waitForEuiToolTipVisible()
+    await waitForRiTooltipVisible()
 
     expect(screen.getByTestId('not useful-vote-tooltip')).toHaveTextContent(
       'Enable Analytics on the Settings page to vote for a tip',

@@ -1,16 +1,16 @@
-import {
-  EuiFieldText,
-  EuiFormRow,
-  EuiIcon,
-  EuiPopover,
-  EuiCheckbox,
-} from '@elastic/eui'
 import React, { memo } from 'react'
-
-import FilterSvg from 'uiSrc/assets/img/icons/filter.svg'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiPopover } from 'uiSrc/components/base'
+import { SearchInput } from 'uiSrc/components/base/inputs'
 import { useFilterTags } from './useFilterTags'
+import { Row } from 'uiSrc/components/base/layout/flex'
 import styles from './styles.module.scss'
+import { COLUMN_FIELD_NAME_MAP, DatabaseListColumn } from 'uiSrc/constants'
+
+const headerText = COLUMN_FIELD_NAME_MAP.get(DatabaseListColumn.Tags)
 
 export const TagsCellHeader = memo(() => {
   const {
@@ -26,18 +26,18 @@ export const TagsCellHeader = memo(() => {
   } = useFilterTags()
 
   if (!tagsData.length) {
-    return <div>Tags</div>
+    return <Row centered>{headerText}</Row>
   }
 
   return (
-    <div>
-      Tags{' '}
-      <EuiPopover
+    <Row centered>
+      {headerText}
+      <RiPopover
         button={
-          <EuiIcon
+          <RiIcon
             role="button"
-            type={FilterSvg}
-            size="m"
+            type="FilterTableIcon"
+            size="l"
             className={styles.filterByTagIcon}
             onClick={(e) => {
               e.stopPropagation()
@@ -52,23 +52,20 @@ export const TagsCellHeader = memo(() => {
         {/* stop propagation to prevent sorting by column header */}
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div style={{ width: 300 }} onClick={(e) => e.stopPropagation()}>
-          <EuiFormRow>
-            <EuiFieldText
-              icon="search"
-              role="search"
+          <FormField>
+            <SearchInput
               data-testid="tag-search"
               placeholder="Enter tag key or value"
-              style={{ borderRadius: 4 }}
               value={tagSearch}
-              onChange={(e) => {
-                setTagSearch(e.target.value)
+              onChange={(value) => {
+                setTagSearch(value)
               }}
             />
-          </EuiFormRow>
+          </FormField>
           <Spacer size="m" />
           {Object.keys(groupedTags).map((key) => (
             <div key={key}>
-              <EuiCheckbox
+              <Checkbox
                 id={key}
                 className={styles.filterTagLabel}
                 label={key}
@@ -80,8 +77,8 @@ export const TagsCellHeader = memo(() => {
                 }}
               />
               {groupedTags[key].map((value) => (
-                <div key={value} style={{ paddingLeft: '20px' }}>
-                  <EuiCheckbox
+                <div key={value} style={{ margin: '10px 0 0 20px' }}>
+                  <Checkbox
                     id={`${key}:${value}`}
                     className={styles.filterTagLabel}
                     data-testid={`${key}:${value}`}
@@ -96,7 +93,7 @@ export const TagsCellHeader = memo(() => {
             </div>
           ))}
         </div>
-      </EuiPopover>
-    </div>
+      </RiPopover>
+    </Row>
   )
 })

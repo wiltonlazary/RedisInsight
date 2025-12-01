@@ -1,4 +1,5 @@
 import NavigationMenu from './navigation-menu/NavigationMenu'
+import AppNavigation from './navigation-menu/app-navigation/AppNavigation'
 import PageHeader from './page-header/PageHeader'
 import GroupBadge from './group-badge/GroupBadge'
 import Notifications from './notifications/Notifications'
@@ -6,7 +7,6 @@ import DatabaseListModules from './database-list-modules/DatabaseListModules'
 import DatabaseListOptions from './database-list-options/DatabaseListOptions'
 import DatabaseOverview from './database-overview/DatabaseOverview'
 import InputFieldSentinel from './input-field-sentinel/InputFieldSentinel'
-import PageBreadcrumbs from './page-breadcrumbs/PageBreadcrumbs'
 import ContentEditable from './ContentEditable'
 import Config from './config'
 import SettingItem from './settings-item/SettingItem'
@@ -26,9 +26,9 @@ import PagePlaceholder from './page-placeholder'
 import BulkActionsConfig from './bulk-actions-config'
 import OnboardingTour from './onboarding-tour'
 import CodeBlock from './code-block'
-import ShowChildByCondition from './show-child-by-condition'
 import FeatureFlagComponent from './feature-flag-component'
 import AutoRefresh from './auto-refresh'
+import ConfirmationPopover from './confirmation-popover'
 import { ModuleNotLoaded, FilterNotAvailable } from './messages'
 import RdiInstanceHeader from './rdi-instance-header'
 import {
@@ -49,6 +49,7 @@ export * from './base'
 
 export {
   NavigationMenu,
+  AppNavigation,
   PageHeader,
   GroupBadge,
   Notifications,
@@ -56,7 +57,6 @@ export {
   DatabaseListOptions,
   DatabaseOverview,
   InputFieldSentinel,
-  PageBreadcrumbs,
   Config,
   ContentEditable,
   ConsentsSettings,
@@ -74,13 +74,13 @@ export {
   BulkActionsConfig,
   OnboardingTour,
   CodeBlock,
-  ShowChildByCondition,
   RecommendationVoting,
   RecommendationCopyComponent,
   FeatureFlagComponent,
   ModuleNotLoaded,
   FilterNotAvailable,
   AutoRefresh,
+  ConfirmationPopover,
   RdiInstanceHeader,
   RecommendationBody,
   RecommendationBadges,

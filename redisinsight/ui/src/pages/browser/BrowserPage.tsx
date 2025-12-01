@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
-import { EuiButton } from '@elastic/eui'
-
 import { isNumber } from 'lodash'
+import styled from 'styled-components'
+
 import {
   formatLongName,
   getDbIndex,
@@ -43,7 +43,17 @@ import {
 import OnboardingStartPopover from 'uiSrc/pages/browser/components/onboarding-start-popover'
 import { sidePanelsSelector } from 'uiSrc/slices/panels/sidePanels'
 import { useStateWithContext } from 'uiSrc/services/hooks'
-import { ResizableContainer, ResizablePanel, ResizablePanelHandle } from 'uiSrc/components/base/layout'
+
+import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
+import { ArrowLeftIcon } from 'uiSrc/components/base/icons'
+import {
+  ResizableContainer,
+  ResizablePanel,
+  ResizablePanelHandle,
+} from 'uiSrc/components/base/layout'
+
+import { useAppNavigationActions } from 'uiSrc/contexts/AppNavigationActionsProvider'
+import Actions from 'uiSrc/pages/browser/components/actions/Actions'
 import BrowserSearchPanel from './components/browser-search-panel'
 import BrowserLeftPanel from './components/browser-left-panel'
 import BrowserRightPanel from './components/browser-right-panel'
@@ -56,13 +66,17 @@ const widthExplorePanel = 460
 export const firstPanelId = 'keys'
 export const secondPanelId = 'keyDetails'
 
+const BorderedResizablePanel = styled(ResizablePanel)`
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.semantic.color.border.neutral500};
+`
+
 const isOneSideMode = (isInsightsOpen: boolean) =>
   globalThis.innerWidth <
   widthResponsiveSize + (isInsightsOpen ? widthExplorePanel : 0)
 
 const BrowserPage = () => {
   const { instanceId } = useParams<{ instanceId: string }>()
-
   const {
     name: connectedInstanceName,
     db = 0,
@@ -110,12 +124,17 @@ const BrowserPage = () => {
 
   const dbName = `${formatLongName(connectedInstanceName, 33, 0, '...')} ${getDbIndex(db)}`
   setTitle(`${dbName} - Browser`)
-
+  const { setActions } = useAppNavigationActions()
   useEffect(() => {
     dispatch(resetErrors())
     updateWindowDimensions()
     globalThis.addEventListener('resize', updateWindowDimensions)
-
+    setActions(
+      <Actions
+        handleAddKeyPanel={handleAddKeyPanel}
+        handleBulkActionsPanel={handleBulkActionsPanel}
+      />,
+    )
     // componentWillUnmount
     return () => {
       globalThis.removeEventListener('resize', updateWindowDimensions)
@@ -281,38 +300,42 @@ const BrowserPage = () => {
     (arePanelsCollapsed && isRightPanelOpen)
 
   return (
-    <div className={`browserPage ${styles.container}`}>
+    <div
+      className={`browserPage ${styles.container}`}
+      data-testid="browser-page"
+    >
       {arePanelsCollapsed && isRightPanelOpen && !isBrowserFullScreen && (
-        <EuiButton
-          color="secondary"
-          iconType="arrowLeft"
-          size="s"
+        <EmptyButton
+          icon={ArrowLeftIcon}
+          size="small"
           onClick={closePanel}
           className={styles.backBtn}
           data-testid="back-right-panel-btn"
         >
           Back
-        </EuiButton>
+        </EmptyButton>
       )}
       <div
         className={cx({
           [styles.hidden]: isRightPanelFullScreen,
         })}
       >
-        <BrowserSearchPanel
-          handleAddKeyPanel={handleAddKeyPanel}
-          handleBulkActionsPanel={handleBulkActionsPanel}
-          handleCreateIndexPanel={handleCreateIndexPanel}
-        />
+        <BrowserSearchPanel handleCreateIndexPanel={handleCreateIndexPanel} />
       </div>
       <div className={cx(styles.main)}>
-        <ResizableContainer className={styles.resizableContainer} direction="horizontal" onLayout={onPanelWidthChange}>
-          <ResizablePanel
+        <ResizableContainer
+          className={styles.resizableContainer}
+          direction="horizontal"
+          onLayout={onPanelWidthChange}
+        >
+          <BorderedResizablePanel
             defaultSize={sizes && sizes[0] ? sizes[0] : 50}
             minSize={45}
             id={firstPanelId}
             className={cx({
-              [styles.fullWidth]: arePanelsCollapsed || (isBrowserFullScreen && !isRightPanelOpen)
+              [styles.fullWidth]:
+                arePanelsCollapsed ||
+                (isBrowserFullScreen && !isRightPanelOpen),
             })}
           >
             <BrowserLeftPanel
@@ -321,18 +344,20 @@ const BrowserPage = () => {
               removeSelectedKey={handleRemoveSelectedKey}
               handleAddKeyPanel={handleAddKeyPanel}
             />
-          </ResizablePanel>
+          </BorderedResizablePanel>
           {!arePanelsCollapsed && !isBrowserFullScreen && (
             <ResizablePanelHandle />
           )}
-          <ResizablePanel
+          <BorderedResizablePanel
             defaultSize={sizes && sizes[1] ? sizes[1] : 50}
             minSize={45}
             id={secondPanelId}
             className={cx({
               [styles.keyDetailsOpen]: isRightPanelOpen,
-              [styles.fullWidth]: arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
-              [styles.keyDetails]: arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
+              [styles.fullWidth]:
+                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
+              [styles.keyDetails]:
+                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
             })}
           >
             <BrowserRightPanel
@@ -346,11 +371,11 @@ const BrowserPage = () => {
               handleBulkActionsPanel={handleBulkActionsPanel}
               closeRightPanels={closeRightPanels}
             />
-          </ResizablePanel>
+          </BorderedResizablePanel>
         </ResizableContainer>
       </div>
       <OnboardingStartPopover />
-    </div >
+    </div>
   )
 }
 
