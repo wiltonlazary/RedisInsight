@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { EuiText } from '@elastic/eui'
 import { useSelector } from 'react-redux'
 
 import { isUndefined } from 'lodash'
+import { Text } from 'uiSrc/components/base/text'
 import {
   bulkActionsDeleteOverviewSelector,
   bulkActionsDeleteSelector,
@@ -10,13 +10,12 @@ import {
 } from 'uiSrc/slices/browser/bulkActions'
 import { keysSelector } from 'uiSrc/slices/browser/keys'
 import { getGroupTypeDisplay, NO_TYPE_NAME } from 'uiSrc/utils'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
 
 import BulkDeleteFooter from './BulkDeleteFooter'
 import BulkDeleteSummary from './BulkDeleteSummary'
 import BulkDeleteSummaryButton from './BulkDeleteSummaryButton'
 import BulkActionsInfo from '../BulkActionsInfo'
-
-import styles from './styles.module.scss'
 
 export interface Props {
   onCancel: () => void
@@ -59,38 +58,44 @@ const BulkDelete = (props: Props) => {
             status={status}
             progress={progress}
           >
-            <BulkDeleteSummary />
+            <Col gap="l">
+              <BulkDeleteSummary />
 
-            {isCompleted && (
-              <div className={styles.bulkDeleteSummaryButtonWrapper}>
-                <BulkDeleteSummaryButton
-                  deletedKeys={deletedKeys}
-                  pattern={searchPattern}
-                  keysType={
-                    keysType === NO_TYPE_NAME ? REPORTED_NO_TYPE_NAME : keysType
-                  }
-                >
-                  Keys deleted
-                </BulkDeleteSummaryButton>
-              </div>
-            )}
+              {isCompleted && (
+                <Row justify="end">
+                  <BulkDeleteSummaryButton
+                    deletedKeys={deletedKeys}
+                    pattern={searchPattern}
+                    keysType={
+                      keysType === NO_TYPE_NAME
+                        ? REPORTED_NO_TYPE_NAME
+                        : keysType
+                    }
+                  >
+                    Keys deleted
+                  </BulkDeleteSummaryButton>
+                </Row>
+              )}
+            </Col>
           </BulkActionsInfo>
           <BulkDeleteFooter onCancel={onCancel} />
         </>
       )}
 
       {showPlaceholder && (
-        <div
-          className={styles.placeholder}
+        <Col
+          gap="l"
+          justify="center"
+          align="center"
           data-testid="bulk-actions-placeholder"
         >
-          <EuiText color="subdued" className={styles.placeholderTitle}>
+          <Text size="XL" color="primary" variant="semiBold">
             No pattern or key type set
-          </EuiText>
-          <EuiText color="subdued" className={styles.placeholderSummary}>
+          </Text>
+          <Text color="secondary">
             To perform a bulk action, set the pattern or select the key type
-          </EuiText>
-        </div>
+          </Text>
+        </Col>
       )}
     </>
   )

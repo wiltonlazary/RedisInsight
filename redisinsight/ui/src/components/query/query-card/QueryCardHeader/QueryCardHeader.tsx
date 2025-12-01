@@ -1,60 +1,58 @@
 import React, { useContext } from 'react'
 import cx from 'classnames'
 import { useSelector } from 'react-redux'
-import {
-  EuiButtonIcon,
-  EuiIcon,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
 import { useParams } from 'react-router-dom'
 import { findIndex, isNumber } from 'lodash'
+import { ColorText } from 'uiSrc/components/base/text'
 
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CopyIcon,
+  DeleteIcon,
+  PlayIcon,
+} from 'uiSrc/components/base/icons'
 import { Theme } from 'uiSrc/constants'
 import {
   getCommandNameFromQuery,
   getVisualizationsByCommand,
   isGroupMode,
-  truncateText,
-  urlForAsset,
-  truncateMilliseconds,
+  isGroupResults,
   isRawMode,
   isSilentMode,
   isSilentModeWithoutError,
-  isGroupResults,
+  truncateMilliseconds,
+  truncateText,
+  urlForAsset,
 } from 'uiSrc/utils'
 import { numberWithSpaces } from 'uiSrc/utils/numbers'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
 import { appPluginsSelector } from 'uiSrc/slices/app/plugins'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import {
-  getViewTypeOptions,
-  WBQueryType,
   getProfileViewTypeOptions,
-  ProfileQueryType,
+  getViewTypeOptions,
   isCommandAllowedForProfile,
+  ProfileQueryType,
+  WBQueryType,
 } from 'uiSrc/pages/workbench/constants'
 import { IPluginVisualization } from 'uiSrc/slices/interfaces'
 import {
-  RunQueryMode,
   ResultsMode,
   ResultsSummary,
+  RunQueryMode,
 } from 'uiSrc/slices/interfaces/workbench'
 import { appRedisCommandsSelector } from 'uiSrc/slices/app/redis-commands'
-import { FormatedDate, FullScreen } from 'uiSrc/components'
-
-import DefaultPluginIconDark from 'uiSrc/assets/img/workbench/default_view_dark.svg'
-import DefaultPluginIconLight from 'uiSrc/assets/img/workbench/default_view_light.svg'
-import ExecutionTimeIcon from 'uiSrc/assets/img/workbench/execution_time.svg?react'
-import GroupModeIcon from 'uiSrc/assets/img/icons/group_mode.svg?react'
-import SilentModeIcon from 'uiSrc/assets/img/icons/silent_mode.svg?react'
+import { FormatedDate, FullScreen, RiTooltip } from 'uiSrc/components'
 
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import QueryCardTooltip from '../QueryCardTooltip'
 
 import styles from './styles.module.scss'
+import { useViewModeContext, ViewMode } from '../../context/view-mode.context'
+import { ProfileSelect } from './QueryCardHeader.styles'
 
 export interface Props {
   query: string
@@ -68,19 +66,24 @@ export interface Props {
   activeResultsMode?: ResultsMode
   summary?: ResultsSummary
   summaryText?: string
-  queryType: WBQueryType
   selectedValue: string
   loading?: boolean
   clearing?: boolean
   executionTime?: number
   emptyCommand?: boolean
   db?: number
+  hideFields?: string[]
   toggleOpen: () => void
   toggleFullScreen: () => void
   setSelectedValue: (type: WBQueryType, value: string) => void
   onQueryDelete: () => void
   onQueryReRun: () => void
   onQueryProfile: (type: ProfileQueryType) => void
+}
+
+export const HIDE_FIELDS = {
+  viewType: 'viewType',
+  profiler: 'profiler',
 }
 
 const getExecutionTimeString = (value: number): string => {
@@ -123,6 +126,7 @@ const QueryCardHeader = (props: Props) => {
     onQueryReRun,
     onQueryProfile,
     db,
+    hideFields = [],
   } = props
 
   const { visualizations = [] } = useSelector(appPluginsSelector)
@@ -130,6 +134,7 @@ const QueryCardHeader = (props: Props) => {
   const { instanceId = '' } = useParams<{ instanceId: string }>()
 
   const { theme } = useContext(ThemeContext)
+  const { viewMode } = useViewModeContext()
 
   const eventStop = (event: React.MouseEvent) => {
     event.preventDefault()
@@ -152,7 +157,12 @@ const QueryCardHeader = (props: Props) => {
   }
 
   const handleCopy = (event: React.MouseEvent, query: string) => {
-    sendEvent(TelemetryEvent.WORKBENCH_COMMAND_COPIED, query)
+    const telemetryEvent =
+      viewMode === ViewMode.Workbench
+        ? TelemetryEvent.WORKBENCH_COMMAND_COPIED
+        : TelemetryEvent.SEARCH_COMMAND_COPIED
+
+    sendEvent(telemetryEvent, query)
     eventStop(event)
     navigator.clipboard?.writeText?.(query)
   }
@@ -180,7 +190,13 @@ const QueryCardHeader = (props: Props) => {
   const handleQueryDelete = (event: React.MouseEvent) => {
     eventStop(event)
     onQueryDelete()
-    sendEvent(TelemetryEvent.WORKBENCH_CLEAR_RESULT_CLICKED, query)
+
+    const telemetryEvent =
+      viewMode === ViewMode.Workbench
+        ? TelemetryEvent.WORKBENCH_CLEAR_RESULT_CLICKED
+        : TelemetryEvent.SEARCH_CLEAR_RESULT_CLICKED
+
+    sendEvent(telemetryEvent, query)
   }
 
   const handleQueryReRun = (event: React.MouseEvent) => {
@@ -193,12 +209,16 @@ const QueryCardHeader = (props: Props) => {
       !isFullScreen &&
       !isSilentModeWithoutError(resultsMode, summary?.fail)
     ) {
-      sendEvent(
-        isOpen
-          ? TelemetryEvent.WORKBENCH_RESULTS_COLLAPSED
-          : TelemetryEvent.WORKBENCH_RESULTS_EXPANDED,
-        query,
-      )
+      const telemetryEvent =
+        viewMode === ViewMode.Workbench
+          ? isOpen
+            ? TelemetryEvent.WORKBENCH_RESULTS_COLLAPSED
+            : TelemetryEvent.WORKBENCH_RESULTS_EXPANDED
+          : isOpen
+            ? TelemetryEvent.SEARCH_RESULTS_COLLAPSED
+            : TelemetryEvent.SEARCH_RESULTS_EXPANDED
+
+      sendEvent(telemetryEvent, query)
     }
     toggleOpen()
   }
@@ -212,42 +232,38 @@ const QueryCardHeader = (props: Props) => {
       iconDark:
         visualization.plugin.internal && visualization.iconDark
           ? urlForAsset(visualization.plugin.baseUrl, visualization.iconDark)
-          : DefaultPluginIconDark,
+          : 'DefaultPluginDarkIcon',
       iconLight:
         visualization.plugin.internal && visualization.iconLight
           ? urlForAsset(visualization.plugin.baseUrl, visualization.iconLight)
-          : DefaultPluginIconLight,
+          : 'DefaultPluginLightIcon',
       internal: visualization.plugin.internal,
     }),
   )
 
   const options: any[] = getViewTypeOptions()
   options.push(...pluginsOptions)
-  const modifiedOptions: EuiSuperSelectOption<any>[] = options.map((item) => {
+  const modifiedOptions = options.map((item) => {
     const { value, id, text, iconDark, iconLight } = item
     return {
       value: id ?? value,
+      label: id ?? value,
+      disabled: false,
       inputDisplay: (
-        <div className={styles.changeViewWrapper}>
-          <EuiToolTip
-            content={truncateText(text, 500)}
-            position="left"
-            anchorClassName={styles.tooltipIcon}
-          >
-            <EuiIcon
-              className={styles.iconDropdownOption}
-              type={theme === Theme.Dark ? iconDark : iconLight}
-              data-testid={`view-type-selected-${value}-${id}`}
-            />
-          </EuiToolTip>
-        </div>
+        <RiTooltip
+          content={truncateText(text, 500)}
+          position="left"
+          anchorClassName={styles.changeViewWrapper}
+        >
+          <RiIcon
+            type={theme === Theme.Dark ? iconDark : iconLight}
+            data-testid={`view-type-selected-${value}-${id}`}
+          />
+        </RiTooltip>
       ),
       dropdownDisplay: (
         <div className={cx(styles.dropdownOption)}>
-          <EuiIcon
-            className={styles.iconDropdownOption}
-            type={theme === Theme.Dark ? iconDark : iconLight}
-          />
+          <RiIcon type={theme === Theme.Dark ? iconDark : iconLight} />
           <span>{truncateText(text, 20)}</span>
         </div>
       ),
@@ -255,25 +271,25 @@ const QueryCardHeader = (props: Props) => {
     }
   })
 
-  const profileOptions: EuiSuperSelectOption<any>[] = (
-    getProfileViewTypeOptions() as any[]
-  ).map((item) => {
+  const profileOptions = (getProfileViewTypeOptions() as any[]).map((item) => {
     const { value, id, text } = item
     return {
       value: id ?? value,
+      label: id ?? value,
       inputDisplay: (
         <div
+          data-test-subj={`profile-type-option-${value}-${id}`}
           className={cx(styles.dropdownOption, styles.dropdownProfileOption)}
         >
-          <EuiIcon
-            className={styles.iconDropdownOption}
-            type="visTagCloud"
+          <RiIcon
+            type="VisTagCloudIcon"
             data-testid={`view-type-selected-${value}-${id}`}
           />
         </div>
       ),
       dropdownDisplay: (
         <div
+          data-test-subj={`profile-type-option-${value}-${id}`}
           className={cx(styles.dropdownOption, styles.dropdownProfileOption)}
         >
           <span>{truncateText(text, 20)}</span>
@@ -294,11 +310,14 @@ const QueryCardHeader = (props: Props) => {
       value: '',
       disabled: true,
       inputDisplay: <span className={styles.separator} />,
+      label: '',
+      dropdownDisplay: <span />,
+      'data-test-subj': '',
     })
   }
 
   return (
-    <div
+    <Row
       onClick={handleToggleOpen}
       tabIndex={0}
       onKeyDown={() => {}}
@@ -312,12 +331,12 @@ const QueryCardHeader = (props: Props) => {
       data-testid="query-card-open"
       role="button"
     >
-      <Row align="center" gap="l" style={{ width: '100%' }}>
+      <Row align="center" gap="l" full>
         <FlexItem className={styles.titleWrapper} grow>
           <div className="copy-btn-wrapper">
-            <EuiTextColor
+            <ColorText
+              color="primary"
               className={styles.title}
-              color="subdued"
               component="div"
               data-testid="query-card-command"
             >
@@ -327,9 +346,9 @@ const QueryCardHeader = (props: Props) => {
                 db={db}
                 resultsMode={resultsMode}
               />
-            </EuiTextColor>
-            <EuiButtonIcon
-              iconType="copy"
+            </ColorText>
+            <IconButton
+              icon={CopyIcon}
               aria-label="Copy query"
               className={cx('copy-btn', styles.copyBtn)}
               disabled={emptyCommand}
@@ -341,192 +360,201 @@ const QueryCardHeader = (props: Props) => {
           </div>
         </FlexItem>
         <FlexItem className={styles.controls}>
-          <Row align="center" gap="m">
+          <Row align="center" justify="end" gap="l">
             <FlexItem
               className={styles.time}
               data-testid="command-execution-date-time"
             >
               {!!createdAt && (
-                <EuiTextColor className={styles.timeText} component="div">
+                <ColorText component="div" size="S">
                   <FormatedDate date={createdAt} />
-                </EuiTextColor>
+                </ColorText>
               )}
             </FlexItem>
             <FlexItem className={styles.summaryTextWrapper}>
               {!!message && !isOpen && (
-                <EuiTextColor className={styles.summaryText} component="div">
+                <ColorText component="div" size="S">
                   {truncateText(message, 13)}
-                </EuiTextColor>
+                </ColorText>
               )}
             </FlexItem>
             <FlexItem
-              className={styles.executionTime}
               data-testid="command-execution-time"
+              className={styles.executionTime}
             >
               {isNumber(executionTime) && (
-                <EuiToolTip
+                <RiTooltip
                   title="Processing Time"
                   content={getExecutionTimeString(executionTime)}
                   position="left"
-                  anchorClassName={cx(styles.tooltipIcon, styles.alignCenter)}
+                  anchorClassName={styles.executionTime}
                   data-testid="execution-time-tooltip"
                 >
-                  <>
-                    <EuiIcon
-                      type={ExecutionTimeIcon}
+                  <Row align="center" gap="s" grow={false}>
+                    <RiIcon
+                      size="M"
+                      color="primary600"
+                      type="UptimeIcon"
                       data-testid="command-execution-time-icon"
-                      className={styles.iconExecutingTime}
                     />
-                    <EuiTextColor
-                      className={cx(
-                        styles.summaryText,
-                        styles.executionTimeValue,
-                      )}
+                    <ColorText
+                      size="S"
+                      color="default"
+                      className={cx(styles.executionTimeValue)}
                       data-testid="command-execution-time-value"
                     >
                       {getTruncatedExecutionTimeString(executionTime)}
-                    </EuiTextColor>
-                  </>
-                </EuiToolTip>
+                    </ColorText>
+                  </Row>
+                </RiTooltip>
               )}
             </FlexItem>
-            <FlexItem
-              className={cx(styles.buttonIcon, styles.viewTypeIcon)}
-              onClick={onDropDownViewClick}
-            >
-              {isOpen && canCommandProfile && !summaryText && (
-                <div className={styles.dropdownWrapper}>
-                  <div className={styles.dropdown}>
-                    <EuiSuperSelect
-                      options={profileOptions}
-                      itemClassName={cx(
-                        styles.changeViewItem,
-                        styles.dropdownProfileItem,
-                      )}
-                      className={cx(
-                        styles.changeView,
-                        styles.dropdownProfileIcon,
-                      )}
-                      valueOfSelected={ProfileQueryType.Profile}
-                      onChange={(value: ProfileQueryType) =>
-                        onQueryProfile(value)
+            <Row align="center" justify="end" gap="s" grow={false}>
+              {!hideFields?.includes(HIDE_FIELDS.profiler) && (
+                <FlexItem
+                  className={cx(styles.buttonIcon, styles.viewTypeIcon)}
+                  onClick={onDropDownViewClick}
+                >
+                  {isOpen && canCommandProfile && !summaryText && (
+                    <ProfileSelect
+                      placeholder={profileOptions[0].inputDisplay}
+                      onChange={(value: ProfileQueryType | string) =>
+                        onQueryProfile(value as ProfileQueryType)
                       }
+                      className="profiler"
+                      options={profileOptions}
                       data-testid="run-profile-type"
+                      valueRender={({ option, isOptionValue }) => {
+                        if (isOptionValue) {
+                          return option.dropdownDisplay as JSX.Element
+                        }
+                        return option.inputDisplay as JSX.Element
+                      }}
                     />
-                  </div>
-                </div>
+                  )}
+                </FlexItem>
               )}
-            </FlexItem>
-            <FlexItem
-              className={cx(styles.buttonIcon, styles.viewTypeIcon)}
-              onClick={onDropDownViewClick}
-            >
-              {isOpen && options.length > 1 && !summaryText && (
-                <div className={styles.dropdownWrapper}>
-                  <div className={styles.dropdown}>
-                    <EuiSuperSelect
+              {!hideFields?.includes(HIDE_FIELDS.viewType) && (
+                <FlexItem
+                  className={cx(styles.buttonIcon, styles.viewTypeIcon)}
+                  onClick={onDropDownViewClick}
+                >
+                  {isOpen && options.length > 1 && !summaryText && (
+                    <ProfileSelect
                       options={modifiedOptions}
-                      itemClassName={cx(styles.changeViewItem)}
-                      className={cx(styles.changeView)}
-                      valueOfSelected={selectedValue}
+                      valueRender={({ option, isOptionValue }) => {
+                        if (isOptionValue) {
+                          return option.dropdownDisplay as JSX.Element
+                        }
+                        return option.inputDisplay as JSX.Element
+                      }}
+                      value={selectedValue}
                       onChange={(value: string) => onChangeView(value)}
+                      className="toggle-view"
                       data-testid="select-view-type"
                     />
-                  </div>
-                </div>
+                  )}
+                </FlexItem>
               )}
-            </FlexItem>
-            <FlexItem
-              className={styles.buttonIcon}
-              onClick={onDropDownViewClick}
-            >
-              {(isOpen || isFullScreen) && (
-                <FullScreen
-                  isFullScreen={isFullScreen}
-                  onToggleFullScreen={toggleFullScreen}
-                />
-              )}
-            </FlexItem>
-            <FlexItem className={styles.buttonIcon}>
-              <EuiButtonIcon
-                disabled={loading || clearing}
-                iconType="trash"
-                aria-label="Delete command"
-                data-testid="delete-command"
-                onClick={handleQueryDelete}
-              />
-            </FlexItem>
-            {!isFullScreen && (
-              <FlexItem className={cx(styles.buttonIcon, styles.playIcon)}>
-                <EuiToolTip content="Run again" position="left">
-                  <EuiButtonIcon
-                    disabled={emptyCommand}
-                    iconType="play"
-                    aria-label="Re-run command"
-                    data-testid="re-run-command"
-                    onClick={handleQueryReRun}
-                  />
-                </EuiToolTip>
-              </FlexItem>
-            )}
-            {!isFullScreen && (
-              <FlexItem className={styles.buttonIcon}>
-                {!isSilentModeWithoutError(resultsMode, summary?.fail) && (
-                  <EuiButtonIcon
-                    iconType={isOpen ? 'arrowUp' : 'arrowDown'}
-                    aria-label="toggle collapse"
+              <FlexItem
+                className={styles.buttonIcon}
+                onClick={onDropDownViewClick}
+              >
+                {(isOpen || isFullScreen) && (
+                  <FullScreen
+                    isFullScreen={isFullScreen}
+                    onToggleFullScreen={toggleFullScreen}
                   />
                 )}
               </FlexItem>
-            )}
-            <FlexItem className={styles.buttonIcon}>
-              {(isRawMode(mode) || isGroupResults(resultsMode)) && (
-                <EuiToolTip
-                  className={styles.tooltip}
-                  anchorClassName={styles.tooltipAnchor}
-                  content={
-                    <>
-                      {isGroupMode(resultsMode) && (
-                        <EuiTextColor
-                          className={cx(styles.mode)}
-                          data-testid="group-mode-tooltip"
-                        >
-                          <EuiIcon type={GroupModeIcon} />
-                        </EuiTextColor>
-                      )}
-                      {isSilentMode(resultsMode) && (
-                        <EuiTextColor
-                          className={cx(styles.mode)}
-                          data-testid="silent-mode-tooltip"
-                        >
-                          <EuiIcon type={SilentModeIcon} />
-                        </EuiTextColor>
-                      )}
-                      {isRawMode(mode) && (
-                        <EuiTextColor
-                          className={cx(styles.mode)}
-                          data-testid="raw-mode-tooltip"
-                        >
-                          -r
-                        </EuiTextColor>
-                      )}
-                    </>
-                  }
-                  position="bottom"
-                  data-testid="parameters-tooltip"
-                >
-                  <EuiIcon
-                    color="subdued"
-                    type="boxesVertical"
-                    data-testid="parameters-anchor"
+              <FlexItem className={styles.buttonIcon}>
+                <RiTooltip content="Clear result" position="left">
+                  <IconButton
+                    disabled={loading || clearing}
+                    icon={DeleteIcon}
+                    aria-label="Delete command"
+                    data-testid="delete-command"
+                    onClick={handleQueryDelete}
                   />
-                </EuiToolTip>
+                </RiTooltip>
+              </FlexItem>
+              {!isFullScreen && (
+                <FlexItem className={cx(styles.buttonIcon, styles.playIcon)}>
+                  <RiTooltip
+                    content="Run again"
+                    position="left"
+                    anchorClassName={cx(styles.buttonIcon, styles.playIcon)}
+                  >
+                    <IconButton
+                      disabled={emptyCommand}
+                      icon={PlayIcon}
+                      aria-label="Re-run command"
+                      data-testid="re-run-command"
+                      onClick={handleQueryReRun}
+                    />
+                  </RiTooltip>
+                </FlexItem>
               )}
-            </FlexItem>
+              {!isFullScreen && (
+                <FlexItem className={styles.buttonIcon}>
+                  {!isSilentModeWithoutError(resultsMode, summary?.fail) && (
+                    <IconButton
+                      icon={isOpen ? ChevronUpIcon : ChevronDownIcon}
+                      aria-label="toggle collapse"
+                      data-testid="toggle-collapse"
+                    />
+                  )}
+                </FlexItem>
+              )}
+              <FlexItem className={styles.buttonIcon}>
+                {(isRawMode(mode) || isGroupResults(resultsMode)) && (
+                  <RiTooltip
+                    className={styles.tooltip}
+                    anchorClassName={styles.buttonIcon}
+                    content={
+                      <>
+                        {isGroupMode(resultsMode) && (
+                          <ColorText
+                            className={cx(styles.mode)}
+                            data-testid="group-mode-tooltip"
+                          >
+                            <RiIcon type="GroupModeIcon" />
+                          </ColorText>
+                        )}
+                        {isSilentMode(resultsMode) && (
+                          <ColorText
+                            className={cx(styles.mode)}
+                            data-testid="silent-mode-tooltip"
+                          >
+                            <RiIcon type="SilentModeIcon" />
+                          </ColorText>
+                        )}
+                        {isRawMode(mode) && (
+                          <ColorText
+                            className={cx(styles.mode)}
+                            data-testid="raw-mode-tooltip"
+                          >
+                            -r
+                          </ColorText>
+                        )}
+                      </>
+                    }
+                    position="bottom"
+                    data-testid="parameters-tooltip"
+                  >
+                    <RiIcon
+                      color="subdued"
+                      type="MoreactionsIcon"
+                      data-testid="parameters-anchor"
+                    />
+                  </RiTooltip>
+                )}
+              </FlexItem>
+            </Row>
           </Row>
         </FlexItem>
       </Row>
-    </div>
+    </Row>
   )
 }
 

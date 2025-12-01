@@ -1,19 +1,20 @@
 import { isEmpty } from 'lodash'
-import React, { ChangeEvent, useState } from 'react'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiTitle,
-  EuiToolTip,
-} from '@elastic/eui'
+import React, { useState } from 'react'
 import { FormikErrors, useFormik } from 'formik'
 import { validateEmail, validateField } from 'uiSrc/utils'
 
+import { RiTooltip } from 'uiSrc/components'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
-import styles from './styles.module.scss'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { StyledOAuthCOntainer } from './OAuthSsoForm.styles'
 
 export interface Props {
   onBack: () => void
@@ -58,7 +59,7 @@ const OAuthSsoForm = ({ onBack, onSubmit }: Props) => {
     disabled: boolean
     text: string
   }) => (
-    <EuiToolTip
+    <RiTooltip
       position="top"
       anchorClassName="euiToolTip__btn-disabled"
       data-testid="btn-submit-tooltip"
@@ -71,65 +72,59 @@ const OAuthSsoForm = ({ onBack, onSubmit }: Props) => {
         ) : null
       }
     >
-      <EuiButton
-        fill
+      <PrimaryButton
         size="s"
-        color="secondary"
         type="submit"
         disabled={disabled}
-        iconType={disabled ? 'iInCircle' : undefined}
+        icon={disabled ? InfoIcon : undefined}
         data-testid="btn-submit"
       >
         {text}
-      </EuiButton>
-    </EuiToolTip>
+      </PrimaryButton>
+    </RiTooltip>
   )
 
   return (
-    <div className={styles.container} data-testid="oauth-container-sso-form">
-      <EuiTitle className={styles.title} size="xs">
-        <h4>Single Sign-On</h4>
-      </EuiTitle>
-      <EuiForm component="form" onSubmit={formik.handleSubmit}>
-        <Row>
-          <FlexItem>
-            <EuiFormRow className={styles.formRaw} label="Email">
-              <EuiFieldText
+    <StyledOAuthCOntainer gap="xxl" data-testid="oauth-container-sso-form">
+      <Title size="S" color="primary">
+        Single Sign-On
+      </Title>
+      <form onSubmit={formik.handleSubmit}>
+        <Row grow>
+          <FlexItem grow>
+            <FormField label="Email">
+              <TextInput
                 name="email"
                 id="sso-email"
                 data-testid="sso-email"
                 maxLength={200}
                 value={formik.values.email}
                 autoComplete="off"
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  formik.setFieldValue(
-                    e.target.name,
-                    validateField(e.target.value.trim()),
-                  )
+                onChange={(value) => {
+                  formik.setFieldValue('email', validateField(value.trim()))
                 }}
               />
-            </EuiFormRow>
+            </FormField>
           </FlexItem>
         </Row>
         <Spacer />
-        <Row justify="end">
+        <Row justify="end" gap="m">
           <FlexItem>
-            <EuiButton
-              color="secondary"
+            <SecondaryButton
               type="button"
               size="s"
               onClick={onBack}
               data-testid="btn-back"
             >
               Back
-            </EuiButton>
+            </SecondaryButton>
           </FlexItem>
           <FlexItem>
             <SubmitButton text="Login" disabled={submitIsDisabled()} />
           </FlexItem>
         </Row>
-      </EuiForm>
-    </div>
+      </form>
+    </StyledOAuthCOntainer>
   )
 }
 

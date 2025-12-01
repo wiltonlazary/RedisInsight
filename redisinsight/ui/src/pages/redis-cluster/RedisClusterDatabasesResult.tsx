@@ -1,31 +1,28 @@
-import React, { useState, useEffect } from 'react'
-import {
-  EuiInMemoryTable,
-  EuiBasicTableColumn,
-  PropertySort,
-  EuiButton,
-  EuiText,
-  EuiTitle,
-  EuiFieldSearch,
-  EuiFormRow,
-} from '@elastic/eui'
-import cx from 'classnames'
-import { useSelector } from 'react-redux'
+import React, { useEffect, useState } from 'react'
 
-import {
-  AddRedisDatabaseStatus,
-  InstanceRedisCluster,
-} from 'uiSrc/slices/interfaces'
+import type { InstanceRedisCluster } from 'uiSrc/slices/interfaces'
+import { AddRedisDatabaseStatus } from 'uiSrc/slices/interfaces'
 import { setTitle } from 'uiSrc/utils'
-import { clusterSelector } from 'uiSrc/slices/instances/cluster'
 import MessageBar from 'uiSrc/components/message-bar/MessageBar'
+import { riToast } from 'uiSrc/components/base/display/toast'
 import { AutodiscoveryPageTemplate } from 'uiSrc/templates'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { type ColumnDef, Table } from 'uiSrc/components/base/layout/table'
+import {
+  DatabaseContainer,
+  DatabaseWrapper,
+  EmptyState,
+  Footer,
+  Header,
+} from 'uiSrc/components/auto-discover'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { SummaryText } from './components'
 
 export interface Props {
-  columns: EuiBasicTableColumn<InstanceRedisCluster>[]
+  columns: ColumnDef<InstanceRedisCluster>[]
+  instances: InstanceRedisCluster[]
   onView: (sendEvent?: boolean) => void
   onBack: (sendEvent?: boolean) => void
 }
@@ -33,20 +30,22 @@ export interface Props {
 const loadingMsg = 'loading...'
 const notFoundMsg = 'Not found'
 
-const RedisClusterDatabasesResult = ({ columns, onBack, onView }: Props) => {
+const RedisClusterDatabasesResult = ({
+  columns,
+  instances,
+  onBack,
+  onView,
+}: Props) => {
   const [items, setItems] = useState<InstanceRedisCluster[]>([])
   const [message, setMessage] = useState(loadingMsg)
 
-  const { loading, dataAdded: instances } = useSelector(clusterSelector)
+  useEffect(() => {
+    setTitle('Redis Enterprise Databases Added')
+  }, [])
 
-  setTitle('Redis Enterprise Databases Added')
-
-  useEffect(() => setItems(instances), [instances])
-
-  const sort: PropertySort = {
-    field: 'name',
-    direction: 'asc',
-  }
+  useEffect(() => {
+    setItems(instances)
+  }, [instances])
 
   const countSuccessAdded = instances.filter(
     ({ statusAdded }) => statusAdded === AddRedisDatabaseStatus.Success,
@@ -56,8 +55,8 @@ const RedisClusterDatabasesResult = ({ columns, onBack, onView }: Props) => {
     ({ statusAdded }) => statusAdded === AddRedisDatabaseStatus.Fail,
   )?.length
 
-  const onQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e?.target?.value?.toLowerCase()
+  const onQueryChange = (term: string) => {
+    const value = term?.toLowerCase()
     const itemsTemp = instances.filter(
       (item: InstanceRedisCluster) =>
         item.name?.toLowerCase().indexOf(value) !== -1 ||
@@ -71,84 +70,58 @@ const RedisClusterDatabasesResult = ({ columns, onBack, onView }: Props) => {
     setItems(itemsTemp)
   }
 
-  const SummaryText = () => (
-    <EuiText className={styles.subTitle}>
-      <b>Summary: </b>
-      {countSuccessAdded ? (
-        <span>
-          Successfully added {countSuccessAdded} database(s)
-          {countFailAdded ? '. ' : '.'}
-        </span>
-      ) : null}
-      {countFailAdded ? (
-        <span>Failed to add {countFailAdded} database(s).</span>
-      ) : null}
-    </EuiText>
-  )
-
   return (
     <AutodiscoveryPageTemplate>
-      <div className="databaseContainer">
-        <EuiTitle size="s" className={styles.title} data-testid="title">
-          <h1>
-            Redis Enterprise
-            {countSuccessAdded + countFailAdded > 1
+      <DatabaseContainer justify="start">
+        <Header
+          title={`
+          Redis Enterprise
+          ${
+            countSuccessAdded + countFailAdded > 1
               ? ' Databases '
-              : ' Database '}
-            Added
-          </h1>
-        </EuiTitle>
-        <Row align="end" gap="s">
-          <FlexItem grow>
-            <MessageBar opened={!!countSuccessAdded || !!countFailAdded}>
-              <SummaryText />
-            </MessageBar>
-          </FlexItem>
-          <FlexItem>
-            <EuiFormRow className={styles.searchForm}>
-              <EuiFieldSearch
-                placeholder="Search..."
-                className={styles.search}
-                onChange={onQueryChange}
-                isClearable
-                aria-label="Search"
-                data-testid="search"
-              />
-            </EuiFormRow>
-          </FlexItem>
-        </Row>
-        <br />
-        <div className="itemList databaseList clusterDatabaseListResult">
-          <EuiInMemoryTable
-            items={items}
-            itemId="uid"
-            loading={loading}
-            message={message}
-            columns={columns}
-            sorting={{ sort }}
-            className={styles.table}
+              : ' Database '
+          }
+          Added
+          `}
+          onBack={onBack}
+          onQueryChange={onQueryChange}
+        />
+        <MessageBar
+          opened={!!countSuccessAdded || !!countFailAdded}
+          variant={
+            !!countFailAdded
+              ? riToast.Variant.Attention
+              : riToast.Variant.Success
+          }
+        >
+          <SummaryText
+            countSuccessAdded={countSuccessAdded}
+            countFailAdded={countFailAdded}
           />
-        </div>
-      </div>
-      <div className={cx(styles.footer, 'footerAddDatabase')}>
-        <EuiButton
-          onClick={() => onBack(false)}
-          color="secondary"
-          className="btn-cancel btn-back"
-          data-testid="btn-back-to-adding"
-        >
-          Back to adding databases
-        </EuiButton>
-        <EuiButton
-          fill
-          size="m"
-          onClick={() => onView(false)}
-          color="secondary"
-          data-testid="btn-view-databases"
-        >
-          View Databases
-        </EuiButton>
-      </div>
+        </MessageBar>
+        <Spacer size="m" />
+        <DatabaseWrapper>
+          <Table
+            columns={columns}
+            data={items}
+            defaultSorting={[{ id: 'name', desc: false }]}
+            paginationEnabled={items.length > 10}
+            stripedRows
+            emptyState={() => <EmptyState message={message} />}
+          />
+        </DatabaseWrapper>
+      </DatabaseContainer>
+      <Footer>
+        <Row justify="end">
+          <PrimaryButton
+            size="m"
+            onClick={() => onView(false)}
+            data-testid="btn-view-databases"
+          >
+            View Databases
+          </PrimaryButton>
+        </Row>
+      </Footer>
     </AutodiscoveryPageTemplate>
   )
 }

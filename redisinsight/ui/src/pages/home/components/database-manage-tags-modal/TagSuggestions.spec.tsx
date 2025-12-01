@@ -9,6 +9,7 @@ import { presetTagSuggestions } from './constants'
 
 jest.mock('react-redux', () => ({
   useSelector: jest.fn(),
+  connect: () => (Component: any) => Component,
 }))
 
 const mockSelector = useSelector as jest.MockedFunction<typeof useSelector>
@@ -76,7 +77,7 @@ describe('TagSuggestions', () => {
 
   it('should display the correct number of tags', () => {
     renderComponent()
-    const tagElements = screen.getAllByRole('option')
+    const tagElements = screen.getAllByRole('listitem')
 
     expect(tagElements.length).toBe(7)
   })
@@ -87,7 +88,7 @@ describe('TagSuggestions', () => {
     })
 
     renderComponent()
-    const tagElements = screen.getAllByRole('option')
+    const tagElements = screen.getAllByRole('listitem')
 
     expect(tagElements.length).toBe(7)
   })
@@ -100,7 +101,7 @@ describe('TagSuggestions', () => {
     renderComponent({
       targetKey: 'environment',
     })
-    const tagElements = screen.getAllByRole('option')
+    const tagElements = screen.getAllByRole('listitem')
 
     expect(tagElements.length).toBe(3)
   })

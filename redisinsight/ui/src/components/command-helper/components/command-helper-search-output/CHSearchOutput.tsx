@@ -1,8 +1,8 @@
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
-import { EuiLink, EuiText, EuiTextColor } from '@elastic/eui'
 import { useParams } from 'react-router-dom'
+import styled from 'styled-components'
 
 import { generateArgsNames } from 'uiSrc/utils'
 import { setSearchedCommand } from 'uiSrc/slices/cli/cli-settings'
@@ -10,11 +10,21 @@ import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { appRedisCommandsSelector } from 'uiSrc/slices/app/redis-commands'
 
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { Link } from 'uiSrc/components/base/link/Link'
 import styles from './styles.module.scss'
 
 export interface Props {
   searchedCommands: string[]
 }
+
+const UnderlineReverseLink = styled(Link)`
+  text-decoration: underline !important;
+
+  &:hover {
+    text-decoration: none !important;
+  }
+`
 
 const CHSearchOutput = ({ searchedCommands }: Props) => {
   const { instanceId = '' } = useParams<{ instanceId: string }>()
@@ -44,25 +54,24 @@ const CHSearchOutput = ({ searchedCommands }: Props) => {
         args,
       ).join(' ')
       return (
-        <EuiText
+        <Text
           size="s"
-          color="subdued"
           className={styles.description}
           data-testid={`cli-helper-output-args-${command}`}
         >
           {argString}
-        </EuiText>
+        </Text>
       )
     }
     return (
-      <EuiText
+      <Text
         size="s"
-        color="subdued"
+        color="primary"
         className={cx(styles.description, styles.summary)}
         data-testid={`cli-helper-output-summary-${command}`}
       >
         {ALL_REDIS_COMMANDS[command].summary}
-      </EuiText>
+      </Text>
     )
   }
 
@@ -71,23 +80,25 @@ const CHSearchOutput = ({ searchedCommands }: Props) => {
       {searchedCommands.length > 0 && (
         <div style={{ width: '100%' }}>
           {searchedCommands.map((command: string) => (
-            <Row gap="m" key={command}>
+            <Row gap="m" key={command} align="center">
               <FlexItem style={{ flexShrink: 0 }}>
-                <EuiText key={command} size="s">
-                  <EuiLink
-                    color="text"
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                      handleClickCommand(e, command)
-                    }}
-                    className={styles.title}
-                    data-testid={`cli-helper-output-title-${command}`}
-                  >
+                <Text
+                  key={command}
+                  size="s"
+                  data-testid={`cli-helper-output-title-${command}`}
+                  onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    handleClickCommand(e, command)
+                  }}
+                >
+                  <UnderlineReverseLink href="#" color="text" variant="inline">
                     {command}
-                  </EuiLink>
-                </EuiText>
+                  </UnderlineReverseLink>
+                </Text>
               </FlexItem>
               <FlexItem style={{ flexDirection: 'row', overflow: 'hidden' }}>
-                {renderDescription(command)}
+                <Text color="text" size="s">
+                  {renderDescription(command)}
+                </Text>
               </FlexItem>
             </Row>
           ))}
@@ -95,9 +106,7 @@ const CHSearchOutput = ({ searchedCommands }: Props) => {
       )}
       {searchedCommands.length === 0 && (
         <div className={styles.defaultScreen}>
-          <EuiTextColor color="subdued" data-testid="search-cmds-no-results">
-            No results found.
-          </EuiTextColor>
+          <Text data-testid="search-cmds-no-results">No results found.</Text>
         </div>
       )}
     </>

@@ -1,7 +1,8 @@
 import React, { ButtonHTMLAttributes, ReactElement } from 'react'
-// todo replace with redis-ui icon
-import { EuiIcon } from '@elastic/eui'
 import cx from 'classnames'
+
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { useInnerText } from 'uiSrc/components/base/utils/hooks/inner-text'
 import {
   ListClassNames,
   ListGroupItemProps,
@@ -9,7 +10,6 @@ import {
   StyledItemInnerButton,
   StyledItemInnerSpan,
   StyledLabel,
-  useInnerText,
 } from './list.styles'
 
 const Item = ({
@@ -32,19 +32,12 @@ const Item = ({
   let iconNode: ReactElement
 
   if (iconType) {
-    // todo replace with redis-ui icon
     iconNode = (
-      <EuiIcon
-        color="inherit" // forces the icon to inherit its parent color
+      <RiIcon
+        color="currentColor" // forces the icon to inherit its parent color
         {...iconProps}
         type={iconType}
-        className={cx('euiListGroupItem__icon', iconProps?.className)}
-        style={{
-          ...iconProps?.style,
-          marginRight: 'var(--size-m)',
-          flexGrow: 0,
-          flexShrink: 0,
-        }}
+        className={cx('ListGroupItem__icon', iconProps?.className)}
       />
     )
 

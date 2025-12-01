@@ -1,14 +1,6 @@
 import {
   Criteria,
-  EuiButtonEmpty,
-  EuiButtonIcon,
-  EuiIcon,
-  EuiLink,
-  EuiPopover,
   EuiTableFieldDataColumnType,
-  EuiText,
-  EuiTextColor,
-  EuiToolTip,
   PropertySort,
 } from '@elastic/eui'
 import cx from 'classnames'
@@ -25,13 +17,16 @@ import React, {
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useLocation } from 'react-router-dom'
 import AutoSizer from 'react-virtualized-auto-sizer'
+import { Text, ColorText } from 'uiSrc/components/base/text'
 
-import RediStackDarkMin from 'uiSrc/assets/img/modules/redistack/RediStackDark-min.svg'
-import RediStackLightMin from 'uiSrc/assets/img/modules/redistack/RediStackLight-min.svg'
-import RediStackDarkLogo from 'uiSrc/assets/img/modules/redistack/RedisStackLogoDark.svg'
-import RediStackLightLogo from 'uiSrc/assets/img/modules/redistack/RedisStackLogoLight.svg'
-import CloudLinkIcon from 'uiSrc/assets/img/oauth/cloud_link.svg?react'
-import ThreeDots from 'uiSrc/assets/img/icons/three_dots.svg?react'
+import {
+  MoreactionsIcon,
+  EditIcon,
+  TagIcon,
+  CopyIcon,
+  RiIcon,
+  RediStackMinIcon,
+} from 'uiSrc/components/base/icons'
 import DatabaseListModules from 'uiSrc/components/database-list-modules/DatabaseListModules'
 import ItemList from 'uiSrc/components/item-list'
 import {
@@ -60,8 +55,6 @@ import {
   CONNECTION_TYPE_DISPLAY,
   ConnectionType,
   Instance,
-  OAuthSocialAction,
-  OAuthSocialSource,
 } from 'uiSrc/slices/interfaces'
 import {
   getRedisInfoSummary,
@@ -77,17 +70,19 @@ import {
   replaceSpaces,
 } from 'uiSrc/utils'
 
-import { setSSOFlow } from 'uiSrc/slices/instances/cloud'
-import { setSocialDialogState } from 'uiSrc/slices/oauth/cloud'
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
-import { getUtmExternalLink } from 'uiSrc/utils/links'
-import { CREATE_CLOUD_DB_ID, HELP_LINKS } from 'uiSrc/pages/home/constants'
+import { CREATE_CLOUD_DB_ID } from 'uiSrc/pages/home/constants'
 
 import { Tag } from 'uiSrc/slices/interfaces/tag'
 import { FeatureFlagComponent } from 'uiSrc/components'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
+import { EmptyButton, IconButton } from 'uiSrc/components/base/forms/buttons'
+import { Link } from 'uiSrc/components/base/link/Link'
 import { RIResizeObserver } from 'uiSrc/components/base/utils'
-import DbStatus from '../db-status'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
+import handleClickFreeDb from './methods/handleClickFreeCloudDb'
+import DbStatus from '../db-status'
 import { TagsCell } from '../tags-cell/TagsCell'
 import { TagsCellHeader } from '../tags-cell/TagsCellHeader'
 
@@ -123,10 +118,8 @@ const DatabasesListWrapper = (props: Props) => {
   const { theme } = useContext(ThemeContext)
 
   const { contextInstanceId } = useSelector(appContextSelector)
-  const {
-    [FeatureFlags.cloudSso]: cloudSsoFeature,
-    [FeatureFlags.databaseManagement]: databaseManagementFeature,
-  } = useSelector(appFeatureFlagsFeaturesSelector)
+  const { [FeatureFlags.databaseManagement]: databaseManagementFeature } =
+    useSelector(appFeatureFlagsFeaturesSelector)
   const { shownColumns } = useSelector(instancesSelector)
 
   const [width, setWidth] = useState(0)
@@ -313,35 +306,6 @@ const DatabasesListWrapper = (props: Props) => {
     })
   }
 
-  const handleClickFreeDb = () => {
-    if (cloudSsoFeature?.flag) {
-      dispatch(setSSOFlow(OAuthSocialAction.Create))
-      dispatch(setSocialDialogState(OAuthSocialSource.DatabaseConnectionList))
-      sendEventTelemetry({
-        event: TelemetryEvent.CLOUD_FREE_DATABASE_CLICKED,
-        eventData: { source: OAuthSocialSource.DatabaseConnectionList },
-      })
-      return
-    }
-
-    sendEventTelemetry({
-      event: HELP_LINKS.cloud.event,
-      eventData: { source: HELP_LINKS.cloud.sources.databaseConnectionList },
-    })
-
-    const link = document.createElement('a')
-    link.setAttribute(
-      'href',
-      getUtmExternalLink(EXTERNAL_LINKS.tryFree, {
-        campaign: 'list_of_databases',
-      }),
-    )
-    link.setAttribute('target', '_blank')
-
-    link.click()
-    link.remove()
-  }
-
   const getRowProps = (instance: Instance) => ({
     className: cx({
       'euiTableRow-isSelected': instance?.id === editedInstance?.id,
@@ -353,8 +317,8 @@ const DatabasesListWrapper = (props: Props) => {
   })
 
   const controlsButton = (instanceId: string) => (
-    <EuiButtonIcon
-      iconType={ThreeDots}
+    <IconButton
+      icon={MoreactionsIcon}
       aria-label="Controls icon"
       data-testid={`controls-button-${instanceId}`}
       onClick={() => toggleControlsPopover(instanceId)}
@@ -379,9 +343,9 @@ const DatabasesListWrapper = (props: Props) => {
         render: function InstanceCell(name: string = '', instance: Instance) {
           if (isCreateCloudDb(instance.id)) {
             return (
-              <EuiText className={cx(styles.tooltipAnchorColumnName)}>
+              <Text className={cx(styles.tooltipAnchorColumnName)}>
                 {instance.name}
-              </EuiText>
+              </Text>
             )
           }
 
@@ -396,7 +360,7 @@ const DatabasesListWrapper = (props: Props) => {
           const cellContent = replaceSpaces(name.substring(0, 200))
 
           return (
-            <div role="presentation">
+            <Row role="presentation" align="center" gap="xs">
               <DbStatus
                 id={id}
                 isNew={newStatus}
@@ -404,13 +368,13 @@ const DatabasesListWrapper = (props: Props) => {
                 createdAt={createdAt}
                 isFree={cloudDetails?.free}
               />
-              <EuiToolTip
+              <RiTooltip
                 position="bottom"
                 title="Database Alias"
                 className={styles.tooltipColumnName}
                 content={`${formatLongName(name)} ${getDbIndex(db)}`}
               >
-                <EuiText
+                <Text
                   className={styles.tooltipAnchorColumnName}
                   data-testid={`instance-name-${id}`}
                   onClick={(e: React.MouseEvent) =>
@@ -420,17 +384,17 @@ const DatabasesListWrapper = (props: Props) => {
                     handleCheckConnectToInstance(e, instance)
                   }
                 >
-                  <EuiTextColor
+                  <ColorText
                     className={cx(styles.tooltipColumnNameText, {
                       [styles.withDb]: db,
                     })}
                   >
                     {cellContent}
-                  </EuiTextColor>
-                  <EuiTextColor>{` ${getDbIndex(db)}`}</EuiTextColor>
-                </EuiText>
-              </EuiToolTip>
-            </div>
+                  </ColorText>
+                  <ColorText>{` ${getDbIndex(db)}`}</ColorText>
+                </Text>
+              </RiTooltip>
+            </Row>
           )
         },
       },
@@ -452,19 +416,19 @@ const DatabasesListWrapper = (props: Props) => {
           const text = `${name}:${port}`
           return (
             <div className="host_port" data-testid="host-port">
-              <EuiText className="copyHostPortText">{text}</EuiText>
-              <EuiToolTip
+              <Text className="copyHostPortText">{text}</Text>
+              <RiTooltip
                 position="right"
                 content="Copy"
                 anchorClassName="copyHostPortTooltip"
               >
-                <EuiButtonIcon
-                  iconType="copy"
+                <IconButton
+                  icon={CopyIcon}
                   aria-label="Copy host:port"
                   className="copyHostPortBtn"
                   onClick={() => handleCopy(text, id)}
                 />
-              </EuiToolTip>
+              </RiTooltip>
             </div>
           )
         },
@@ -499,34 +463,27 @@ const DatabasesListWrapper = (props: Props) => {
                   <DatabaseListModules
                     content={
                       isRediStack ? (
-                        <EuiIcon
-                          type={
-                            theme === Theme.Dark
-                              ? RediStackDarkMin
-                              : RediStackLightMin
-                          }
-                          data-testid="redis-stack-icon"
-                        />
+                        <RediStackMinIcon data-testid="redis-stack-icon" />
                       ) : undefined
                     }
                     tooltipTitle={
                       isRediStack ? (
                         <>
-                          <EuiIcon
+                          <RiIcon
                             type={
                               theme === Theme.Dark
-                                ? RediStackDarkLogo
-                                : RediStackLightLogo
+                                ? 'RediStackDarkLogoIcon'
+                                : 'RediStackLightLogoIcon'
                             }
                             className={styles.tooltipLogo}
                             data-testid="tooltip-redis-stack-icon"
                           />
-                          <EuiText
+                          <Text
                             color="subdued"
                             style={{ marginTop: 4, marginBottom: -4 }}
                           >
                             Includes
-                          </EuiText>
+                          </Text>
                         </>
                       ) : undefined
                     }
@@ -587,36 +544,31 @@ const DatabasesListWrapper = (props: Props) => {
           return (
             <>
               {databaseManagementFeature?.flag && (
-                <EuiToolTip content="Manage Tags">
-                  <EuiButtonIcon
-                    iconType="tag"
+                <RiTooltip content="Manage Tags">
+                  <IconButton
+                    icon={TagIcon}
                     className={styles.tagsButton}
                     aria-label="Manage Instance Tags"
                     data-testid={`manage-instance-tags-${instance.id}`}
                     onClick={() => handleManageInstanceTags(instance)}
                   />
-                </EuiToolTip>
+                </RiTooltip>
               )}
               {instance.cloudDetails && (
-                <EuiToolTip content="Go to Redis Cloud">
-                  <EuiLink
+                <RiTooltip content="Go to Redis Cloud">
+                  <Link
                     target="_blank"
-                    external={false}
                     href={EXTERNAL_LINKS.cloudConsole}
                     onClick={handleClickGoToCloud}
                     data-testid={`cloud-link-${instance.id}`}
                   >
-                    <EuiIcon
-                      type={CloudLinkIcon}
-                      className={styles.cloudIcon}
-                    />
-                  </EuiLink>
-                </EuiToolTip>
+                    <RiIcon type="CloudLinkIcon" className={styles.cloudIcon} />
+                  </Link>
+                </RiTooltip>
               )}
               <FeatureFlagComponent name={FeatureFlags.databaseManagement}>
-                <EuiPopover
+                <RiPopover
                   ownFocus
-                  initialFocus={false}
                   anchorPosition="leftUp"
                   isOpen={controlsOpenIdRef.current === instance.id}
                   closePopover={() => toggleControlsPopover('')}
@@ -626,15 +578,16 @@ const DatabasesListWrapper = (props: Props) => {
                 >
                   <div className="controlsPopoverContent">
                     <div>
-                      <EuiButtonEmpty
-                        iconType="pencil"
+                      <EmptyButton
+                        justify="start"
+                        icon={EditIcon}
                         className="editInstanceBtn"
                         aria-label="Edit instance"
-                        data-testid={`edit-instance-${instance.id}`}
                         onClick={() => handleClickEditInstance(instance)}
+                        data-testid={`edit-instance-${instance.id}`}
                       >
                         Edit database
-                      </EuiButtonEmpty>
+                      </EmptyButton>
                     </div>
                     <div>
                       <PopoverDelete
@@ -655,7 +608,7 @@ const DatabasesListWrapper = (props: Props) => {
                       />
                     </div>
                   </div>
-                </EuiPopover>
+                </RiPopover>
               </FeatureFlagComponent>
             </>
           )

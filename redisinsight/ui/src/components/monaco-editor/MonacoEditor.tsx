@@ -1,7 +1,11 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import ReactMonacoEditor, { monaco as monacoEditor } from 'react-monaco-editor'
 import cx from 'classnames'
-import { EuiButton, EuiIcon } from '@elastic/eui'
 import { merge } from 'lodash'
 
 import { MonacoThemes, darkTheme, lightTheme } from 'uiSrc/constants/monaco'
@@ -13,6 +17,8 @@ import {
 import { DSL, Theme } from 'uiSrc/constants'
 import { ThemeContext } from 'uiSrc/contexts/themeContext'
 import InlineItemEditor from 'uiSrc/components/inline-item-editor'
+import { EditIcon } from 'uiSrc/components/base/icons'
+import { ActionIconButton } from 'uiSrc/components/base/forms/buttons'
 import DedicatedEditor from './components/dedicated-editor'
 import styles from './styles.module.scss'
 
@@ -37,6 +43,7 @@ export interface CommonProps {
   onSubmitDedicatedEditor?: (langId: DSL) => void
   onCloseDedicatedEditor?: (langId: DSL) => void
   'data-testid'?: string
+  fullHeight?: boolean
 }
 
 export interface Props extends CommonProps {
@@ -74,6 +81,7 @@ const MonacoEditor = (props: Props) => {
     onSubmitDedicatedEditor,
     onCloseDedicatedEditor,
     'data-testid': dataTestId = 'monaco-editor',
+    fullHeight,
   } = props
 
   let contribution: Nullable<ISnippetController> = null
@@ -255,6 +263,7 @@ const MonacoEditor = (props: Props) => {
         disabled,
         [styles.isEditing]: isEditing && readOnly,
       })}
+      style={fullHeight ? { flex: '1 1 auto' } : undefined}
     >
       <InlineItemEditor
         onApply={handleApply}
@@ -267,6 +276,7 @@ const MonacoEditor = (props: Props) => {
           className={cx('inlineMonacoEditor', editorWrapperClassName)}
           data-testid={`wrapper-${dataTestId}`}
           ref={input}
+          style={fullHeight ? { height: '100%' } : undefined}
         >
           <ReactMonacoEditor
             language={language}
@@ -296,15 +306,13 @@ const MonacoEditor = (props: Props) => {
         />
       )}
       {isEditable && readOnly && !isEditing && (
-        <EuiButton
-          fill
-          color="secondary"
+        <ActionIconButton
+          variant="secondary"
           onClick={() => setIsEditing(true)}
           className={styles.editBtn}
           data-testid="edit-monaco-value"
-        >
-          <EuiIcon type="pencil" />
-        </EuiButton>
+          icon={EditIcon}
+        />
       )}
     </div>
   )

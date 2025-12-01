@@ -9,7 +9,7 @@ import {
   screen,
   cleanup,
   render,
-  waitForEuiPopoverVisible,
+  waitForRiPopoverVisible,
   initialStateDefault,
   mockStore,
 } from 'uiSrc/utils/test-utils'
@@ -28,7 +28,7 @@ jest.mock('uiSrc/slices/instances/instances', () => ({
   ...jest.requireActual('uiSrc/slices/instances/instances'),
   connectedInstanceSelector: jest.fn().mockReturnValue({
     id: 'instanceId',
-    provider: 'RE_CLOUD',
+    provider: 'REDIS_CLOUD',
   }),
 }))
 
@@ -66,7 +66,7 @@ describe('WelcomeScreen', () => {
 
     fireEvent.click(screen.getByTestId('insights-db-analysis-link'))
 
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
     fireEvent.click(screen.getByTestId('approve-insights-db-analysis-btn'))
 
     expect(pushMock).toHaveBeenCalledWith(Pages.databaseAnalysis('instanceId'))
@@ -78,7 +78,7 @@ describe('WelcomeScreen', () => {
 
     fireEvent.click(screen.getByTestId('insights-db-analysis-link'))
     ;(async () => {
-      await waitForEuiPopoverVisible()
+      await waitForRiPopoverVisible()
     })()
 
     fireEvent.click(screen.getByTestId('approve-insights-db-analysis-btn'))
@@ -101,7 +101,7 @@ describe('WelcomeScreen', () => {
     render(<WelcomeScreen />)
 
     fireEvent.click(screen.getByTestId('insights-db-analysis-link'))
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
     fireEvent.click(screen.getByTestId('approve-insights-db-analysis-btn'))
 
     expect(sendEventTelemetry).toBeCalledWith({
@@ -109,7 +109,7 @@ describe('WelcomeScreen', () => {
       eventData: {
         databaseId: 'instanceId',
         total: 1,
-        provider: 'RE_CLOUD',
+        provider: 'REDIS_CLOUD',
       },
     })
     ;(sendEventTelemetry as jest.Mock).mockRestore()

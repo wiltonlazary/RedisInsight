@@ -1,5 +1,4 @@
 import React, { ChangeEvent } from 'react'
-import { EuiLink, EuiCheckbox } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 
 import cx from 'classnames'
@@ -11,6 +10,10 @@ import {
 } from 'uiSrc/slices/oauth/cloud'
 
 import { enableUserAnalyticsAction } from 'uiSrc/slices/user/user-settings'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { Text } from 'uiSrc/components/base/text'
+
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -33,10 +36,11 @@ const OAuthAgreement = (props: Props) => {
 
   return (
     <div className={cx(styles.wrapper, { [styles.small]: size === 's' })}>
-      <EuiCheckbox
+      <Checkbox
         id="ouath-agreement"
         name="agreement"
         label="By signing up, you acknowledge that you agree:"
+        labelSize="M"
         checked={agreement}
         onChange={handleCheck}
         className={styles.agreement}
@@ -44,36 +48,44 @@ const OAuthAgreement = (props: Props) => {
       />
       <ul className={styles.list}>
         <li className={styles.listItem}>
-          {'to our '}
-          <EuiLink
-            color="subdued"
-            href="https://redis.io/legal/cloud-tos/?utm_source=redisinsight&utm_medium=main&utm_campaign=main"
-            className={styles.link}
-            external={false}
-            target="_blank"
-            data-testid="ouath-agreements-cloud-terms-of-service"
-          >
-            Cloud Terms of Service
-          </EuiLink>
-          {' and '}
-          <EuiLink
-            color="subdued"
-            href="https://redis.io/legal/privacy-policy/?utm_source=redisinsight&utm_medium=main&utm_campaign=main"
-            className={styles.link}
-            external={false}
-            target="_blank"
-            data-testid="oauth-agreement-privacy-policy"
-          >
-            Privacy Policy
-          </EuiLink>
+          <Text color="secondary" size="s">
+            {'to our '}
+            <Link
+              variant="inline"
+              size="S"
+              color="subdued"
+              href="https://redis.io/legal/cloud-tos/?utm_source=redisinsight&utm_medium=main&utm_campaign=main"
+              className={styles.link}
+              target="_blank"
+              data-testid="ouath-agreements-cloud-terms-of-service"
+            >
+              Cloud Terms of Service
+            </Link>
+            {' and '}
+            <Link
+              variant="inline"
+              size="S"
+              color="subdued"
+              href="https://redis.io/legal/privacy-policy/?utm_source=redisinsight&utm_medium=main&utm_campaign=main"
+              className={styles.link}
+              target="_blank"
+              data-testid="oauth-agreement-privacy-policy"
+            >
+              Privacy Policy
+            </Link>
+          </Text>
         </li>
         <li className={styles.listItem}>
-          that Redis Insight will generate Redis Cloud API account and user
-          keys, and store them locally on your machine
+          <Text color="secondary" size="s">
+            that Redis Insight will generate Redis Cloud API account and user
+            keys, and store them locally on your machine
+          </Text>
         </li>
         <li className={styles.listItem}>
-          that usage data will be enabled to help us understand and improve how
-          Redis Insight features are used
+          <Text color="secondary" size="s">
+            that usage data will be enabled to help us understand and improve
+            how Redis Insight features are used
+          </Text>
         </li>
       </ul>
     </div>

@@ -1,10 +1,15 @@
 import React from 'react'
-import cx from 'classnames'
-import { EuiButtonIcon, EuiToolTip } from '@elastic/eui'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { DeleteIcon, PlusIcon } from 'uiSrc/components/base/icons'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
-import styles from './styles.module.scss'
+import {
+  ActionIconButton,
+  IconButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { HorizontalSpacer } from 'uiSrc/components/base/layout'
+import { RiTooltip } from 'uiSrc/components'
+import { ItemsWrapper } from './AddMultipleFields.styles'
 
 export interface Props<T> {
   items: T[]
@@ -18,50 +23,45 @@ const AddMultipleFields = <T,>(props: Props<T>) => {
   const { items, children, isClearDisabled, onClickRemove, onClickAdd } = props
 
   const renderItem = (child: React.ReactNode, item: T, index?: number) => (
-    <FlexItem
-      key={index}
-      className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace', styles.row)}
-      grow
-    >
-      <Row align="center" gap="s">
+    <FlexItem key={index} grow>
+      <Row align="center" gap="m">
         <FlexItem grow>{child}</FlexItem>
         <FlexItem>
-          <EuiToolTip content="Remove" position="left">
-            <EuiButtonIcon
-              iconType="trash"
-              isDisabled={isClearDisabled(item, index)}
-              color="primary"
+          <RiTooltip content="Remove" position="left">
+            <IconButton
+              icon={DeleteIcon}
+              disabled={isClearDisabled(item, index)}
               aria-label="Remove Item"
               onClick={() => onClickRemove(item, index)}
               data-testid="remove-item"
             />
-          </EuiToolTip>
+          </RiTooltip>
         </FlexItem>
       </Row>
     </FlexItem>
   )
 
   return (
-    <>
-      {items.map((item, index) =>
-        renderItem(children(item, index), item, index),
-      )}
-      <Spacer size="s" />
+    <Col gap="m">
+      <ItemsWrapper gap="m">
+        {items.map((item, index) =>
+          renderItem(children(item, index), item, index),
+        )}
+      </ItemsWrapper>
       <Row align="center" justify="end">
-        <FlexItem>
-          <EuiToolTip content="Add" position="left">
-            <EuiButtonIcon
-              className={styles.addBtn}
-              iconType="plus"
-              color="primary"
-              aria-label="Add new item"
-              onClick={onClickAdd}
-              data-testid="add-item"
-            />
-          </EuiToolTip>
-        </FlexItem>
+        <RiTooltip content="Add" position="left" delay={500}>
+          <ActionIconButton
+            variant="secondary"
+            icon={PlusIcon}
+            aria-label="Add new item"
+            onClick={onClickAdd}
+            data-testid="add-item"
+          />
+        </RiTooltip>
+        <HorizontalSpacer size="l" />
       </Row>
-    </>
+      <Spacer size="s" />
+    </Col>
   )
 }
 

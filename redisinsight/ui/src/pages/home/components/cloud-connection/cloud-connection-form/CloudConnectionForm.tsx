@@ -1,22 +1,13 @@
-import React, { ChangeEvent, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { FormikErrors, useFormik } from 'formik'
 import { isEmpty } from 'lodash'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiRadioGroup,
-  EuiText,
-  EuiToolTip,
-  keys,
-} from '@elastic/eui'
-
 import { useSelector } from 'react-redux'
+
+import * as keys from 'uiSrc/constants/keys'
 import { validateField } from 'uiSrc/utils/validations'
 import validationErrors from 'uiSrc/constants/validationErrors'
-import { FeatureFlagComponent } from 'uiSrc/components'
+import { FeatureFlagComponent, RiTooltip } from 'uiSrc/components'
 import { FeatureFlags } from 'uiSrc/constants'
 import { CloudConnectionOptions } from 'uiSrc/pages/home/constants'
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
@@ -26,9 +17,18 @@ import { MessageCloudApiKeys } from 'uiSrc/pages/home/components/form/Messages'
 import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { WindowEvent } from 'uiSrc/components/base/utils/WindowEvent'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { Text } from 'uiSrc/components/base/text'
+import { RiRadioGroup } from 'uiSrc/components/base/forms/radio-group/RadioGroup'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { ICloudConnectionSubmit } from '../CloudConnectionFormWrapper'
 
-import styles from '../styles.module.scss'
+import { ScrollableWrapper } from '../../ManualConnection.styles'
 
 export interface Props {
   accessKey: string
@@ -54,8 +54,16 @@ const fieldDisplayNames: Values = {
 }
 
 const options = [
-  { id: CloudConnectionOptions.Account, label: 'Redis Cloud account' },
-  { id: CloudConnectionOptions.ApiKeys, label: 'Redis Cloud API keys' },
+  {
+    id: CloudConnectionOptions.Account,
+    value: CloudConnectionOptions.Account,
+    label: 'Redis Cloud account',
+  },
+  {
+    id: CloudConnectionOptions.ApiKeys,
+    value: CloudConnectionOptions.ApiKeys,
+    label: 'Redis Cloud API keys',
+  },
 ]
 
 const CloudConnectionForm = (props: Props) => {
@@ -112,19 +120,17 @@ const CloudConnectionForm = (props: Props) => {
   }
 
   const CancelButton = ({ onClick }: { onClick: () => void }) => (
-    <EuiButton
-      size="s"
-      color="secondary"
+    <SecondaryButton
       className="btn-cancel"
       onClick={onClick}
       style={{ marginRight: 12 }}
     >
       Cancel
-    </EuiButton>
+    </SecondaryButton>
   )
 
   const SubmitButton = ({ onClick, submitIsDisabled }: ISubmitButton) => (
-    <EuiToolTip
+    <RiTooltip
       position="top"
       anchorClassName="euiToolTip__btn-disabled"
       title={
@@ -134,26 +140,23 @@ const CloudConnectionForm = (props: Props) => {
       }
       content={
         submitIsDisabled ? (
-          <span className="euiToolTip__content">
+          <span>
             {Object.values(errors).map((err) => [err, <br key={err} />])}
           </span>
         ) : null
       }
     >
-      <EuiButton
-        fill
-        size="s"
-        color="secondary"
+      <PrimaryButton
         type="submit"
         onClick={onClick}
         disabled={submitIsDisabled}
-        isLoading={loading}
-        iconType={submitIsDisabled ? 'iInCircle' : undefined}
+        loading={loading}
+        icon={submitIsDisabled ? InfoIcon : undefined}
         data-testid="btn-submit"
       >
         Submit
-      </EuiButton>
-    </EuiToolTip>
+      </PrimaryButton>
+    </RiTooltip>
   )
 
   const Footer = () => {
@@ -162,13 +165,13 @@ const CloudConnectionForm = (props: Props) => {
     const footerEl = document.getElementById('footerDatabaseForm')
     if (footerEl) {
       return ReactDOM.createPortal(
-        <div className="footerAddDatabase">
+        <Row justify="end" gap="m">
           {onClose && <CancelButton onClick={onClose} />}
           <SubmitButton
             onClick={formik.submitForm}
             submitIsDisabled={!submitIsEnable()}
           />
-        </div>,
+        </Row>,
         footerEl,
       )
     }
@@ -176,15 +179,15 @@ const CloudConnectionForm = (props: Props) => {
   }
 
   const CloudApiForm = (
-    <div className={styles.cloudApi} data-testid="add-db_cloud-api">
+    <div data-testid="add-db_cloud-api">
       <MessageCloudApiKeys />
       <Spacer />
       <WindowEvent event="keydown" handler={onKeyDown} />
-      <EuiForm component="form" onSubmit={formik.handleSubmit}>
+      <form onSubmit={formik.handleSubmit}>
         <Row responsive>
-          <FlexItem>
-            <EuiFormRow label="API Account Key*">
-              <EuiFieldText
+          <FlexItem grow>
+            <FormField label="API Account Key" required>
+              <TextInput
                 name="accessKey"
                 id="accessKey"
                 data-testid="access-key"
@@ -192,20 +195,18 @@ const CloudConnectionForm = (props: Props) => {
                 placeholder={fieldDisplayNames.accessKey}
                 value={formik.values.accessKey}
                 autoComplete="off"
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  formik.setFieldValue(
-                    e.target.name,
-                    validateField(e.target.value.trim()),
-                  )
+                onChange={(value) => {
+                  formik.setFieldValue('accessKey', validateField(value.trim()))
                 }}
               />
-            </EuiFormRow>
+            </FormField>
           </FlexItem>
         </Row>
+        <Spacer size="l" />
         <Row responsive>
           <FlexItem grow>
-            <EuiFormRow label="API User Key*">
-              <EuiFieldText
+            <FormField label="API User Key" required>
+              <TextInput
                 name="secretKey"
                 id="secretKey"
                 data-testid="secret-key"
@@ -213,41 +214,36 @@ const CloudConnectionForm = (props: Props) => {
                 placeholder={fieldDisplayNames.secretKey}
                 value={formik.values.secretKey}
                 autoComplete="off"
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  formik.setFieldValue(
-                    e.target.name,
-                    validateField(e.target.value.trim()),
-                  )
+                onChange={(value) => {
+                  formik.setFieldValue('secretKey', validateField(value.trim()))
                 }}
               />
-            </EuiFormRow>
+            </FormField>
           </FlexItem>
         </Row>
         <Footer />
-      </EuiForm>
+      </form>
     </div>
   )
 
   return (
-    <div className="getStartedForm eui-yScroll">
+    <ScrollableWrapper>
       <FeatureFlagComponent name={FeatureFlags.cloudSso}>
-        <Col gap="s">
+        <Col gap="l">
           <FlexItem grow>
-            <EuiText color="subdued" size="s">
-              Connect with:
-            </EuiText>
+            <Text color="primary">Connect with</Text>
           </FlexItem>
           <FlexItem grow>
-            <EuiRadioGroup
-              options={options}
-              idSelected={type}
-              className={styles.cloudOptions}
+            <RiRadioGroup
+              layout="horizontal"
+              items={options}
+              value={type}
               onChange={(id) => setType(id as CloudConnectionOptions)}
               data-testid="cloud-options"
             />
           </FlexItem>
         </Col>
-        <Spacer size="s" />
+        <Spacer size="l" />
       </FeatureFlagComponent>
       {type === CloudConnectionOptions.Account && (
         <OAuthAutodiscovery
@@ -256,7 +252,7 @@ const CloudConnectionForm = (props: Props) => {
         />
       )}
       {type === CloudConnectionOptions.ApiKeys && CloudApiForm}
-    </div>
+    </ScrollableWrapper>
   )
 }
 

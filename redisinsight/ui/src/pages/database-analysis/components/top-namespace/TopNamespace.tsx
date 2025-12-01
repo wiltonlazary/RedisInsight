@@ -1,6 +1,4 @@
-import { EuiButton, EuiLink, EuiSwitch, EuiTitle } from '@elastic/eui'
 import { isNull } from 'lodash'
-import cx from 'classnames'
 import React, { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
@@ -9,15 +7,28 @@ import {
   DEFAULT_EXTRAPOLATION,
   SectionName,
   TableView,
-} from 'uiSrc/pages/database-analysis'
-import { TableLoader } from 'uiSrc/pages/database-analysis/components'
+} from 'uiSrc/pages/database-analysis/constants'
+import TableLoader from 'uiSrc/pages/database-analysis/components/table-loader'
 import { resetBrowserTree } from 'uiSrc/slices/app/context'
 import { changeKeyViewType } from 'uiSrc/slices/browser/keys'
 import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
 import { Nullable } from 'uiSrc/utils'
+import { TextBtn } from 'uiSrc/pages/database-analysis/components/base/TextBtn'
+import { SwitchInput } from 'uiSrc/components/base/inputs'
+import { Title } from 'uiSrc/components/base/text/Title'
 import { DatabaseAnalysis } from 'apiSrc/modules/database-analysis/models'
-import Table from './Table'
-import styles from './styles.module.scss'
+import TopNamespacesTable from './TopNamespacesTable'
+import {
+  Section,
+  SectionTitle,
+  SectionTitleWrapper,
+} from 'uiSrc/pages/database-analysis/components/styles'
+import {
+  NoNamespaceBtn,
+  NoNamespaceMsg,
+  NoNamespaceText,
+  SectionContent,
+} from './TopNamespace.styles'
 
 export interface Props {
   data: Nullable<DatabaseAnalysis>
@@ -39,6 +50,14 @@ const TopNamespace = (props: Props) => {
     setIsExtrapolated(extrapolation !== DEFAULT_EXTRAPOLATION)
   }, [data, extrapolation])
 
+  const handleTreeViewClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+
+    dispatch(resetBrowserTree())
+    dispatch(changeKeyViewType(KeyViewType.Tree))
+    history.push(Pages.browser(instanceId))
+  }
+
   if (loading) {
     return <TableLoader />
   }
@@ -47,104 +66,74 @@ const TopNamespace = (props: Props) => {
     return null
   }
 
-  const handleTreeViewClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-
-    dispatch(resetBrowserTree())
-    dispatch(changeKeyViewType(KeyViewType.Tree))
-    history.push(Pages.browser(instanceId))
-  }
-
   if (!data?.topMemoryNsp || data?.totalKeys?.total === 0) {
     return null
   }
 
   if (!data?.topMemoryNsp?.length && !data?.topKeysNsp?.length) {
     return (
-      <div
-        className={cx('section', styles.wrapper)}
-        data-testid="top-namespaces-empty"
-      >
-        <div className="section-title-wrapper">
-          <EuiTitle className="section-title">
-            <h4>TOP NAMESPACES</h4>
-          </EuiTitle>
-        </div>
-        <div className="section-content" data-testid="top-namespaces-message">
-          <div className={styles.noNamespaceMsg}>
-            <EuiTitle size="xs">
-              <span>No namespaces to display</span>
-            </EuiTitle>
-            <p>
+      <Section data-testid="top-namespaces-empty">
+        <SectionTitleWrapper>
+          <SectionTitle size="M">TOP NAMESPACES</SectionTitle>
+        </SectionTitleWrapper>
+        <SectionContent data-testid="top-namespaces-message">
+          <NoNamespaceMsg>
+            <Title size="L">No namespaces to display</Title>
+            <NoNamespaceText>
               {'Configure the delimiter in '}
-              <EuiLink
-                color="text"
-                onClick={handleTreeViewClick}
+              <NoNamespaceBtn
                 data-testid="tree-view-page-link"
+                onClick={handleTreeViewClick}
               >
                 Tree View
-              </EuiLink>
+              </NoNamespaceBtn>
               {' to customize the namespaces displayed.'}
-            </p>
-          </div>
-        </div>
-      </div>
+            </NoNamespaceText>
+          </NoNamespaceMsg>
+        </SectionContent>
+      </Section>
     )
   }
 
   return (
-    <div className={cx('section', styles.wrapper)} data-testid="top-namespaces">
-      <div className="section-title-wrapper">
-        <EuiTitle className="section-title">
-          <h4>TOP NAMESPACES</h4>
-        </EuiTitle>
-        <EuiButton
-          fill
-          size="s"
-          color="secondary"
+    <Section data-testid="top-namespaces">
+      <SectionTitleWrapper gap="m">
+        <SectionTitle size="M">TOP NAMESPACES</SectionTitle>
+        <TextBtn
+          $active={tableView === TableView.MEMORY}
+          size="small"
           onClick={() => setTableView(TableView.MEMORY)}
           disabled={tableView === TableView.MEMORY}
-          className={cx(styles.textBtn, {
-            [styles.activeBtn]: tableView === TableView.MEMORY,
-          })}
           data-testid="btn-change-table-memory"
         >
           by Memory
-        </EuiButton>
-        <EuiButton
-          fill
-          size="s"
-          color="secondary"
+        </TextBtn>
+        <TextBtn
+          $active={tableView === TableView.KEYS}
+          size="small"
           onClick={() => setTableView(TableView.KEYS)}
           disabled={tableView === TableView.KEYS}
-          className={cx(styles.textBtn, {
-            [styles.activeBtn]: tableView === TableView.KEYS,
-          })}
           data-testid="btn-change-table-keys"
         >
           by Number of Keys
-        </EuiButton>
+        </TextBtn>
         {extrapolation !== DEFAULT_EXTRAPOLATION && (
-          <EuiSwitch
-            compressed
+          <SwitchInput
             color="subdued"
             className="switch-extrapolate-results"
-            label="Extrapolate results"
+            title="Extrapolate results"
             checked={isExtrapolated}
-            onChange={(e) => {
-              setIsExtrapolated(e.target.checked)
-              onSwitchExtrapolation?.(
-                e.target.checked,
-                SectionName.TOP_NAMESPACES,
-              )
+            onCheckedChange={(checked) => {
+              setIsExtrapolated(checked)
+              onSwitchExtrapolation?.(checked, SectionName.TOP_NAMESPACES)
             }}
             data-testid="extrapolate-results"
           />
         )}
-      </div>
-      <div className="section-content">
+      </SectionTitleWrapper>
+      <SectionContent>
         {tableView === TableView.MEMORY && (
-          <Table
+          <TopNamespacesTable
             data={data?.topMemoryNsp ?? []}
             defaultSortField="memory"
             delimiter={data?.delimiter ?? ''}
@@ -154,7 +143,7 @@ const TopNamespace = (props: Props) => {
           />
         )}
         {tableView === TableView.KEYS && (
-          <Table
+          <TopNamespacesTable
             data={data?.topKeysNsp ?? []}
             defaultSortField="keys"
             delimiter={data?.delimiter ?? ''}
@@ -163,8 +152,8 @@ const TopNamespace = (props: Props) => {
             dataTestid="nsp-table-keys"
           />
         )}
-      </div>
-    </div>
+      </SectionContent>
+    </Section>
   )
 }
 

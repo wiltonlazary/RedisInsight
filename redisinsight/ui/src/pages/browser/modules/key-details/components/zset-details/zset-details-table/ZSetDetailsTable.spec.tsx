@@ -10,8 +10,8 @@ import {
   act,
   mockedStore,
   cleanup,
-  waitForEuiPopoverVisible,
-  waitForEuiToolTipVisible,
+  waitForRiPopoverVisible,
+  waitForRiTooltipVisible,
 } from 'uiSrc/utils/test-utils'
 import {
   GZIP_COMPRESSED_VALUE_1,
@@ -78,7 +78,7 @@ describe('ZSetDetailsTable', () => {
     render(<ZSetDetailsTable {...instance(mockedProps)} />)
 
     fireEvent.click(screen.getByTestId('zset-remove-button-1-icon'))
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
     expect(screen.getByTestId('zset-remove-button-1')).toBeInTheDocument()
   })
 
@@ -184,9 +184,9 @@ describe('ZSetDetailsTable', () => {
       const scoreEditButton = screen.getByTestId(/zset_edit-btn-/)
 
       await act(async () => {
-        fireEvent.mouseOver(scoreEditButton)
+        fireEvent.focus(scoreEditButton)
       })
-      await waitForEuiToolTipVisible()
+      await waitForRiTooltipVisible()
 
       expect(screen.getByTestId(/zset_edit-tooltip-/)).toHaveTextContent(
         TEXT_DISABLED_ACTION_WITH_TRUNCATED_DATA,
@@ -200,9 +200,9 @@ describe('ZSetDetailsTable', () => {
       expect(removeButton).toBeDisabled()
 
       await act(async () => {
-        fireEvent.mouseOver(removeButton)
+        fireEvent.focus(removeButton)
       })
-      await waitForEuiToolTipVisible()
+      await waitForRiTooltipVisible()
 
       expect(
         screen.getByTestId(/zset-remove-button-.+-tooltip$/),

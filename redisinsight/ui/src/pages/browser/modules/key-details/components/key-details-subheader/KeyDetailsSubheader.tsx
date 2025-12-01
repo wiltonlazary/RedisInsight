@@ -14,7 +14,7 @@ export interface Props {
 }
 
 export const KeyDetailsSubheader = ({ keyType, Actions }: Props) => (
-  <div className={styles.subheaderContainer}>
+  <FlexItem className={styles.subheaderContainer}>
     <AutoSizer disableHeight>
       {({ width = 0 }) => (
         <div style={{ width }}>
@@ -26,7 +26,6 @@ export const KeyDetailsSubheader = ({ keyType, Actions }: Props) => (
                 </FlexItem>
                 <Divider
                   className={styles.divider}
-                  colorVariable="separatorColor"
                   orientation="vertical"
                 />
               </>
@@ -36,7 +35,7 @@ export const KeyDetailsSubheader = ({ keyType, Actions }: Props) => (
         </div>
       )}
     </AutoSizer>
-  </div>
+  </FlexItem>
 )
 
 export default KeyDetailsSubheader

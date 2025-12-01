@@ -1,14 +1,6 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toNumber } from 'lodash'
-import cx from 'classnames'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiFormRow,
-  EuiPanel,
-  EuiTextColor,
-} from '@elastic/eui'
 
 import { stringToBuffer, validateScoreNumber } from 'uiSrc/utils'
 import { isNaNConvertedString } from 'uiSrc/utils/numbers'
@@ -27,7 +19,13 @@ import {
 import AddMultipleFields from 'uiSrc/pages/browser/components/add-multiple-fields'
 import { ISetMemberState } from 'uiSrc/pages/browser/components/add-key/AddKeySet/interfaces'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -177,19 +175,8 @@ const AddZsetMembers = (props: Props) => {
     members.length === 1 && !(item.name.length || item.score.length)
 
   return (
-    <>
-      <EuiPanel
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
-        data-test-subj="add-zset-field-panel"
-        className={cx(
-          styles.container,
-          'eui-yScroll',
-          'flexItemNoFullWidth',
-          'inlineFieldsNoSpace',
-        )}
-      >
+    <Col gap="m">
+      <div className={styles.container}>
         <AddMultipleFields
           items={members}
           isClearDisabled={isClearDisabled}
@@ -197,37 +184,35 @@ const AddZsetMembers = (props: Props) => {
           onClickAdd={addMember}
         >
           {(item, index) => (
-            <Row align="center">
+            <Row align="center" gap="m">
               <FlexItem grow>
-                <EuiFormRow fullWidth>
-                  <EuiFieldText
-                    fullWidth
+                <FormField>
+                  <TextInput
                     name={`member-${item.id}`}
                     id={`member-${item.id}`}
                     placeholder={config.member.placeholder}
                     value={item.name}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleMemberChange('name', item.id, e.target.value)
+                    onChange={(value) =>
+                      handleMemberChange('name', item.id, value)
                     }
-                    inputRef={
+                    ref={
                       index === members.length - 1 ? lastAddedMemberName : null
                     }
                     disabled={loading}
                     data-testid="member-name"
                   />
-                </EuiFormRow>
+                </FormField>
               </FlexItem>
               <FlexItem grow>
-                <EuiFormRow fullWidth>
-                  <EuiFieldText
-                    fullWidth
+                <FormField>
+                  <TextInput
                     name={`score-${item.id}`}
                     id={`score-${item.id}`}
                     maxLength={200}
                     placeholder={config.score.placeholder}
                     value={item.score}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleMemberChange('score', item.id, e.target.value)
+                    onChange={(value) =>
+                      handleMemberChange('score', item.id, value)
                     }
                     onBlur={() => {
                       handleScoreBlur(item)
@@ -235,48 +220,37 @@ const AddZsetMembers = (props: Props) => {
                     disabled={loading}
                     data-testid="member-score"
                   />
-                </EuiFormRow>
+                </FormField>
               </FlexItem>
             </Row>
           )}
         </AddMultipleFields>
-      </EuiPanel>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        className="flexItemNoFullWidth"
-      >
-        <Row justify="end" gap="l">
-          <FlexItem>
-            <div>
-              <EuiButton
-                color="secondary"
-                onClick={() => closePanel(true)}
-                data-testid="cancel-members-btn"
-              >
-                <EuiTextColor color="default">Cancel</EuiTextColor>
-              </EuiButton>
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <div>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                disabled={loading || !isFormValid}
-                isLoading={loading}
-                onClick={submitData}
-                data-testid="save-members-btn"
-              >
-                Save
-              </EuiButton>
-            </div>
-          </FlexItem>
-        </Row>
-      </EuiPanel>
-    </>
+      </div>
+      <Row justify="end" gap="l">
+        <FlexItem>
+          <div>
+            <SecondaryButton
+              onClick={() => closePanel(true)}
+              data-testid="cancel-members-btn"
+            >
+              Cancel
+            </SecondaryButton>
+          </div>
+        </FlexItem>
+        <FlexItem>
+          <div>
+            <PrimaryButton
+              disabled={loading || !isFormValid}
+              loading={loading}
+              onClick={submitData}
+              data-testid="save-members-btn"
+            >
+              Save
+            </PrimaryButton>
+          </div>
+        </FlexItem>
+      </Row>
+    </Col>
   )
 }
 

@@ -1,9 +1,9 @@
-import { EuiToolTip, ToolTipPositions } from '@elastic/eui'
-import { EuiToolTipProps } from '@elastic/eui/src/components/tool_tip/tool_tip'
+import { ToolTipPositions } from '@elastic/eui'
 import React from 'react'
+import { RiTooltip, RiTooltipProps } from 'uiSrc/components'
 
 export interface Props
-  extends Omit<EuiToolTipProps, 'children' | 'delay' | 'position'> {
+  extends Omit<RiTooltipProps, 'children' | 'delay' | 'position'> {
   value: string | JSX.Element
   tooltipContent: string | JSX.Element
   expanded?: boolean
@@ -26,7 +26,7 @@ const FormattedValue = ({
   const truncated = value?.substring?.(0, truncateLength) ?? value
 
   return (
-    <EuiToolTip
+    <RiTooltip
       title={title}
       content={tooltipContent}
       anchorClassName="truncateText"
@@ -34,7 +34,7 @@ const FormattedValue = ({
       {...rest}
     >
       <>{truncated}</>
-    </EuiToolTip>
+    </RiTooltip>
   )
 }
 

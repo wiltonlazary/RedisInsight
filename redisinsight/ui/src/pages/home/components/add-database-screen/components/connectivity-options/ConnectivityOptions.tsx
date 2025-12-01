@@ -1,21 +1,22 @@
 import React from 'react'
-import { EuiBadge, EuiButton, EuiTitle, } from '@elastic/eui'
-import cx from 'classnames'
+
 import { AddDbType } from 'uiSrc/pages/home/constants'
 import { FeatureFlagComponent, OAuthSsoHandlerDialog } from 'uiSrc/components'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
 import { EXTERNAL_LINKS, UTM_CAMPAINGS } from 'uiSrc/constants/links'
 import { FeatureFlags } from 'uiSrc/constants'
 import { OAuthSocialAction, OAuthSocialSource } from 'uiSrc/slices/interfaces'
-
-import CloudIcon from 'uiSrc/assets/img/oauth/cloud_centered.svg?react'
-import RocketIcon from 'uiSrc/assets/img/oauth/rocket.svg?react'
-
-import { FlexItem, Grid } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Grid, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Text } from 'uiSrc/components/base/text/Text'
+import { RiIcon } from 'uiSrc/components/base/icons'
 import { CONNECTIVITY_OPTIONS } from '../../constants'
 
-import styles from './styles.module.scss'
+import {
+  StyledBadge,
+  StyledConnectivityLink,
+  StyledIcon,
+} from './ConnectivityOptions.styles'
 
 export interface Props {
   onClickOption: (type: AddDbType) => void
@@ -27,34 +28,28 @@ const ConnectivityOptions = (props: Props) => {
 
   return (
     <>
-      <section className={styles.cloudSection}>
-        <EuiTitle size="xs" className={styles.sectionTitle}>
-          <span>Get started with Redis Cloud account</span>
-        </EuiTitle>
+      <section>
+        <Text color="primary">Get started with Redis Cloud account</Text>
         <Spacer />
         <Grid gap="l" columns={3} responsive>
           <FlexItem>
-            <EuiButton
-              color="secondary"
-              className={styles.typeBtn}
+            <StyledConnectivityLink
               onClick={() => onClickOption(AddDbType.cloud)}
               data-testid="discover-cloud-btn"
             >
-              <CloudIcon className={styles.btnIcon} />
-              Add databases
-            </EuiButton>
+              <Col align="center" gap="s">
+                <StyledIcon type="CloudIcon" size="xl" />
+                <Text color="primary">Add databases</Text>
+              </Col>
+            </StyledConnectivityLink>
           </FlexItem>
           <FeatureFlagComponent name={FeatureFlags.cloudAds}>
             <FlexItem>
               <OAuthSsoHandlerDialog>
                 {(ssoCloudHandlerClick, isSSOEnabled) => (
-                  <EuiButton
-                    color="secondary"
-                    className={styles.typeBtn}
-                    href={getUtmExternalLink(EXTERNAL_LINKS.tryFree, {
-                      campaign: UTM_CAMPAINGS[OAuthSocialSource.AddDbForm],
-                    })}
-                    target="_blank"
+                  <StyledConnectivityLink
+                    data-testid="create-free-db-btn"
+                    color="primary"
                     onClick={(e: React.MouseEvent) => {
                       ssoCloudHandlerClick(e, {
                         source: OAuthSocialSource.AddDbForm,
@@ -62,39 +57,39 @@ const ConnectivityOptions = (props: Props) => {
                       })
                       isSSOEnabled && onClose?.()
                     }}
-                    data-testid="create-free-db-btn"
+                    href={getUtmExternalLink(EXTERNAL_LINKS.tryFree, {
+                      campaign: UTM_CAMPAINGS[OAuthSocialSource.AddDbForm],
+                    })}
+                    target="_blank"
                   >
-                    <EuiBadge color="subdued" className={styles.freeBadge}>
-                      Free
-                    </EuiBadge>
-                    <RocketIcon className={cx(styles.btnIcon, styles.rocket)} />
-                    New database
-                  </EuiButton>
+                    <StyledBadge label="FREE" variant="notice" />
+                    <Col align="center" gap="s">
+                      <StyledIcon type="RocketIcon" size="xl" />
+                      <Text color="primary">New database</Text>
+                    </Col>
+                  </StyledConnectivityLink>
                 )}
               </OAuthSsoHandlerDialog>
             </FlexItem>
           </FeatureFlagComponent>
-          <FlexItem grow />
         </Grid>
       </section>
       <Spacer size="xxl" />
       <section>
-        <EuiTitle size="xs" className={styles.sectionTitle}>
-          <span>More connectivity options</span>
-        </EuiTitle>
+        <Text color="primary">More connectivity options</Text>
         <Spacer />
         <Grid gap="l" responsive columns={3}>
           {CONNECTIVITY_OPTIONS.map(({ id, type, title, icon }) => (
             <FlexItem key={id}>
-              <EuiButton
-                color="secondary"
-                className={cx(styles.typeBtn, styles.small)}
+              <StyledConnectivityLink
                 onClick={() => onClickOption(type)}
                 data-testid={`option-btn-${id}`}
               >
-                {icon?.({ className: styles.btnIcon })}
-                {title}
-              </EuiButton>
+                <Row gap="s" align="center" justify="center">
+                  <RiIcon type={icon} size="xl" />
+                  <Text color="primary">{title}</Text>
+                </Row>
+              </StyledConnectivityLink>
             </FlexItem>
           ))}
         </Grid>

@@ -1,16 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  EuiButton,
-  EuiFilePicker,
-  EuiIcon,
-  EuiLoadingSpinner,
-  EuiText,
-  EuiTextColor,
-  EuiTitle,
-  EuiToolTip,
-} from '@elastic/eui'
 import ReactDOM from 'react-dom'
+
 import {
   fetchInstancesAction,
   importInstancesSelector,
@@ -19,13 +10,20 @@ import {
 } from 'uiSrc/slices/instances/instances'
 import { Nullable } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { UploadWarning } from 'uiSrc/components'
+import { RiFilePicker, RiTooltip, UploadWarning } from 'uiSrc/components'
 import { useModalHeader } from 'uiSrc/contexts/ModalTitleProvider'
 import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon, RiIcon } from 'uiSrc/components/base/icons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { Loader } from 'uiSrc/components/base/display'
 import ResultsLog from './components/ResultsLog'
 
-import styles from './styles.module.scss'
+import { ScrollableWrapper } from '../ManualConnection.styles'
 
 export interface Props {
   onClose: () => void
@@ -48,12 +46,7 @@ const ImportDatabase = (props: Props) => {
   useEffect(() => {
     setDomReady(true)
 
-    setModalHeader(
-      <EuiTitle size="s">
-        <h4>Import from file</h4>
-      </EuiTitle>,
-      true,
-    )
+    setModalHeader(<Title size="M">Import from file</Title>, true)
 
     return () => {
       setModalHeader(null)
@@ -107,70 +100,58 @@ const ImportDatabase = (props: Props) => {
 
     if (error) {
       return ReactDOM.createPortal(
-        <div className="footerAddDatabase">
-          <EuiButton
-            fill
-            size="s"
+        <Row justify="end" gap="m" data-testid="footer-import-database">
+          <PrimaryButton
             color="secondary"
             onClick={onClickRetry}
             data-testid="btn-retry"
           >
             Retry
-          </EuiButton>
-        </div>,
+          </PrimaryButton>
+        </Row>,
         footerEl,
       )
     }
 
     if (data) {
       return ReactDOM.createPortal(
-        <div className="footerAddDatabase">
-          <EuiButton
-            fill
-            size="s"
-            color="secondary"
+        <Row justify="end" gap="m" data-testid="footer-import-database">
+          <PrimaryButton
             type="submit"
             onClick={handleOnClose}
             data-testid="btn-close"
           >
-            Ok
-          </EuiButton>
-        </div>,
+            OK
+          </PrimaryButton>
+        </Row>,
         footerEl,
       )
     }
 
     return ReactDOM.createPortal(
-      <div className="footerAddDatabase">
-        <EuiButton
-          size="s"
-          color="secondary"
+      <Row justify="end" gap="m" data-testid="footer-import-database">
+        <SecondaryButton
           className="btn-cancel"
           onClick={handleOnClose}
-          style={{ marginRight: 12 }}
         >
           Cancel
-        </EuiButton>
-        <EuiToolTip
+        </SecondaryButton>
+        <RiTooltip
           position="top"
-          anchorClassName="euiToolTip__btn-disabled"
           content={isSubmitDisabled ? 'Upload a file' : undefined}
         >
-          <EuiButton
-            fill
-            size="s"
-            color="secondary"
+          <PrimaryButton
             type="submit"
             onClick={onSubmit}
-            isLoading={loading}
+            loading={loading}
             disabled={isSubmitDisabled}
-            iconType={isSubmitDisabled ? 'iInCircle' : undefined}
+            icon={isSubmitDisabled ? InfoIcon : undefined}
             data-testid="btn-submit"
           >
             Submit
-          </EuiButton>
-        </EuiToolTip>
-      </div>,
+          </PrimaryButton>
+        </RiTooltip>
+      </Row>,
       footerEl,
     )
   }
@@ -179,77 +160,74 @@ const ImportDatabase = (props: Props) => {
 
   return (
     <>
-      <div className={styles.formWrapper} data-testid="add-db_import">
-        <Col>
-          <FlexItem grow>
+      <ScrollableWrapper data-testid="add-db_import">
+        <Col gap="xl">
+          <Col grow gap="xl">
             {isShowForm && (
-              <>
-                <EuiText color="subdued" size="s">
+              <Col gap="xl">
+                <Text>
                   Use a JSON file to import your database connections. Ensure
                   that you only use files from trusted sources to prevent the
                   risk of automatically executing malicious code.
-                </EuiText>
-                <Spacer />
-                <EuiFilePicker
+                </Text>
+
+                <RiFilePicker
                   id="import-file-modal-filepicker"
                   initialPromptText="Select or drag and drop a file"
-                  className={styles.fileDrop}
                   isInvalid={isInvalid}
                   onChange={onFileChange}
                   display="large"
                   data-testid="import-file-modal-filepicker"
                   aria-label="Select or drag and drop file"
                 />
+
                 {isInvalid && (
-                  <EuiTextColor
-                    color="danger"
-                    className={styles.errorFileMsg}
-                    data-testid="input-file-error-msg"
-                  >
+                  <ColorText color="danger" data-testid="input-file-error-msg">
                     {`File should not exceed ${MAX_MB_FILE} MB`}
-                  </EuiTextColor>
+                  </ColorText>
                 )}
-              </>
+              </Col>
             )}
             {loading && (
-              <div
-                className={styles.loading}
+              <Col
+                justify="center"
+                gap="l"
+                align="center"
                 data-testid="file-loading-indicator"
               >
-                <EuiLoadingSpinner size="xl" />
-                <EuiText color="subdued" style={{ marginTop: 12 }}>
-                  Uploading...
-                </EuiText>
-              </div>
+                <Loader size="xl" />
+                <Text>Uploading...</Text>
+              </Col>
             )}
             {error && (
-              <div className={styles.result} data-testid="result-failed">
-                <EuiIcon
-                  type="crossInACircleFilled"
-                  size="xxl"
-                  color="danger"
+              <Col
+                align="center"
+                gap="l"
+                justify="center"
+                data-testid="result-failed"
+              >
+                <RiIcon
+                  type="IndicatorXIcon"
+                  color="danger600"
+                  customSize="5rem"
                 />
-                <EuiText color="subdued" style={{ marginTop: 16 }}>
-                  Failed to add database connections
-                </EuiText>
-                <EuiText color="subdued">{error}</EuiText>
-              </div>
+                <Text>Failed to add database connections</Text>
+                <Text>{error}</Text>
+              </Col>
             )}
-          </FlexItem>
+          </Col>
           {isShowForm && (
-            <FlexItem grow className={styles.uploadWarningContainer}>
+            <FlexItem>
               <UploadWarning />
             </FlexItem>
           )}
         </Col>
         {data && (
           <Row justify="center">
-            <FlexItem grow style={{ maxWidth: '100%' }}>
-              <ResultsLog data={data} />
-            </FlexItem>
+            <ResultsLog data={data} />
           </Row>
         )}
-      </div>
+      </ScrollableWrapper>
       <Footer />
     </>
   )

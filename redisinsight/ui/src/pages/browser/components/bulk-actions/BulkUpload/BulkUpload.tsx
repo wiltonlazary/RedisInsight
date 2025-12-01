@@ -1,16 +1,6 @@
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  EuiButton,
-  EuiFilePicker,
-  EuiIcon,
-  EuiPopover,
-  EuiText,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
 
-import cx from 'classnames'
 import { Nullable } from 'uiSrc/utils'
 import { BulkActionsStatus, BulkActionsType } from 'uiSrc/constants'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
@@ -28,9 +18,27 @@ import BulkActionSummary from 'uiSrc/pages/browser/components/bulk-actions/BulkA
 
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { isProcessedBulkAction } from 'uiSrc/pages/browser/components/bulk-actions/utils'
-import { UploadWarning } from 'uiSrc/components'
-import { Spacer } from 'uiSrc/components/base/layout/spacer'
-import styles from './styles.module.scss'
+import {
+  RiFilePicker,
+  UploadWarning,
+  RiPopover,
+  RiTooltip,
+} from 'uiSrc/components'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RefreshIcon } from 'uiSrc/components/base/icons'
+import { ColorText, Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  StyledContent,
+  StyledFooter,
+  StyledPopoverContainer,
+  StyledPopoverIcon,
+  StyledPopoverText,
+} from './BulkUpload.styles'
 
 export interface Props {
   onCancel: () => void
@@ -103,33 +111,36 @@ const BulkUpload = (props: Props) => {
   }
 
   return (
-    <div className={styles.container} data-testid="bulk-upload-container">
+    <Col justify="between" data-testid="bulk-upload-container">
       {!isCompleted ? (
-        <div className={styles.content}>
-          <EuiText color="subdued">
-            Upload the text file with the list of Redis commands
-            <EuiToolTip
+        <StyledContent gap="l" align="start">
+          <Row align="start" grow={false}>
+            <Text color="primary">
+              Upload the text file with the list of Redis commands
+            </Text>
+            <RiTooltip
               content={
                 <>
-                  <EuiText size="xs">SET Key0 Value0</EuiText>
-                  <EuiText size="xs">SET Key1 Value1</EuiText>
-                  <EuiText size="xs">...</EuiText>
-                  <EuiText size="xs">SET KeyN ValueN</EuiText>
+                  <Text size="xs">SET Key0 Value0</Text>
+                  <Text size="xs">SET Key1 Value1</Text>
+                  <Text size="xs">...</Text>
+                  <Text size="xs">SET KeyN ValueN</Text>
                 </>
               }
               data-testid="bulk-upload-tooltip-example"
             >
-              <EuiIcon
-                type="iInCircle"
-                style={{ marginLeft: 4, marginBottom: 2 }}
+              <RiIcon
+                type="InfoIcon"
+                style={{
+                  marginLeft: 4,
+                  marginBottom: 2,
+                }}
               />
-            </EuiToolTip>
-          </EuiText>
-          <Spacer size="l" />
-          <EuiFilePicker
+            </RiTooltip>
+          </Row>
+          <RiFilePicker
             id="bulk-upload-file-input"
             initialPromptText="Select or drag and drop a file"
-            className={styles.fileDrop}
             isInvalid={isInvalid}
             onChange={onFileChange}
             display="large"
@@ -137,28 +148,19 @@ const BulkUpload = (props: Props) => {
             aria-label="Select or drag and drop file"
           />
           {isInvalid && (
-            <EuiTextColor
-              color="danger"
-              className={styles.errorFileMsg}
-              data-testid="input-file-error-msg"
-            >
+            <ColorText color="danger" data-testid="input-file-error-msg">
               File should not exceed {MAX_MB_FILE} MB
-            </EuiTextColor>
+            </ColorText>
           )}
           <UploadWarning />
-          <Spacer size="l" />
-        </div>
+        </StyledContent>
       ) : (
         <BulkActionsInfo
           loading={loading}
           status={status}
           progress={progress}
           title="Commands executed from file"
-          subTitle={
-            <div className="truncateText" style={{ paddingTop: 6 }}>
-              {fileName}
-            </div>
-          }
+          subTitle={<div className="truncateText">{fileName}</div>}
         >
           <BulkActionSummary
             type={BulkActionsType.Upload}
@@ -170,74 +172,66 @@ const BulkUpload = (props: Props) => {
           />
         </BulkActionsInfo>
       )}
-      <div className={styles.footer}>
-        <EuiButton
-          color="secondary"
+
+      <StyledFooter gap="l" justify="end" grow={false}>
+        <SecondaryButton
           onClick={handleClickCancel}
-          className={styles.cancelBtn}
           data-testid="bulk-action-cancel-btn"
         >
           {isProcessedBulkAction(status) ? 'Close' : 'Cancel'}
-        </EuiButton>
+        </SecondaryButton>
         {!isCompleted ? (
-          <EuiPopover
+          <RiPopover
             id="bulk-upload-warning-popover"
             anchorPosition="upCenter"
             isOpen={isPopoverOpen}
             closePopover={() => setIsPopoverOpen(false)}
-            panelClassName={styles.panelPopover}
             panelPaddingSize="none"
             button={
-              <EuiButton
-                fill
-                color="secondary"
+              <PrimaryButton
                 onClick={handleUploadWarning}
                 disabled={isSubmitDisabled || loading}
-                isLoading={loading}
+                loading={loading}
                 data-testid="bulk-action-warning-btn"
               >
                 Upload
-              </EuiButton>
+              </PrimaryButton>
             }
           >
-            <EuiText
-              color="subdued"
-              className={styles.containerPopover}
-              data-testid="bulk-action-tooltip"
-            >
-              <EuiIcon type="alert" className={styles.popoverIcon} />
-              <div className={cx(styles.popoverItem, styles.popoverItemTitle)}>
-                Are you sure you want to perform this action?
-              </div>
-              <div className={styles.popoverItem}>
-                All commands from the file will be executed against your
-                database.
-              </div>
-              <EuiButton
-                fill
-                size="s"
-                color="secondary"
-                className={styles.uploadApproveBtn}
-                onClick={handleUpload}
-                data-testid="bulk-action-apply-btn"
-              >
-                Upload
-              </EuiButton>
-            </EuiText>
-          </EuiPopover>
+            <StyledPopoverContainer gap="m">
+              <Col data-testid="bulk-action-tooltip" gap="s">
+                <StyledPopoverIcon type="ToastDangerIcon" />
+                <StyledPopoverText size="L" color="primary">
+                  Are you sure you want to perform this action?
+                </StyledPopoverText>
+                <StyledPopoverText size="M" color="secondary">
+                  All commands from the file will be executed against your
+                  database.
+                </StyledPopoverText>
+              </Col>
+              <Row justify="end">
+                <PrimaryButton
+                  size="s"
+                  onClick={handleUpload}
+                  data-testid="bulk-action-apply-btn"
+                >
+                  Upload
+                </PrimaryButton>
+              </Row>
+            </StyledPopoverContainer>
+          </RiPopover>
         ) : (
-          <EuiButton
-            fill
-            iconType="refresh"
+          <PrimaryButton
+            icon={RefreshIcon}
             color="secondary"
             onClick={onStartAgain}
             data-testid="bulk-action-start-new-btn"
           >
             Start New
-          </EuiButton>
+          </PrimaryButton>
         )}
-      </div>
-    </div>
+      </StyledFooter>
+    </Col>
   )
 }
 

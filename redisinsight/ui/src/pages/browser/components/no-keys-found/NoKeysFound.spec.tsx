@@ -7,7 +7,7 @@ import {
   fireEvent,
   mockedStore,
   cleanup,
-  waitForEuiPopoverVisible,
+  waitForRiPopoverVisible,
   waitForStack,
 } from 'uiSrc/utils/test-utils'
 
@@ -19,8 +19,7 @@ import {
 } from 'uiSrc/slices/browser/bulkActions'
 import { addMessageNotification } from 'uiSrc/slices/app/notifications'
 import successMessages from 'uiSrc/components/notifications/success-messages'
-import { changeKeyViewType, loadKeys } from 'uiSrc/slices/browser/keys'
-import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
+import { loadKeys } from 'uiSrc/slices/browser/keys'
 import {
   changeSelectedTab,
   changeSidePanel,
@@ -39,7 +38,7 @@ jest.mock('uiSrc/telemetry', () => ({
 jest.mock('uiSrc/slices/instances/instances', () => ({
   ...jest.requireActual('uiSrc/slices/instances/instances'),
   connectedInstanceSelector: jest.fn().mockReturnValue({
-    provider: 'RE_CLOUD',
+    provider: 'REDIS_CLOUD',
   }),
 }))
 
@@ -77,7 +76,7 @@ describe('NoKeysFound', () => {
     render(<NoKeysFound {...mockedProps} onAddKeyPanel={jest.fn()} />)
 
     fireEvent.click(screen.getByTestId('load-sample-data-btn'))
-    await waitForEuiPopoverVisible()
+    await waitForRiPopoverVisible()
 
     fireEvent.click(screen.getByTestId('load-sample-data-btn-confirm'))
 
@@ -90,7 +89,6 @@ describe('NoKeysFound', () => {
       changeSelectedTab(InsightsPanelTabs.Explore),
       changeSidePanel(SidePanels.Insights),
       resetExplorePanelSearch(),
-      changeKeyViewType(KeyViewType.Tree),
       loadKeys(),
     ]
 

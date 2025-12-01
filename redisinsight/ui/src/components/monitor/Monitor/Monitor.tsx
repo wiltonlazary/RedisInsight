@@ -1,22 +1,25 @@
 import React, { useState } from 'react'
 import cx from 'classnames'
-import {
-  EuiButtonIcon,
-  EuiIcon,
-  EuiSwitch,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
 import AutoSizer from 'react-virtualized-auto-sizer'
 
 import { IMonitorDataPayload } from 'uiSrc/slices/interfaces'
-import BanIcon from 'uiSrc/assets/img/monitor/ban.svg?react'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { RiTooltip } from 'uiSrc/components'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { ColorText, Text, Title } from 'uiSrc/components/base/text'
+import { SwitchInput } from 'uiSrc/components/base/inputs'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import MonitorLog from '../MonitorLog'
 import MonitorOutputList from '../MonitorOutputList'
 
+import ProfilerImage from 'uiSrc/assets/img/profiler/magnifier.svg'
+
 import styles from './styles.module.scss'
+import { StyledImagePanel } from './Monitor.styles'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { Banner } from 'uiSrc/components/base/display/banner'
+import { RiImage } from 'uiSrc/components/base/display'
 
 export interface Props {
   items: IMonitorDataPayload[]
@@ -45,60 +48,67 @@ const Monitor = (props: Props) => {
   const [saveLogValue, setSaveLogValue] = useState(isSaveToFile)
 
   const MonitorNotStarted = () => (
-    <div className={styles.startContainer} data-testid="monitor-not-started">
-      <div className={styles.startContent}>
-        <EuiToolTip content="Start" display="inlineBlock">
-          <EuiButtonIcon
-            iconType="playFilled"
-            className={styles.startTitleIcon}
-            size="m"
-            onClick={() => handleRunMonitor(saveLogValue)}
-            aria-label="start monitor"
-            data-testid="start-monitor"
-          />
-        </EuiToolTip>
-        <div className={styles.startTitle}>Start Profiler</div>
-        <Row style={{ flexGrow: 0 }}>
-          <FlexItem>
-            <EuiIcon
-              className={cx(styles.iconWarning, 'warning--light')}
-              type="alert"
-              size="m"
-              color="warning"
-              aria-label="alert icon"
-              style={{ paddingTop: 2 }}
-            />
-          </FlexItem>
-          <FlexItem>
-            <EuiTextColor
-              color="warning"
-              className="warning--light"
-              style={{ paddingLeft: 4 }}
-              data-testid="monitor-warning-message"
+    <Row
+      align="center"
+      style={{ margin: 48 }}
+      gap="xxl"
+      data-testid="monitor-not-started"
+    >
+      <StyledImagePanel align="center">
+        <RiImage
+          src={ProfilerImage}
+          alt="Profiler"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        />
+        <Spacer size="l" />
+        <Text>
+          Get a deeper understanding of your database with real-time command,
+          key, and client statistics.
+        </Text>
+      </StyledImagePanel>
+
+      <Col gap="xl">
+        <Title size="M">Profiler</Title>
+        <Text>
+          Analyze every command sent to Redis in real time to debug issues and
+          optimize performance.
+        </Text>
+
+        <div>
+          <RiTooltip content="Enable real-time profiling of your Redis database.">
+            <PrimaryButton
+              onClick={() => handleRunMonitor(saveLogValue)}
+              aria-label="start monitor"
+              data-testid="start-monitor"
             >
-              Running Profiler will decrease throughput, avoid running it in
-              production databases.
-            </EuiTextColor>
-          </FlexItem>
-        </Row>
-      </div>
-      <div className={styles.saveLogContainer} data-testid="save-log-container">
-        <EuiToolTip
-          title="Allows you to download the generated log file after pausing the Profiler"
-          content="Profiler log is saved to a file on your local machine with no size limitation.
-          The temporary log file will be automatically rewritten when the Profiler is reset."
-          data-testid="save-log-tooltip"
-        >
-          <EuiSwitch
-            compressed
-            label={<span>Save Log</span>}
-            checked={saveLogValue}
-            onChange={(e) => setSaveLogValue(e.target.checked)}
-            data-testid="save-log-switch"
-          />
-        </EuiToolTip>
-      </div>
-    </div>
+              Start Profiler
+            </PrimaryButton>
+          </RiTooltip>
+        </div>
+
+        <div data-testid="save-log-container">
+          <RiTooltip
+            title="Allows you to download the generated log file after pausing the Profiler."
+            content="Profiler log is saved to a file on your local machine with no size limitation. The temporary log file will be automatically rewritten when the Profiler is reset."
+            data-testid="save-log-tooltip"
+          >
+            <SwitchInput
+              title="Save Log"
+              checked={saveLogValue}
+              onCheckedChange={setSaveLogValue}
+              data-testid="save-log-switch"
+            />
+          </RiTooltip>
+        </div>
+
+        <Banner
+          variant="attention"
+          showIcon
+          data-testid="monitor-warning-message"
+          message="Running Profiler will decrease throughput, avoid running it in production databases."
+        />
+      </Col>
+    </Row>
   )
 
   const MonitorError = () => (
@@ -106,21 +116,21 @@ const Monitor = (props: Props) => {
       <div className={cx(styles.startContent, styles.startContentError)}>
         <Row>
           <FlexItem>
-            <EuiIcon
-              type={BanIcon}
+            <RiIcon
+              type="BannedIcon"
               size="m"
               color="danger"
               aria-label="no permissions icon"
             />
           </FlexItem>
           <FlexItem grow>
-            <EuiTextColor
+            <ColorText
               color="danger"
               style={{ paddingLeft: 4 }}
               data-testid="monitor-error-message"
             >
               {error}
-            </EuiTextColor>
+            </ColorText>
           </FlexItem>
         </Row>
       </div>

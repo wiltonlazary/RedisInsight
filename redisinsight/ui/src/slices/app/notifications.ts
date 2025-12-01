@@ -10,11 +10,13 @@ import {
   Maybe,
   Nullable,
 } from 'uiSrc/utils'
+import { NotificationsDto } from 'apiSrc/modules/notification/dto'
 import {
-  NotificationsDto,
-  NotificationDto,
-} from 'apiSrc/modules/notification/dto'
-import { IError, InfiniteMessage, StateAppNotifications } from '../interfaces'
+  IError,
+  IGlobalNotification,
+  InfiniteMessage,
+  StateAppNotifications,
+} from '../interfaces'
 
 import { AppDispatch, RootState } from '../store'
 
@@ -35,6 +37,13 @@ export const initialState: StateAppNotifications = {
 
 export interface IAddInstanceErrorPayload extends AxiosError {
   instanceId?: string
+  response?: AxiosError['response'] & {
+    data: {
+      message?: string | JSX.Element
+      title?: string
+      additionalInfo?: Record<string, any>
+    }
+  }
 }
 // A slice for recipes
 const notificationsSlice = createSlice({
@@ -76,7 +85,9 @@ const notificationsSlice = createSlice({
       state.errors.push(error)
     },
     removeError: (state, { payload = '' }: { payload: string }) => {
-      state.errors = state.errors.filter((error) => error.id !== payload)
+      if (state.errors.find((error) => error.id === payload)) {
+        state.errors = state.errors.filter((error) => error.id !== payload)
+      }
     },
     resetErrors: (state) => {
       state.errors = []
@@ -89,10 +100,14 @@ const notificationsSlice = createSlice({
       })
     },
     removeMessage: (state, { payload = '' }: { payload: string }) => {
-      state.messages = state.messages.filter(
-        (message) => message.id !== payload,
-      )
-      state.errors = state.errors.filter((error) => error.id !== payload)
+      if (state.messages.find((message) => message.id === payload)) {
+        state.messages = state.messages.filter(
+          (message) => message.id !== payload,
+        )
+      }
+      if (state.errors.find((error) => error.id === payload)) {
+        state.errors = state.errors.filter((error) => error.id !== payload)
+      }
     },
     resetMessages: (state) => {
       state.messages = []
@@ -125,7 +140,7 @@ const notificationsSlice = createSlice({
     },
     setLastReceivedNotification: (
       state,
-      { payload }: { payload: Nullable<NotificationDto> },
+      { payload }: { payload: Nullable<IGlobalNotification> },
     ) => {
       state.notificationCenter.lastReceivedNotification = payload
     },
@@ -154,13 +169,23 @@ const notificationsSlice = createSlice({
       if (index === -1) {
         state.infiniteMessages.push(payload)
       } else {
+        const currentNotification = state.infiniteMessages[index]
+        // check if existing notification is exactly the same as the new one, if yes, do not update
+        if (
+          currentNotification.variation &&
+          payload.variation === currentNotification.variation
+        ) {
+          return
+        }
         state.infiniteMessages[index] = payload
       }
     },
     removeInfiniteNotification: (state, { payload }: PayloadAction<string>) => {
-      state.infiniteMessages = state.infiniteMessages.filter(
-        (message) => message.id !== payload,
-      )
+      if (state.infiniteMessages.find((message) => message.id === payload)) {
+        state.infiniteMessages = state.infiniteMessages.filter(
+          (message) => message.id !== payload,
+        )
+      }
     },
   },
 })

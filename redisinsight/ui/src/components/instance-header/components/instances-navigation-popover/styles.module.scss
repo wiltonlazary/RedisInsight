@@ -1,11 +1,3 @@
-.showPopoverBtn {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
 .breadCrumbLink {
   cursor: pointer;
   text-decoration: underline;
@@ -33,35 +25,8 @@
   }
 }
 
-.tabs {
-  display: flex;
-  flex: 1;
-  flex-shrink: 0 !important;
-  overflow: initial !important;
-  gap: 12px;
+.tabsContainer {
   padding: 0 16px;
-  border-bottom: 1px solid var(--separatorColor);
-  align-items: center;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-
-  .tab {
-    margin-bottom: -1px;
-
-    :global {
-      .euiTab__content {
-        font-size: 14px !important;
-        font-weight: 400 !important;
-        padding: 4px 0 !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-    }
-  }
 }
 
 .emptyMsg {

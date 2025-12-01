@@ -1,5 +1,4 @@
 import React, {
-  ChangeEvent,
   Ref,
   useCallback,
   useEffect,
@@ -8,14 +7,6 @@ import React, {
   useState,
 } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
-import {
-  EuiButton,
-  EuiProgress,
-  EuiText,
-  EuiTextArea,
-  EuiToolTip,
-} from '@elastic/eui'
 
 import {
   bufferToSerializedFormat,
@@ -63,6 +54,12 @@ import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { IFetchKeyArgs } from 'uiSrc/constants/prop-types/keys'
 
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { DownloadIcon } from 'uiSrc/components/base/icons'
+import { SecondaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
+import { TextArea } from 'uiSrc/components/base/inputs'
+import { RiTooltip } from 'uiSrc/components'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
 import styles from './styles.module.scss'
 
 const MIN_ROWS = 8
@@ -221,7 +218,7 @@ const StringDetailsValue = (props: Props) => {
     })
   }
 
-  const handleDownloadString = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleDownloadString = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     dispatch(fetchDownloadStringValue(key, downloadFile))
     sendEventTelemetry({
@@ -235,7 +232,8 @@ const StringDetailsValue = (props: Props) => {
 
   const renderValue = (value: string) => {
     const textEl = (
-      <EuiText
+      <Text
+        color="secondary"
         className={styles.stringValue}
         onClick={() => isEditable && setIsEdit(true)}
         style={{ whiteSpace: 'break-spaces' }}
@@ -244,11 +242,11 @@ const StringDetailsValue = (props: Props) => {
         {areaValue !== ''
           ? value
           : !isLoading && <span style={{ fontStyle: 'italic' }}>Empty</span>}
-      </EuiText>
+      </Text>
     )
 
     return (
-      <EuiToolTip
+      <RiTooltip
         title={!isValid ? noEditableText : undefined}
         anchorClassName={styles.tooltipAnchor}
         className={styles.tooltip}
@@ -256,7 +254,7 @@ const StringDetailsValue = (props: Props) => {
         data-testid="string-value-tooltip"
       >
         {textEl}
-      </EuiToolTip>
+      </RiTooltip>
     )
   }
 
@@ -268,10 +266,8 @@ const StringDetailsValue = (props: Props) => {
         data-testid="string-details"
       >
         {isLoading && (
-          <EuiProgress
+          <ProgressBarLoader
             color="primary"
-            size="xs"
-            position="absolute"
             data-testid="progress-key-string"
           />
         )}
@@ -296,22 +292,15 @@ const StringDetailsValue = (props: Props) => {
               )?.isValid
             }
           >
-            <EuiTextArea
-              fullWidth
+            <TextArea
               name="value"
               id="value"
               rows={rows}
-              resize="vertical"
               placeholder={config.value.placeholder}
               value={areaValue}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                setAreaValue(e.target.value)
-              }}
+              onChange={setAreaValue}
               disabled={loading}
-              inputRef={textAreaRef}
-              className={cx(styles.stringTextArea, {
-                [styles.areaWarning]: isDisabled,
-              })}
+              ref={textAreaRef}
               style={{
                 maxHeight: containerRef.current
                   ? containerRef.current?.clientHeight - 80
@@ -328,31 +317,29 @@ const StringDetailsValue = (props: Props) => {
           <Row justify="between" align="center">
             <FlexItem>
               {!isFullStringLoaded(initialValue?.data?.length, length) && (
-                <EuiButton
+                <SecondaryButton
                   className={styles.stringFooterBtn}
-                  size="s"
-                  color="secondary"
+                  size="small"
                   data-testid="load-all-value-btn"
                   onClick={() => handleLoadAll(key, keyType)}
                 >
                   Load all
-                </EuiButton>
+                </SecondaryButton>
               )}
             </FlexItem>
             {!isTruncatedValue && (
               <FlexItem>
-                <EuiButton
+                <SecondaryButton
                   className={styles.stringFooterBtn}
-                  size="s"
-                  color="secondary"
-                  iconType="download"
+                  size="small"
+                  icon={DownloadIcon}
                   iconSide="right"
                   data-testid="download-all-value-btn"
                   onClick={handleDownloadString}
-                  isDisabled={isTruncatedValue}
+                  disabled={isTruncatedValue}
                 >
                   Download
-                </EuiButton>
+                </SecondaryButton>
               </FlexItem>
             )}
           </Row>

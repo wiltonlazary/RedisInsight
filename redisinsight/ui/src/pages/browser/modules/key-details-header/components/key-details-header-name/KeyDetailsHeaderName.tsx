@@ -1,15 +1,14 @@
-import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiIcon,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import cx from 'classnames'
 import { isNull } from 'lodash'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 
+import {
+  handleCopy as handleCopyUtil,
+  formatLongName,
+  isEqualBuffers,
+  stringToBuffer,
+} from 'uiSrc/utils'
 import InlineItemEditor from 'uiSrc/components/inline-item-editor/InlineItemEditor'
 import { TEXT_UNPRINTABLE_CHARACTERS } from 'uiSrc/constants'
 import { AddCommonFieldsFormConfig } from 'uiSrc/pages/browser/components/add-key/constants/fields-config'
@@ -26,15 +25,24 @@ import {
   sendEventTelemetry,
   TelemetryEvent,
 } from 'uiSrc/telemetry'
-import {
-  formatLongName,
-  isEqualBuffers,
-  replaceSpaces,
-  stringToBuffer,
-} from 'uiSrc/utils'
 
-import { FlexItem, Grid } from 'uiSrc/components/base/layout/flex'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CopyIcon } from 'uiSrc/components/base/icons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RiTooltip } from 'uiSrc/components'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import styles from './styles.module.scss'
+import styled from 'styled-components'
+
+const StyledInputWrapper = styled(Row)`
+  min-width: 150px;
+`
+
+const StyledFlexWrapper = styled(FlexItem)`
+  max-width: 450px;
+  gap: ${({ theme }) => theme.core.space.space050};
+`
 
 export interface Props {
   onEditKey: (
@@ -83,9 +91,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
     setKeyIsEditing(true)
   }
 
-  const onChangeKey = ({
-    currentTarget: { value },
-  }: ChangeEvent<HTMLInputElement>) => {
+  const onChangeKey = (value: string) => {
     keyIsEditing && setKey(value)
   }
 
@@ -122,7 +128,7 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
     keyInputIsEditing: boolean,
     keyNameInputRef: React.RefObject<HTMLInputElement>,
   ) => {
-    navigator.clipboard.writeText(text)
+    handleCopyUtil(text)
 
     if (keyInputIsEditing) {
       keyNameInputRef?.current?.focus()
@@ -143,99 +149,73 @@ const KeyDetailsHeaderName = ({ onEditKey }: Props) => {
     })
   }
 
-  const appendKeyEditing = () =>
-    !keyIsEditing ? <EuiIcon type="pencil" color="subdued" /> : ''
-
   return (
-    <FlexItem
+    <StyledFlexWrapper
+      direction="row"
       onMouseEnter={onMouseEnterKey}
       onMouseLeave={onMouseLeaveKey}
       onClick={onClickKey}
-      className={cx(
-        styles.keyFlexItem, // TODO with styles.keyFlexItemEditing
-        keyIsEditing || keyIsHovering ? styles.keyFlexItemEditing : null,
-      )}
       data-testid="edit-key-btn"
     >
-      {(keyIsEditing || keyIsHovering) && (
-        <Grid
-          className={styles.classNameGridComponent}
-          data-testid="edit-key-grid"
-        >
-          <FlexItem grow className={styles.flexItemKeyInput}>
-            <EuiToolTip
-              title="Key Name"
-              position="left"
-              content={tooltipContent}
-              anchorClassName={styles.toolTipAnchorKey}
-            >
-              <>
-                <InlineItemEditor
-                  onApply={() => applyEditKey()}
-                  isDisabled={!keyIsEditable}
-                  disabledTooltipText={TEXT_UNPRINTABLE_CHARACTERS}
-                  onDecline={(event) => cancelEditKey(event)}
-                  viewChildrenMode={!keyIsEditing}
-                  isLoading={loading}
-                  declineOnUnmount={false}
-                >
-                  <EuiFieldText
-                    name="key"
-                    id="key"
-                    inputRef={keyNameRef}
-                    className={cx(styles.keyInput, {
-                      [styles.keyInputEditing]: keyIsEditing,
-                      'input-warning': !keyIsEditable,
-                    })}
-                    placeholder={
-                      AddCommonFieldsFormConfig?.keyName?.placeholder
-                    }
-                    value={key!}
-                    fullWidth={false}
-                    compressed
-                    isLoading={loading}
-                    onChange={onChangeKey}
-                    append={appendKeyEditing()}
-                    readOnly={!keyIsEditing}
-                    autoComplete="off"
-                    data-testid="edit-key-input"
-                  />
-                </InlineItemEditor>
-                <p className={styles.keyHiddenText}>{key}</p>
-              </>
-            </EuiToolTip>
-            {keyIsHovering && (
-              <EuiToolTip
-                position="right"
-                content="Copy"
-                anchorClassName={styles.copyKey}
-              >
-                <EuiButtonIcon
-                  iconType="copy"
-                  id={COPY_KEY_NAME_ICON}
-                  aria-label="Copy key name"
-                  color="primary"
-                  onClick={(event: any) =>
-                    handleCopy(event, key!, keyIsEditing, keyNameRef)
-                  }
-                  data-testid="copy-key-name-btn"
-                />
-              </EuiToolTip>
-            )}
-          </FlexItem>
-        </Grid>
-      )}
-      <EuiText
-        className={cx(styles.key, {
-          [styles.hidden]: keyIsEditing || keyIsHovering,
-        })}
-        data-testid="key-name-text"
+      <RiTooltip
+        title="Key Name"
+        position="left"
+        content={tooltipContent}
+        anchorClassName={styles.toolTipAnchorKey}
       >
-        <b className="truncateText">
-          {replaceSpaces(keyProp?.substring(0, 200))}
-        </b>
-      </EuiText>
-    </FlexItem>
+        <InlineItemEditor
+          onApply={() => applyEditKey()}
+          isDisabled={!keyIsEditable}
+          disabledTooltipText={TEXT_UNPRINTABLE_CHARACTERS}
+          onDecline={(event) => cancelEditKey(event)}
+          viewChildrenMode={!keyIsEditing}
+          isLoading={loading}
+          declineOnUnmount={false}
+        >
+          <StyledInputWrapper align="center" style={{ maxWidth: 420 }}>
+            <TextInput
+              autoSize
+              name="key"
+              id="key"
+              ref={keyNameRef}
+              className={cx(styles.keyInput, {
+                [styles.keyInputEditing]: keyIsEditing,
+                'input-warning': !keyIsEditable,
+              })}
+              placeholder={AddCommonFieldsFormConfig?.keyName?.placeholder}
+              value={key!}
+              loading={loading}
+              onChange={onChangeKey}
+              readOnly={!keyIsEditing}
+              autoComplete="off"
+              data-testid="edit-key-input"
+              // todo: do not hardcode. align with other components in a single place
+              style={{ paddingLeft: 9, lineHeight: '31px' }}
+            />
+          </StyledInputWrapper>
+        </InlineItemEditor>
+      </RiTooltip>
+      {!keyIsEditing && keyIsHovering && (
+        <Row align="center">
+          <RiIcon size="M" type="EditIcon" />
+          <RiTooltip
+            position="right"
+            content="Copy"
+            anchorClassName={styles.copyKey}
+          >
+            <IconButton
+              icon={CopyIcon}
+              id={COPY_KEY_NAME_ICON}
+              aria-label="Copy key name"
+              onClick={(event: any) =>
+                handleCopy(event, key!, keyIsEditing, keyNameRef)
+              }
+              data-testid="copy-key-name-btn"
+            />
+          </RiTooltip>
+        </Row>
+      )}
+    </StyledFlexWrapper>
   )
 }
 

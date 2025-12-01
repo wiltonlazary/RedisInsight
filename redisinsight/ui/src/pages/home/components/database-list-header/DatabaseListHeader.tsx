@@ -1,10 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { EuiButton, EuiCheckbox, EuiPopover } from '@elastic/eui'
 import { useSelector, useDispatch } from 'react-redux'
 import { isEmpty } from 'lodash'
 import cx from 'classnames'
 
-import ColumnsIcon from 'uiSrc/assets/img/icons/columns.svg?react'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import {
   instancesSelector,
@@ -16,7 +14,7 @@ import PromoLink from 'uiSrc/components/promo-link/PromoLink'
 import { FeatureFlagComponent, OAuthSsoHandlerDialog } from 'uiSrc/components'
 import { getPathToResource } from 'uiSrc/services/resourcesService'
 import { ContentCreateRedis } from 'uiSrc/slices/interfaces/content'
-import { HELP_LINKS } from 'uiSrc/pages/home/constants'
+import { CREATE_CLOUD_DB_ID, HELP_LINKS } from 'uiSrc/pages/home/constants'
 import { contentSelector } from 'uiSrc/slices/content/create-redis-buttons'
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import { getContentByFeature } from 'uiSrc/utils/content'
@@ -28,6 +26,14 @@ import {
 } from 'uiSrc/constants'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { PlusIcon } from 'uiSrc/components/base/icons'
+import ColumnsConfigPopover from 'uiSrc/components/columns-config/ColumnsConfigPopover'
+import handleClickFreeCloudDb from '../database-list-component/methods/handleClickFreeCloudDb'
 import SearchDatabasesList from '../search-databases-list'
 
 import styles from './styles.module.scss'
@@ -42,7 +48,6 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
   const { loading, data } = useSelector(contentSelector)
 
   const [promoData, setPromoData] = useState<ContentCreateRedis>()
-  const [columnsConfigShown, setColumnsConfigShown] = useState(false)
 
   const { theme } = useContext(ThemeContext)
   const { [FeatureFlags.enhancedCloudUI]: enhancedCloudUIFeature } =
@@ -57,7 +62,7 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
     }
 
     if (data?.cloud && !isEmpty(data.cloud)) {
-      setPromoData(getContentByFeature(data.cloud, featureFlags))
+      setPromoData(getContentByFeature(data.cloud as any, featureFlags))
     }
   }, [loading, data, featureFlags])
 
@@ -89,44 +94,41 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
     handleClickLink(event, eventData)
   }
 
-  const toggleColumnsConfigVisibility = () =>
-    setColumnsConfigShown(!columnsConfigShown)
-
-  const changeShownColumns = (status: boolean, column: DatabaseListColumn) => {
-    const newColumns = status
-      ? [...shownColumns, column]
-      : shownColumns.filter((col) => col !== column)
-
-    dispatch(setShownColumns(newColumns))
-
-    const shown: DatabaseListColumn[] = []
-    const hidden: DatabaseListColumn[] = []
-
-    if (status) {
-      shown.push(column)
-    } else {
-      hidden.push(column)
-    }
-
+  const handleColumnsChange = (
+    next: DatabaseListColumn[],
+    diff: { shown: DatabaseListColumn[]; hidden: DatabaseListColumn[] },
+  ) => {
+    dispatch(setShownColumns(next))
     sendEventTelemetry({
       event: TelemetryEvent.DATABASE_LIST_COLUMNS_CLICKED,
-      eventData: {
-        shown,
-        hidden,
-      },
+      eventData: diff,
     })
   }
 
-  const AddInstanceBtn = () => (
-    <EuiButton
-      fill
-      color="secondary"
-      onClick={handleOnAddDatabase}
-      className={styles.addInstanceBtn}
-      data-testid="add-redis-database-short"
+  const AddCloudInstanceButton = () => (
+    <FeatureFlagComponent
+      name={[FeatureFlags.enhancedCloudUI, FeatureFlags.cloudAds]}
     >
-      <span>+ Add Redis database</span>
-    </EuiButton>
+      <PrimaryButton
+        onClick={handleClickFreeCloudDb}
+        data-testid={`${CREATE_CLOUD_DB_ID}-button`}
+      >
+        Create free Cloud database
+      </PrimaryButton>
+    </FeatureFlagComponent>
+  )
+
+  const AddLocalInstanceButton = () => (
+    <FeatureFlagComponent name={FeatureFlags.databaseManagement}>
+      <EmptyButton
+        variant="primary"
+        onClick={handleOnAddDatabase}
+        data-testid="add-redis-database-short"
+        icon={PlusIcon}
+      >
+        Connect existing database
+      </EmptyButton>
+    </FeatureFlagComponent>
   )
 
   const CreateBtn = ({ content }: { content: ContentCreateRedis }) => {
@@ -143,7 +145,6 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
             description={description}
             url={links?.main?.url}
             testId="promo-btn"
-            icon="arrowRight"
             styles={{
               ...linkStyles,
               backgroundImage: linkStyles?.backgroundImage
@@ -166,21 +167,6 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
     )
   }
 
-  const columnCheckboxes = Array.from(COLUMN_FIELD_NAME_MAP.entries()).map(
-    ([field, name]) => (
-      <EuiCheckbox
-        key={`show-${field}`}
-        id={`show-${field}`}
-        name={`show-${field}`}
-        label={name}
-        checked={shownColumns.includes(field)}
-        disabled={shownColumns.includes(field) && shownColumns.length === 1}
-        onChange={(e) => changeShownColumns(e.target.checked, field)}
-        data-testid={`show-${field}`}
-      />
-    ),
-  )
-
   return (
     <div className={styles.containerDl}>
       <Row
@@ -189,10 +175,9 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
         responsive={false}
         gap="s"
       >
-        <FlexItem>
-          <FeatureFlagComponent name={FeatureFlags.databaseManagement}>
-            <AddInstanceBtn />
-          </FeatureFlagComponent>
+        <FlexItem direction="row" $gap="m">
+          <AddCloudInstanceButton />
+          <AddLocalInstanceButton />
         </FlexItem>
         {!loading && !isEmpty(data) && (
           <FlexItem className={cx(styles.promo)}>
@@ -208,37 +193,14 @@ const DatabaseListHeader = ({ onAddInstance }: Props) => {
           </FlexItem>
         )}
         {instances.length > 0 && (
-          <FlexItem grow>
-            <Row justify="end" align="center" gap="s">
-              <FlexItem className={styles.columnsButtonItem}>
-                <EuiPopover
-                  ownFocus={false}
-                  anchorPosition="downLeft"
-                  isOpen={columnsConfigShown}
-                  closePopover={() => setColumnsConfigShown(false)}
-                  data-testid="columns-config-popover"
-                  button={
-                    <EuiButton
-                      size="m"
-                      color="secondary"
-                      iconType={ColumnsIcon}
-                      onClick={toggleColumnsConfigVisibility}
-                      className={styles.columnsButton}
-                      data-testid="btn-columns-config"
-                      aria-label="columns"
-                    >
-                      <span>Columns</span>
-                    </EuiButton>
-                  }
-                >
-                  {columnCheckboxes}
-                </EuiPopover>
-              </FlexItem>
-              <FlexItem>
-                <SearchDatabasesList />
-              </FlexItem>
-            </Row>
-          </FlexItem>
+          <Row justify="end" align="center" gap="l">
+            <ColumnsConfigPopover
+              columnsMap={COLUMN_FIELD_NAME_MAP}
+              shownColumns={shownColumns}
+              onChange={handleColumnsChange}
+            />
+            <SearchDatabasesList />
+          </Row>
         )}
       </Row>
       <Spacer className={styles.spacerDl} />

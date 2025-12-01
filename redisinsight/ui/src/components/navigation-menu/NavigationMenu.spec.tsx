@@ -76,7 +76,7 @@ describe('NavigationMenu', () => {
       }))
       render(<NavigationMenu />)
 
-      expect(screen.queryByTestId('browser-page-btn"')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('browser-page-btn')).not.toBeInTheDocument()
     })
 
     it('should render help menu', () => {
@@ -137,7 +137,7 @@ describe('NavigationMenu', () => {
       expect(render(<NavigationMenu />)).toBeTruthy()
     })
 
-    it('should render private routes with instanceId', () => {
+    it('should not render private routes with instanceId', () => {
       ;(appInfoSelector as jest.Mock).mockImplementation(() => ({
         ...mockAppInfoSelector,
         server: {
@@ -146,8 +146,8 @@ describe('NavigationMenu', () => {
       }))
       render(<NavigationMenu />)
 
-      expect(screen.getByTestId('browser-page-btn')).toBeTruthy()
-      expect(screen.getByTestId('workbench-page-btn')).toBeTruthy()
+      expect(screen.queryByTestId('browser-page-btn')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('workbench-page-btn')).not.toBeInTheDocument()
     })
 
     it('should render public routes', () => {
@@ -165,10 +165,10 @@ describe('NavigationMenu', () => {
     it('should render cloud link', () => {
       const { container } = render(<NavigationMenu />)
 
-      const createCloudLink = container.querySelector(
-        '[data-test-subj="create-cloud-nav-link"]',
+      const createCloudItem = container.querySelector(
+        '[data-testid="create-cloud-sidebar-item"]',
       )
-      expect(createCloudLink).toBeTruthy()
+      expect(createCloudItem).toBeTruthy()
     })
 
     it('should render github btn with proper link', () => {
@@ -178,26 +178,12 @@ describe('NavigationMenu', () => {
           buildType: BuildType.DockerOnPremise,
         },
       }))
-      const { container } = render(<NavigationMenu />)
+      render(<NavigationMenu />)
 
-      const githubBtn = container.querySelector(
-        '[data-test-subj="github-repo-btn"]',
-      )
+      const githubBtn = screen.getByTestId("github-repo-btn")
       expect(githubBtn).toBeTruthy()
       expect(githubBtn?.getAttribute('href')).toEqual(EXTERNAL_LINKS.githubRepo)
     })
-  })
-
-  it('should render private routes with connectedRdiInstanceId', () => {
-    ;(appContextSelector as jest.Mock).mockImplementation(() => ({
-      ...appContextSelector,
-      workspace: 'redisDataIntegration',
-    }))
-
-    render(<NavigationMenu />)
-
-    expect(screen.getByTestId('pipeline-status-page-btn')).toBeTruthy()
-    expect(screen.getByTestId('pipeline-management-page-btn')).toBeTruthy()
   })
 
   describe('feature flags tests', () => {
@@ -219,9 +205,6 @@ describe('NavigationMenu', () => {
         screen.queryByTestId('github-repo-divider-default'),
       ).toBeInTheDocument()
       expect(screen.queryByTestId('github-repo-icon')).toBeInTheDocument()
-      expect(
-        screen.queryByTestId('github-repo-divider-otherwise'),
-      ).not.toBeInTheDocument()
     })
 
     it('should hide feature dependent items when feature flag is off', async () => {
@@ -240,9 +223,6 @@ describe('NavigationMenu', () => {
         screen.queryByTestId('github-repo-divider-default'),
       ).not.toBeInTheDocument()
       expect(screen.queryByTestId('notification-menu')).not.toBeInTheDocument()
-      expect(
-        screen.queryByTestId('github-repo-divider-otherwise'),
-      ).toBeInTheDocument()
     })
   })
 })

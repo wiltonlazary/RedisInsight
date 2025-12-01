@@ -1,17 +1,7 @@
-import {
-  EuiButton,
-  EuiButtonEmpty,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiSuperSelect,
-  EuiText,
-} from '@elastic/eui'
 import { toNumber } from 'lodash'
-import React, { ChangeEvent, useState } from 'react'
+import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import cx from 'classnames'
 import {
   DEFAULT_SLOWLOG_DURATION_UNIT,
   DEFAULT_SLOWLOG_MAX_LEN,
@@ -31,8 +21,20 @@ import { errorValidateNegativeInteger, validateNumber } from 'uiSrc/utils'
 import { numberWithSpaces } from 'uiSrc/utils/numbers'
 import { useConnectionType } from 'uiSrc/components/hooks/useConnectionType'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import {
+  defaultValueRender,
+  RiSelect,
+} from 'uiSrc/components/base/forms/select/RiSelect'
 import { convertNumberByUnits } from '../../utils'
-import styles from './styles.module.scss'
+import { StyledContainer, StyledInput } from './SlowLogConfig.styles'
 
 export interface Props {
   closePopover: () => void
@@ -117,7 +119,7 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
 
   const clusterContent = () => (
     <>
-      <EuiText color="subdued" className={styles.clusterText}>
+      <Text color="primary">
         Each node can have different Slow Log configuration in a clustered
         database.
         <Spacer size="s" />
@@ -126,18 +128,15 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
         {' or '}
         <code>CONFIG SET slowlog-max-len</code>
         {' for a specific node in redis-cli to configure it.'}
-      </EuiText>
-
-      <Spacer size="xs" />
-      <EuiButton
-        fill
-        color="secondary"
-        className={styles.clusterBtn}
-        onClick={closePopover}
-        data-testid="slowlog-config-ok-btn"
-      >
-        Ok
-      </EuiButton>
+      </Text>
+      <Row justify="end">
+        <PrimaryButton
+          onClick={closePopover}
+          data-testid="slowlog-config-ok-btn"
+        >
+          Ok
+        </PrimaryButton>
+      </Row>
     </>
   )
 
@@ -165,112 +164,120 @@ const SlowLogConfig = ({ closePopover, onRefresh }: Props) => {
   }
 
   return (
-    <div
-      className={cx(styles.container, {
-        [styles.containerCluster]: connectionType === ConnectionType.Cluster,
-      })}
+    <StyledContainer
+      $isCluster={connectionType === ConnectionType.Cluster}
+      gap="xxl"
     >
       {connectionType === ConnectionType.Cluster && clusterContent()}
       {connectionType !== ConnectionType.Cluster && (
         <>
-          <EuiForm component="form">
-            <EuiFormRow className={styles.formRow}>
-              <>
-                <div className={styles.rowLabel}>slowlog-log-slower-than</div>
-                <div className={styles.rowFields}>
-                  <EuiFieldText
+          <form>
+            <Col gap="xxl">
+              <FormField
+                layout="vertical"
+                label={<Text color="primary">slowlog-log-slower-than</Text>}
+                additionalText={
+                  <FlexItem $gap="s">
+                    <Text
+                      color="secondary"
+                      size="s"
+                      data-testid="unit-converter"
+                    >
+                      {unitConverter()}
+                    </Text>
+                    <Text
+                      color="secondary"
+                      size="s"
+                      data-testid="unit-converter"
+                    >
+                      Execution time to exceed in order to log the command.
+                      <br />
+                      -1 disables Slow Log. 0 logs each command.
+                    </Text>
+                  </FlexItem>
+                }
+              >
+                <Row grow={false} align="center" justify="start" gap="s">
+                  <StyledInput
                     name="slowerThan"
                     id="slowerThan"
-                    className={styles.input}
                     value={slowerThan}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setSlowerThan(
-                        validateNumber(e.target.value.trim(), -1, Infinity),
-                      )
+                    onChange={(value) => {
+                      setSlowerThan(validateNumber(value.trim(), -1, Infinity))
                     }}
                     placeholder={`${convertNumberByUnits(DEFAULT_SLOWLOG_SLOWER_THAN, durationUnit)}`}
                     autoComplete="off"
                     data-testid="slower-than-input"
                   />
-                  <EuiSuperSelect
+                  <RiSelect
+                    style={{ maxWidth: 100 }}
                     options={options}
-                    valueOfSelected={durationUnit}
+                    value={durationUnit}
+                    valueRender={defaultValueRender}
                     onChange={onChangeUnit}
-                    popoverClassName={styles.selectWrapper}
                     data-test-subj="select-default-unit"
                   />
-                  <div className={styles.helpText}>
-                    <div data-testid="unit-converter">{unitConverter()}</div>
-                    <div>
-                      Execution time to exceed in order to log the command.
-                      <br />
-                      -1 disables Slow Log. 0 logs each command.
-                    </div>
-                  </div>
-                </div>
-              </>
-            </EuiFormRow>
-            <EuiFormRow className={styles.formRow}>
-              <>
-                <div className={styles.rowLabel}>slowlog-max-len</div>
-                <div className={styles.rowFields}>
-                  <EuiFieldText
-                    name="maxLen"
-                    id="maxLen"
-                    className={styles.input}
-                    placeholder={`${DEFAULT_SLOWLOG_MAX_LEN}`}
-                    value={maxLen}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setMaxLen(validateNumber(e.target.value.trim()))
-                    }}
-                    autoComplete="off"
-                    data-testid="max-len-input"
-                  />
-                  <div className={styles.helpText}>
+                </Row>
+              </FormField>
+              <FormField
+                layout="vertical"
+                label={<Text color="primary">slowlog-max-len</Text>}
+                additionalText={
+                  <Text color="secondary" size="s">
                     The length of the Slow Log. When a new command is logged the
                     oldest
                     <br />
                     one is removed from the queue of logged commands.
-                  </div>
-                </div>
-              </>
-            </EuiFormRow>
-            <Spacer size="m" />
-          </EuiForm>
+                  </Text>
+                }
+              >
+                <StyledInput
+                  name="maxLen"
+                  id="maxLen"
+                  placeholder={`${DEFAULT_SLOWLOG_MAX_LEN}`}
+                  value={maxLen}
+                  onChange={(value) => {
+                    setMaxLen(validateNumber(value.trim()))
+                  }}
+                  autoComplete="off"
+                  data-testid="max-len-input"
+                />
+              </FormField>
+            </Col>
+          </form>
 
-          <div className={styles.footer}>
-            <div className={styles.helpText}>
-              NOTE: This is server configuration
-            </div>
-            <div className={styles.actions}>
-              <EuiButtonEmpty
-                size="l"
+          <Row justify="between" align="center">
+            <FlexItem>
+              <Text size="s" color="secondary">
+                NOTE: This is server configuration
+              </Text>
+            </FlexItem>
+            <Row align="center" gap="m" grow={false}>
+              <EmptyButton
+                size="large"
                 onClick={handleDefault}
                 data-testid="slowlog-config-default-btn"
               >
                 Default
-              </EuiButtonEmpty>
-              <EuiButton
-                color="secondary"
+              </EmptyButton>
+              <SecondaryButton
                 onClick={handleCancel}
                 data-testid="slowlog-config-cancel-btn"
               >
                 Cancel
-              </EuiButton>
-              <EuiButton
-                fill
-                color="secondary"
-                isDisabled={disabledApplyBtn()}
+              </SecondaryButton>
+              <PrimaryButton
+                disabled={disabledApplyBtn()}
                 onClick={handleSave}
                 data-testid="slowlog-config-save-btn"
               >
                 Save
-              </EuiButton>
-            </div>
-          </div>
+              </PrimaryButton>
+            </Row>
+          </Row>
         </>
       )}
-    </div>
+    </StyledContainer>
   )
 }
 

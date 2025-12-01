@@ -1,19 +1,18 @@
 import styled, { css } from 'styled-components'
 import {
+  AllHTMLAttributes,
+  ButtonHTMLAttributes,
   CSSProperties,
   HTMLAttributes,
   MouseEventHandler,
   ReactElement,
   ReactNode,
   Ref,
-  ButtonHTMLAttributes,
-  AllHTMLAttributes,
-  useState,
-  useCallback,
-  useEffect,
 } from 'react'
-// todo replace with redis-ui icon
-import { EuiIconProps, IconType } from '@elastic/eui/src/components/icon/icon'
+
+import { AllIconsType } from 'uiSrc/components/base/icons/RiIcon'
+import { IconProps } from 'uiSrc/components/base/icons'
+import { Theme } from 'uiSrc/components/base/theme/types'
 
 export const ListClassNames = {
   listItem: 'RI-list-group-item',
@@ -27,9 +26,6 @@ export const ListClassNames = {
 
 export const MAX_FORM_WIDTH = 400
 
-export const GAP_SIZES = ['none', 's', 'm'] as const
-export type ListGroupGapSize = (typeof GAP_SIZES)[number]
-
 export type ListGroupProps = HTMLAttributes<HTMLUListElement> & {
   className?: string
   /**
@@ -42,7 +38,7 @@ export type ListGroupProps = HTMLAttributes<HTMLUListElement> & {
    * Spacing between list items
    * @default s
    */
-  gap?: ListGroupGapSize
+  gap?: keyof typeof listStyles.gap
 
   /**
    * Sets the max-width of the page.
@@ -57,14 +53,12 @@ export type ListGroupProps = HTMLAttributes<HTMLUListElement> & {
 
 export const listStyles = {
   gap: {
-    none: css`
-      gap: 0;
-    `,
+    none: 'gap: 0;',
     s: css`
-      gap: var(--gap-s);
+      gap: ${({ theme }: { theme: Theme }) => theme.core.space.space100};
     `,
     m: css`
-      gap: var(--gap-m);
+      gap: ${({ theme }: { theme: Theme }) => theme.core.space.space150};
     `,
   },
   flush: css`
@@ -80,7 +74,7 @@ export const listStyles = {
 
 export const StyledGroup = styled.ul<
   Omit<ListGroupProps, 'gap' | 'flush' | 'maxWidth'> & {
-    $gap?: ListGroupGapSize
+    $gap?: keyof typeof listStyles.gap
     $flush?: boolean
   }
 >`
@@ -90,7 +84,6 @@ export const StyledGroup = styled.ul<
   ${({ $flush = false }) => $flush && listStyles.flush};
 `
 
-type IconProps = Omit<EuiIconProps, 'type'>
 export const SIZES = ['xs', 's', 'm', 'l'] as const
 export type ListGroupItemSize = (typeof SIZES)[number]
 
@@ -124,14 +117,14 @@ export type ListGroupItemProps = HTMLAttributes<HTMLLIElement> & {
   isDisabled?: boolean
 
   /**
-   * Adds `EuiIcon` of `EuiIcon.type`
+   * Adds `RiIcon` of `RiIcon.type`
    */
-  iconType?: IconType
+  iconType?: AllIconsType
 
   /**
-   * Further extend the props applied to EuiIcon
+   * Further extend the props applied to RiIcon
    */
-  iconProps?: Omit<IconProps, 'type'>
+  iconProps?: IconProps
 
   /**
    * Custom node to pass as the icon. Cannot be used in conjunction
@@ -374,69 +367,3 @@ export const StyledLabel = styled.span<{
   ${({ wrapText }) =>
     wrapText ? listItemLabelStyles.wrapText : listItemLabelStyles.truncate}
 `
-
-type RefT = HTMLElement | Element | undefined | null
-
-/**
- * `useInnerText` is a hook that provides the text content of the DOM node referenced by `ref`.
- *
- * When `ref` changes, the hook will update the `innerText` value by reading the `ref`'s `innerText` property.
- * If `ref` is null or does not have an `innerText` property, the hook will return `null`.
- *
- * @example
- * const MyComponent = () => {
- *   const [ref, innerText] = useInnerText('default value')
- *
- *   return (
- *     <div ref={ref}>
- *       {innerText}
- *     </div>
- *   )
- * }
- *
- * @param innerTextFallback Value to return if `ref` is null or does not have an `innerText` property.
- * @returns A tuple containing a function to update the `ref` and the current `innerText` value.
- */
-export function useInnerText(
-  innerTextFallback?: string,
-): [(node: RefT) => void, string | undefined] {
-  const [ref, setRef] = useState<RefT>(null)
-  const [innerText, setInnerText] = useState(innerTextFallback)
-
-  const updateInnerText = useCallback(
-    (node: RefT) => {
-      if (!node) return
-      setInnerText(
-        // Check for `innerText` implementation rather than a simple OR check
-        // because in real cases the result of `innerText` could correctly be `null`
-        // while the result of `textContent` could correctly be non-`null` due to
-        // differing reliance on browser layout calculations.
-        // We prefer the result of `innerText`, if available.
-        'innerText' in node
-          ? node.innerText
-          : node.textContent || innerTextFallback,
-      )
-    },
-    [innerTextFallback],
-  )
-
-  useEffect(() => {
-    const observer = new MutationObserver((mutationsList) => {
-      if (mutationsList.length) updateInnerText(ref)
-    })
-
-    if (ref) {
-      updateInnerText(ref)
-      observer.observe(ref, {
-        characterData: true,
-        subtree: true,
-        childList: true,
-      })
-    }
-    return () => {
-      observer.disconnect()
-    }
-  }, [ref, updateInnerText])
-
-  return [setRef, innerText]
-}

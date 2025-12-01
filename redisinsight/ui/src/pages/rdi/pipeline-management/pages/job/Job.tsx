@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  EuiText,
-  EuiLink,
-  EuiButton,
-  EuiLoadingSpinner,
-  EuiToolTip,
-} from '@elastic/eui'
-import { get, throttle } from 'lodash'
-import cx from 'classnames'
+import { throttle } from 'lodash'
 import { monaco as monacoEditor } from 'react-monaco-editor'
 
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
@@ -18,8 +10,8 @@ import {
   fetchPipelineStrategies,
   rdiPipelineSelector,
   setChangedFile,
-  setPipeline,
   setPipelineJobs,
+  updatePipelineJob,
 } from 'uiSrc/slices/rdi/pipeline'
 import { FileChangeType } from 'uiSrc/slices/interfaces'
 import MonacoYaml from 'uiSrc/components/monaco-editor/components/monaco-yaml'
@@ -33,11 +25,16 @@ import {
   yamlToJson,
 } from 'uiSrc/utils'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
-import { KeyboardShortcut } from 'uiSrc/components'
+import { KeyboardShortcut, RiTooltip } from 'uiSrc/components'
 
 import { addErrorNotification } from 'uiSrc/slices/app/notifications'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Text, Title } from 'uiSrc/components/base/text'
+import { Loader } from 'uiSrc/components/base/display'
 import TemplateButton from '../../components/template-button'
-import styles from './styles.module.scss'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Link, TextButton } from '@redis-ui/components'
+import { StyledRdiJobConfigContainer } from 'uiSrc/pages/rdi/pipeline-management/pages/job/styles'
 
 export interface Props {
   name: string
@@ -60,7 +57,7 @@ const Job = (props: Props) => {
   const deployedJobValueRef = useRef<Maybe<string>>(deployedJobValue)
   const jobNameRef = useRef<string>(name)
 
-  const { loading, schema, jobFunctions, jobs } =
+  const { loading, monacoJobsSchema, jobFunctions, jobs } =
     useSelector(rdiPipelineSelector)
 
   useEffect(() => {
@@ -126,13 +123,7 @@ const Job = (props: Props) => {
   )
 
   const handleChange = (value: string) => {
-    const newJobs = jobs.map((job, index) => {
-      if (index === jobIndexRef.current) {
-        return { ...job, value }
-      }
-      return job
-    })
-    dispatch(setPipelineJobs(newJobs))
+    dispatch(updatePipelineJob({ name: jobNameRef.current, value }))
     checkIsFileUpdated(value)
   }
 
@@ -177,120 +168,125 @@ const Job = (props: Props) => {
   }
 
   return (
-    <>
-      <div className={cx('content', { isSidePanelOpen: isPanelOpen })}>
-        <div className="rdi__content-header">
-          <EuiText className={cx('rdi__title', 'line-clamp-2')}>{name}</EuiText>
-          <div className={styles.actionContainer}>
-            <EuiToolTip
-              position="top"
-              className={styles.tooltip}
-              content={
-                KEYBOARD_SHORTCUTS?.rdi?.openDedicatedEditor && (
-                  <div className={styles.tooltipContent}>
-                    <EuiText size="s">{`${KEYBOARD_SHORTCUTS.rdi.openDedicatedEditor?.description}\u00A0\u00A0`}</EuiText>
-                    <KeyboardShortcut
-                      separator={KEYBOARD_SHORTCUTS?._separator}
-                      items={KEYBOARD_SHORTCUTS.rdi.openDedicatedEditor.keys}
-                    />
-                  </div>
-                )
-              }
-              data-testid="open-dedicated-editor-tooltip"
-            >
-              <EuiButton
-                color="secondary"
-                size="s"
-                style={{ marginRight: '16px' }}
-                onClick={() => setShouldOpenDedicatedEditor(true)}
-                data-testid="open-dedicated-editor-btn"
-              >
-                SQL and JMESPath Editor
-              </EuiButton>
-            </EuiToolTip>
-            <TemplateButton
-              value={value}
-              setFieldValue={(template) => {
-                const newJobs = jobs.map((job, index) => {
-                  if (index === jobIndexRef.current) {
-                    return { ...job, value: template }
+    <Row>
+      <StyledRdiJobConfigContainer grow>
+        <Col gap="m">
+          <Row grow={false} align="center" justify="between">
+            <Title size="S" color="primary">
+              {name}
+            </Title>
+            <FlexItem>
+              <Row gap="l">
+                <RiTooltip
+                  position="top"
+                  content={
+                    KEYBOARD_SHORTCUTS?.rdi?.openDedicatedEditor && (
+                      <div>
+                        <Text size="s">{`${KEYBOARD_SHORTCUTS.rdi.openDedicatedEditor?.description}\u00A0\u00A0`}</Text>
+                        <KeyboardShortcut
+                          separator={KEYBOARD_SHORTCUTS?._separator}
+                          items={
+                            KEYBOARD_SHORTCUTS.rdi.openDedicatedEditor.keys
+                          }
+                        />
+                      </div>
+                    )
                   }
-                  return job
-                })
-                dispatch(setPipelineJobs(newJobs))
+                  data-testid="open-dedicated-editor-tooltip"
+                >
+                  <TextButton
+                    onClick={() => setShouldOpenDedicatedEditor(true)}
+                    data-testid="open-dedicated-editor-btn"
+                    variant="primary-inline"
+                  >
+                    SQL and JMESPath Editor
+                  </TextButton>
+                </RiTooltip>
+                <TemplateButton
+                  value={value}
+                  setFieldValue={(template) => {
+                    const newJobs = jobs.map((job, index) => {
+                      if (index === jobIndexRef.current) {
+                        return {
+                          ...job,
+                          value: template,
+                        }
+                      }
+                      return job
+                    })
+                    dispatch(setPipelineJobs(newJobs))
+                  }}
+                />
+              </Row>
+            </FlexItem>
+          </Row>
+          <Text color="primary">
+            {'Create a job per source table to filter, transform, and '}
+            <Link
+              data-testid="rdi-pipeline-transformation-link"
+              target="_blank"
+              href={getUtmExternalLink(EXTERNAL_LINKS.rdiPipelineTransforms, {
+                medium: UTM_MEDIUMS.Rdi,
+                campaign: 'job_file',
+              })}
+              variant="inline"
+            >
+              map data
+            </Link>
+            {' to Redis.'}
+          </Text>
+          {loading ? (
+            <div data-testid="rdi-job-loading">
+              <Loader color="secondary" size="l" loaderText="Loading..." />
+            </div>
+          ) : (
+            <MonacoYaml
+              schema={monacoJobsSchema}
+              value={value}
+              onChange={handleChange}
+              disabled={loading}
+              dedicatedEditorLanguages={[DSL.sqliteFunctions, DSL.jmespath]}
+              dedicatedEditorFunctions={
+                jobFunctions as monacoEditor.languages.CompletionItem[]
+              }
+              dedicatedEditorOptions={{
+                suggest: {
+                  preview: false,
+                  showIcons: true,
+                  showStatusBar: true,
+                },
               }}
+              onChangeLanguage={handleChangeLanguage}
+              shouldOpenDedicatedEditor={shouldOpenDedicatedEditor}
+              onOpenDedicatedEditor={handleOpenDedicatedEditor}
+              onCloseDedicatedEditor={handleCloseDedicatedEditor}
+              onSubmitDedicatedEditor={handleSubmitDedicatedEditor}
+              data-testid="rdi-monaco-job"
+              fullHeight
             />
-          </div>
-        </div>
-        <EuiText className="rdi__text" color="subdued">
-          {'Create a job per source table to filter, transform, and '}
-          <EuiLink
-            external={false}
-            data-testid="rdi-pipeline-transformation-link"
-            target="_blank"
-            href={getUtmExternalLink(EXTERNAL_LINKS.rdiPipelineTransforms, {
-              medium: UTM_MEDIUMS.Rdi,
-              campaign: 'job_file',
-            })}
-          >
-            map data
-          </EuiLink>
-          {' to Redis.'}
-        </EuiText>
-        {loading ? (
-          <div
-            className={cx('rdi__editorWrapper', 'rdi__loading')}
-            data-testid="rdi-job-loading"
-          >
-            <EuiText color="subdued" style={{ marginBottom: 12 }}>
-              Loading data...
-            </EuiText>
-            <EuiLoadingSpinner color="secondary" size="l" />
-          </div>
-        ) : (
-          <MonacoYaml
-            schema={get(schema, 'jobs', null)}
-            value={value}
-            onChange={handleChange}
-            disabled={loading}
-            dedicatedEditorLanguages={[DSL.sqliteFunctions, DSL.jmespath]}
-            dedicatedEditorFunctions={
-              jobFunctions as monacoEditor.languages.CompletionItem[]
-            }
-            dedicatedEditorOptions={{
-              suggest: { preview: false, showIcons: true, showStatusBar: true },
-            }}
-            onChangeLanguage={handleChangeLanguage}
-            wrapperClassName="rdi__editorWrapper"
-            shouldOpenDedicatedEditor={shouldOpenDedicatedEditor}
-            onOpenDedicatedEditor={handleOpenDedicatedEditor}
-            onCloseDedicatedEditor={handleCloseDedicatedEditor}
-            onSubmitDedicatedEditor={handleSubmitDedicatedEditor}
-            data-testid="rdi-monaco-job"
-          />
-        )}
-
-        <div className="rdi__actions">
-          <EuiButton
-            fill
-            color="secondary"
-            size="s"
-            onClick={handleDryRunJob}
-            isDisabled={isPanelOpen}
-            data-testid="rdi-job-dry-run"
-          >
-            Dry Run
-          </EuiButton>
-        </div>
-      </div>
+          )}
+          <Row grow={false} justify="end">
+            <PrimaryButton
+              color="secondary"
+              onClick={handleDryRunJob}
+              disabled={isPanelOpen}
+              data-testid="rdi-job-dry-run"
+            >
+              Dry Run
+            </PrimaryButton>
+          </Row>
+        </Col>
+      </StyledRdiJobConfigContainer>
       {isPanelOpen && (
-        <DryRunJobPanel
-          onClose={() => setIsPanelOpen(false)}
-          job={value}
-          name={name}
-        />
+        <FlexItem>
+          <DryRunJobPanel
+            onClose={() => setIsPanelOpen(false)}
+            job={value}
+            name={name}
+          />
+        </FlexItem>
       )}
-    </>
+    </Row>
   )
 }
 

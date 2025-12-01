@@ -1,20 +1,24 @@
 import React, { useState } from 'react'
-import cx from 'classnames'
-import { EuiButton, EuiTitle } from '@elastic/eui'
-import { TableView } from 'uiSrc/pages/database-analysis'
+import { TableView } from 'uiSrc/pages/database-analysis/constants'
 import { Nullable } from 'uiSrc/utils'
-import { TableLoader } from 'uiSrc/pages/database-analysis/components'
+import TableLoader from 'uiSrc/pages/database-analysis/components/table-loader'
+import { TextBtn } from 'uiSrc/pages/database-analysis/components/base/TextBtn'
 import { DatabaseAnalysis } from 'apiSrc/modules/database-analysis/models'
+import {
+  Section,
+  SectionTitle,
+  SectionTitleWrapper,
+} from 'uiSrc/pages/database-analysis/components/styles'
 
-import Table from './Table'
-import styles from './styles.module.scss'
+import TopKeysTable from './TopKeysTable'
+import { SectionContent } from 'uiSrc/pages/database-analysis/components/top-namespace/TopNamespace.styles'
 
 export interface Props {
   data: Nullable<DatabaseAnalysis>
   loading: boolean
-  delimiter?: string
 }
 
+const MAX_TOP_KEYS = 15
 const TopKeys = ({ data, loading }: Props) => {
   const { topKeysLength = [], topKeysMemory = [], delimiter } = data || {}
   const [tableView, setTableView] = useState<TableView>(TableView.MEMORY)
@@ -28,45 +32,36 @@ const TopKeys = ({ data, loading }: Props) => {
   }
 
   return (
-    <div className={cx('section', styles.wrapper)}>
-      <div className="section-title-wrapper">
-        <EuiTitle className="section-title">
-          <h4 data-testid="top-keys-title">
-            {topKeysLength.length < 15 && topKeysMemory?.length < 15
-              ? 'TOP KEYS'
-              : 'TOP 15 KEYS'}
-          </h4>
-        </EuiTitle>
-        <EuiButton
-          fill
-          size="s"
-          color="secondary"
+    <Section>
+      <SectionTitleWrapper>
+        <SectionTitle size="M" data-testid="top-keys-title">
+          {topKeysLength.length < MAX_TOP_KEYS &&
+          topKeysMemory?.length < MAX_TOP_KEYS
+            ? 'TOP KEYS'
+            : `TOP ${MAX_TOP_KEYS} KEYS`}
+        </SectionTitle>
+        <TextBtn
+          $active={tableView === TableView.MEMORY}
+          size="small"
           onClick={() => setTableView(TableView.MEMORY)}
           disabled={tableView === TableView.MEMORY}
-          className={cx(styles.textBtn, {
-            [styles.activeBtn]: tableView === TableView.MEMORY,
-          })}
           data-testid="btn-change-table-memory"
         >
           by Memory
-        </EuiButton>
-        <EuiButton
-          fill
-          size="s"
-          color="secondary"
+        </TextBtn>
+        <TextBtn
+          $active={tableView === TableView.KEYS}
+          size="small"
           onClick={() => setTableView(TableView.KEYS)}
           disabled={tableView === TableView.KEYS}
-          className={cx(styles.textBtn, {
-            [styles.activeBtn]: tableView === TableView.KEYS,
-          })}
           data-testid="btn-change-table-keys"
         >
           by Length
-        </EuiButton>
-      </div>
-      <div className="section-content">
+        </TextBtn>
+      </SectionTitleWrapper>
+      <SectionContent>
         {tableView === TableView.MEMORY && (
-          <Table
+          <TopKeysTable
             data={topKeysMemory}
             defaultSortField="memory"
             delimiter={delimiter}
@@ -74,15 +69,15 @@ const TopKeys = ({ data, loading }: Props) => {
           />
         )}
         {tableView === TableView.KEYS && (
-          <Table
+          <TopKeysTable
             data={topKeysLength}
             defaultSortField="length"
             delimiter={delimiter}
             dataTestid="top-keys-table-length"
           />
         )}
-      </div>
-    </div>
+      </SectionContent>
+    </Section>
   )
 }
 

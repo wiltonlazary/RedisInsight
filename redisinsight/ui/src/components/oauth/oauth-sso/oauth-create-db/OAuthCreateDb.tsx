@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { EuiButton, EuiText, EuiTitle } from '@elastic/eui'
 import {
   createFreeDbJob,
   fetchPlans,
@@ -28,14 +27,18 @@ import {
 } from 'uiSrc/slices/instances/cloud'
 import { Nullable } from 'uiSrc/utils'
 import OAuthForm from 'uiSrc/components/oauth/shared/oauth-form'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
 import {
   OAuthAdvantages,
   OAuthAgreement,
   OAuthRecommendedSettings,
 } from '../../shared'
 import styles from './styles.module.scss'
+import { StyledAdvantagesContainerAbsolute } from '../../shared/styles'
 
 export interface Props {
   source?: Nullable<OAuthSocialSource>
@@ -113,7 +116,9 @@ const OAuthCreateDb = (props: Props) => {
     <div className={styles.container} data-testid="oauth-container-create-db">
       <Row>
         <FlexItem grow className={styles.advantagesContainer}>
-          <OAuthAdvantages />
+          <StyledAdvantagesContainerAbsolute>
+            <OAuthAdvantages />
+          </StyledAdvantagesContainerAbsolute>
         </FlexItem>
         <FlexItem grow className={styles.socialContainer}>
           {!data ? (
@@ -124,12 +129,15 @@ const OAuthCreateDb = (props: Props) => {
             >
               {(form: React.ReactNode) => (
                 <>
-                  <EuiText className={styles.subTitle}>
-                    Get started with
-                  </EuiText>
-                  <EuiTitle className={styles.title}>
-                    <h2>Free trial Cloud database</h2>
-                  </EuiTitle>
+                  <Col align="center">
+                    <Text color="primary" size="L">
+                      Get started with
+                    </Text>
+                    <Title size="XL" color="primary" className={styles.title}>
+                      Free Redis Cloud database
+                    </Title>
+                  </Col>
+
                   {form}
                   <div>
                     <OAuthRecommendedSettings
@@ -143,29 +151,31 @@ const OAuthCreateDb = (props: Props) => {
             </OAuthForm>
           ) : (
             <>
-              <EuiText className={styles.subTitle}>Get your</EuiText>
-              <EuiTitle className={styles.title}>
-                <h2>Free trial Cloud database</h2>
-              </EuiTitle>
+              <Col align="center">
+                <Text color="primary" size="L">
+                  Get your
+                </Text>
+                <Title size="XL" color="primary" className={styles.title}>
+                  Free Redis Cloud database
+                </Title>
+              </Col>
               <Spacer size="xl" />
-              <EuiText textAlign="center" color="subdued">
+              <Text textAlign="center" color="primary">
                 The database will be created automatically and can be changed
                 from Redis Cloud.
-              </EuiText>
+              </Text>
               <Spacer size="xl" />
               <OAuthRecommendedSettings
                 value={isRecommended}
                 onChange={handleChangeRecommendedSettings}
               />
               <Spacer />
-              <EuiButton
-                fill
-                color="secondary"
+              <PrimaryButton
                 onClick={handleClickCreate}
                 data-testid="oauth-create-db"
               >
                 Create
-              </EuiButton>
+              </PrimaryButton>
             </>
           )}
         </FlexItem>

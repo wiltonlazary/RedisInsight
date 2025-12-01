@@ -1,18 +1,18 @@
-import React, { useRef } from 'react'
+import React from 'react'
 
-import cx from 'classnames'
-import { EuiButton, EuiText, EuiToolTip } from '@elastic/eui'
 import { ResultsMode, RunQueryMode } from 'uiSrc/slices/interfaces'
 import { KEYBOARD_SHORTCUTS } from 'uiSrc/constants'
-import { KeyboardShortcut } from 'uiSrc/components'
+import { KeyboardShortcut, RiTooltip } from 'uiSrc/components'
 import { isGroupMode } from 'uiSrc/utils'
 
-import GroupModeIcon from 'uiSrc/assets/img/icons/group_mode.svg?react'
-import RawModeIcon from 'uiSrc/assets/img/icons/raw_mode.svg?react'
+import { RiIcon } from 'uiSrc/components/base/icons'
 
-import Divider from 'uiSrc/components/divider/Divider'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
-import styles from './styles.module.scss'
+import { Text } from 'uiSrc/components/base/text'
+import RunButton from 'uiSrc/components/query/components/RunButton'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { QADivider } from 'uiSrc/components/query/query-actions/QueryActions.styles'
+import { ToggleButton } from 'uiSrc/components/base/forms/buttons'
 
 export interface Props {
   onChangeMode?: () => void
@@ -21,29 +21,22 @@ export interface Props {
   activeMode: RunQueryMode
   resultsMode?: ResultsMode
   isLoading?: boolean
-  isDisabled?: boolean
 }
 
 const QueryActions = (props: Props) => {
   const {
     isLoading,
-    isDisabled,
     activeMode,
     resultsMode,
     onChangeMode,
     onChangeGroupMode,
     onSubmit,
   } = props
-  const runTooltipRef = useRef<EuiToolTip>(null)
-
   const KeyBoardTooltipContent = KEYBOARD_SHORTCUTS?.workbench?.runQuery && (
     <>
-      <EuiText className={styles.tooltipText} size="s">
-        {KEYBOARD_SHORTCUTS.workbench.runQuery?.label}:
-      </EuiText>
+      <Text size="s">{KEYBOARD_SHORTCUTS.workbench.runQuery?.label}:</Text>
       <Spacer size="s" />
       <KeyboardShortcut
-        badgeTextClassName={styles.tooltipText}
         separator={KEYBOARD_SHORTCUTS?._separator}
         items={KEYBOARD_SHORTCUTS.workbench.runQuery.keys}
       />
@@ -51,33 +44,26 @@ const QueryActions = (props: Props) => {
   )
 
   return (
-    <div
-      className={cx(styles.actions, { [styles.disabledActions]: isDisabled })}
-    >
+    <Row align="center" justify="between" gap="l" grow={false}>
       {onChangeMode && (
-        <EuiToolTip
+        <RiTooltip
           position="left"
           content="Enables the raw output mode"
           data-testid="change-mode-tooltip"
         >
-          <EuiButton
-            fill
-            size="s"
-            color="secondary"
-            onClick={() => onChangeMode()}
-            iconType={RawModeIcon}
+          <ToggleButton
+            onPressedChange={() => onChangeMode()}
             disabled={isLoading}
-            className={cx(styles.btn, styles.textBtn, {
-              [styles.activeBtn]: activeMode === RunQueryMode.Raw,
-            })}
+            pressed={activeMode === RunQueryMode.Raw}
             data-testid="btn-change-mode"
           >
-            Raw mode
-          </EuiButton>
-        </EuiToolTip>
+            <RiIcon size="m" type="RawModeIcon" />
+            <Text size="s">Raw mode</Text>
+          </ToggleButton>
+        </RiTooltip>
       )}
       {onChangeGroupMode && (
-        <EuiToolTip
+        <RiTooltip
           position="left"
           content={
             <>
@@ -89,29 +75,19 @@ const QueryActions = (props: Props) => {
           }
           data-testid="group-results-tooltip"
         >
-          <EuiButton
-            fill
-            size="s"
-            color="secondary"
-            onClick={() => onChangeGroupMode()}
+          <ToggleButton
+            onPressedChange={() => onChangeGroupMode()}
             disabled={isLoading}
-            iconType={GroupModeIcon}
-            className={cx(styles.btn, styles.textBtn, {
-              [styles.activeBtn]: isGroupMode(resultsMode),
-            })}
+            pressed={isGroupMode(resultsMode)}
             data-testid="btn-change-group-mode"
           >
-            Group results
-          </EuiButton>
-        </EuiToolTip>
+            <RiIcon size="m" type="GroupModeIcon" />
+            <Text size="s">Group results</Text>
+          </ToggleButton>
+        </RiTooltip>
       )}
-      <Divider
-        orientation="vertical"
-        colorVariable="separatorColor"
-        className={styles.divider}
-      />
-      <EuiToolTip
-        ref={runTooltipRef}
+      <QADivider orientation="vertical" colorVariable="separatorColor" />
+      <RiTooltip
         position="left"
         content={
           isLoading
@@ -120,22 +96,9 @@ const QueryActions = (props: Props) => {
         }
         data-testid="run-query-tooltip"
       >
-        <EuiButton
-          onClick={() => {
-            onSubmit()
-            setTimeout(() => runTooltipRef?.current?.hideToolTip?.(), 0)
-          }}
-          isLoading={isLoading}
-          disabled={isLoading}
-          iconType="playFilled"
-          className={cx(styles.btn, styles.submitButton)}
-          aria-label="submit"
-          data-testid="btn-submit"
-        >
-          Run
-        </EuiButton>
-      </EuiToolTip>
-    </div>
+        <RunButton isLoading={isLoading} onSubmit={onSubmit} />
+      </RiTooltip>
+    </Row>
   )
 }
 

@@ -14,7 +14,7 @@ import {
   fireEvent,
   render,
   screen,
-  waitForEuiToolTipVisible,
+  waitForRiTooltipVisible,
 } from 'uiSrc/utils/test-utils'
 
 import Header, { Props } from './Header'
@@ -62,7 +62,7 @@ const connectType = (state: any, connectionType: any) => {
             connectedInstance: {
               ...state.connections.instances.connectedInstance,
               connectionType,
-              provider: 'RE_CLOUD',
+              provider: 'REDIS_CLOUD',
             },
           },
         },
@@ -127,7 +127,7 @@ describe('DatabaseAnalysisHeader', () => {
       event: TelemetryEvent.DATABASE_ANALYSIS_STARTED,
       eventData: {
         databaseId: INSTANCE_ID_MOCK,
-        provider: 'RE_CLOUD',
+        provider: 'REDIS_CLOUD',
       },
     })
     ;(sendEventTelemetry as jest.Mock).mockRestore()
@@ -140,7 +140,7 @@ describe('DatabaseAnalysisHeader', () => {
 
     const analizeButtonId = screen.getByTestId('start-database-analysis-btn')
     expect(analizeButtonId).toBeInTheDocument()
-    expect(analizeButtonId).toHaveTextContent('Analyze')
+    expect(analizeButtonId.textContent).toContain('New Report')
   })
 
   it.skip('should call onChangeSelectedAnalysis after change selector', async () => {
@@ -172,9 +172,9 @@ describe('CLUSTER db', () => {
     render(<Header {...instance(mockedProps)} />)
 
     await act(async () => {
-      fireEvent.mouseOver(screen.getByTestId('db-new-reports-icon'))
+      fireEvent.focus(screen.getByTestId('db-new-reports-icon'))
     })
-    await waitForEuiToolTipVisible()
+    await waitForRiTooltipVisible()
 
     expect(screen.getByTestId('db-new-reports-tooltip')).toHaveTextContent(
       'Analyze up to 10 000 keys per shard to get an overview of your data and tips on how to save memory and optimize the usage of your database.',
@@ -192,9 +192,9 @@ describe('STANDALONE db', () => {
     render(<Header {...instance(mockedProps)} />)
 
     await act(async () => {
-      fireEvent.mouseOver(screen.getByTestId('db-new-reports-icon'))
+      fireEvent.focus(screen.getByTestId('db-new-reports-icon'))
     })
-    await waitForEuiToolTipVisible()
+    await waitForRiTooltipVisible()
 
     expect(screen.getByTestId('db-new-reports-tooltip')).toHaveTextContent(
       'Analyze up to 10 000 keys to get an overview of your data and tips on how to save memory and optimize the usage of your database.',
@@ -212,9 +212,9 @@ describe('SENTINEL db', () => {
     render(<Header {...instance(mockedProps)} />)
 
     await act(async () => {
-      fireEvent.mouseOver(screen.getByTestId('db-new-reports-icon'))
+      fireEvent.focus(screen.getByTestId('db-new-reports-icon'))
     })
-    await waitForEuiToolTipVisible()
+    await waitForRiTooltipVisible()
 
     expect(screen.getByTestId('db-new-reports-tooltip')).toHaveTextContent(
       'Analyze up to 10 000 keys to get an overview of your data and tips on how to save memory and optimize the usage of your database.',

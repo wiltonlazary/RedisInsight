@@ -1,56 +1,38 @@
 import React from 'react'
-import { EuiFormRow, EuiIcon, EuiTextArea, EuiToolTip } from '@elastic/eui'
 
-import styles from './styles.module.scss'
+import {
+  FormField,
+  RiInfoIconProps,
+} from 'uiSrc/components/base/forms/FormField'
+import { TextArea } from 'uiSrc/components/base/inputs'
+import { Text } from 'uiSrc/components/base/text'
+import { HostInfoTooltipContent } from '../../../host-info-tooltip-content/HostInfoTooltipContent'
 
 export interface Props {
   value: string
   onChange: (e: React.ChangeEvent<any>) => void
 }
 
+const connectionUrlInfo: RiInfoIconProps = {
+  content: HostInfoTooltipContent({ includeAutofillInfo: false }),
+  placement: 'right',
+  maxWidth: '100%',
+}
+
 const ConnectionUrl = ({ value, onChange }: Props) => (
-  <EuiFormRow
-    label={
-      <div className={styles.connectionUrlInfo}>
-        <div>Connection URL</div>
-        <EuiToolTip
-          title="The following connection URLs are supported:"
-          className="homePage_tooltip"
-          position="right"
-          content={
-            <ul className="homePage_toolTipUl">
-              <li>
-                <span className="dot" />
-                redis://[[username]:[password]]@host:port
-              </li>
-              <li>
-                <span className="dot" />
-                rediss://[[username]:[password]]@host:port
-              </li>
-              <li>
-                <span className="dot" />
-                host:port
-              </li>
-            </ul>
-          }
-        >
-          <EuiIcon type="iInCircle" style={{ cursor: 'pointer' }} />
-        </EuiToolTip>
-      </div>
-    }
+  <FormField
+    label={<Text>Connection URL</Text>}
+    infoIconProps={connectionUrlInfo}
   >
-    <EuiTextArea
+    <TextArea
       name="connectionURL"
       id="connectionURL"
       value={value}
-      onChange={onChange}
-      fullWidth
+      onChangeCapture={onChange}
       placeholder="redis://default@127.0.0.1:6379"
-      resize="none"
-      style={{ height: 88 }}
       data-testid="connection-url"
     />
-  </EuiFormRow>
+  </FormField>
 )
 
 export default ConnectionUrl

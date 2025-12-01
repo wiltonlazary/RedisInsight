@@ -5,6 +5,9 @@
   "files": ["dist", "node_modules", "package.json"],
   "artifactName": "Redis-Insight-${os}-${arch}.${ext}",
   "compression": "normal",
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "buildDependenciesFromSource": false,
   "asarUnpack": ["node_modules/keytar", "node_modules/sqlite3"],
   "protocols": [
     {
@@ -24,9 +27,7 @@
         "arch": ["x64", "arm64"]
       }
     ],
-    "notarize": {
-      "teamId": "UUK47G4BAZ"
-    },
+    "notarize": true,
     "type": "distribution",
     "hardenedRuntime": true,
     "darkModeSupport": true,
@@ -45,10 +46,8 @@
     "asarUnpack": ["node_modules"],
     "provisioningProfile": "embedded.provisionprofile",
     "binaries": [
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
+      "Contents/Resources/app.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "Contents/Resources/app.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
     ],
     "artifactName": "Redis-Insight-${os}-${arch}-mas.${ext}"
   },
@@ -61,10 +60,8 @@
     "asarUnpack": ["node_modules"],
     "provisioningProfile": "dev.provisionprofile",
     "binaries": [
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
+      "Contents/Resources/app.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "Contents/Resources/app.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
     ],
     "artifactName": "Redis-Insight-${os}-${arch}-masDev.${ext}"
   },
@@ -86,7 +83,7 @@
     "target": ["nsis"],
     "artifactName": "Redis-Insight-${os}-installer.${ext}",
     "icon": "resources/icon.ico",
-    "publisherName": ["Redis Inc.", "Redis Labs Inc."]
+    "legalTrademarks": "Redis Inc., Redis Labs Inc."
   },
   "nsis": {
     "oneClick": false,
@@ -117,9 +114,11 @@
     "category": "Development",
     "artifactName": "Redis-Insight-${os}-${arch}.${ext}",
     "desktop": {
-      "Name": "Redis Insight",
-      "Type": "Application",
-      "Comment": "Redis GUI by Redis Ltd"
+      "entry": {
+        "Name": "Redis Insight",
+        "Type": "Application",
+        "Comment": "Redis GUI by Redis Ltd"
+      }
     }
   },
   "deb": {

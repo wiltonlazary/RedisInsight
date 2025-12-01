@@ -1,6 +1,5 @@
 import React from 'react'
 import cx from 'classnames'
-import { EuiButton, EuiIcon, EuiToolTip } from '@elastic/eui'
 import { getConfig } from 'uiSrc/config'
 
 import {
@@ -8,13 +7,14 @@ import {
   DATABASE_OVERVIEW_REFRESH_INTERVAL,
 } from 'uiSrc/constants/browser'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import WarningIcon from 'uiSrc/assets/img/warning.svg?react'
 import MetricItem, {
   OverviewItem,
 } from 'uiSrc/components/database-overview/components/OverviewMetrics/MetricItem'
 import { useDatabaseOverview } from 'uiSrc/components/database-overview/hooks/useDatabaseOverview'
 
 import { IMetric } from 'uiSrc/components/database-overview/components/OverviewMetrics'
+import { SecondaryButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import AutoRefresh from '../auto-refresh'
 import styles from './styles.module.scss'
 
@@ -37,14 +37,17 @@ const DatabaseOverview = () => {
   return (
     <Row className={styles.container}>
       <FlexItem grow key="overview">
-        <Row className={cx('flex-row', styles.itemContainer, styles.overview)}
-            align="center"
-          >
+        <Row
+          className={cx('flex-row', styles.itemContainer, styles.overview)}
+          align="center"
+        >
           {connectivityError && (
             <MetricItem
               id="connectivityError"
               tooltipContent={connectivityError}
-              content={<EuiIcon size="m" type={WarningIcon} />}
+              content={
+                <RiIcon size="m" type="ToastInfoIcon" color="danger500" />
+              }
             />
           )}
           {metrics?.length! > 0 && (
@@ -55,9 +58,8 @@ const DatabaseOverview = () => {
                   className={styles.upgradeBtnItem}
                   style={{ borderRight: 'none' }}
                 >
-                  <EuiButton
-                    color="secondary"
-                    fill={!!usedMemoryPercent && usedMemoryPercent >= 75}
+                  <SecondaryButton
+                    filled={!!usedMemoryPercent && usedMemoryPercent >= 75}
                     className={cx(styles.upgradeBtn)}
                     style={{ fontWeight: '400' }}
                     onClick={() => {
@@ -69,7 +71,7 @@ const DatabaseOverview = () => {
                     data-testid="upgrade-ri-db-button"
                   >
                     Upgrade plan
-                  </EuiButton>
+                  </SecondaryButton>
                 </OverviewItem>
               )}
               {metrics?.map((overviewItem) => (
@@ -88,7 +90,7 @@ const DatabaseOverview = () => {
                   <AutoRefresh
                     displayText={false}
                     displayLastRefresh={false}
-                    iconSize="xs"
+                    iconSize="S"
                     loading={false}
                     enableAutoRefreshDefault
                     lastRefreshTime={lastRefreshTime}
@@ -116,11 +118,11 @@ const DatabaseOverview = () => {
 const getTooltipContent = (metric: IMetric) => {
   if (!metric.children?.length) {
     return (
-      <>
+      <Row>
         <span>{metric.tooltip?.content}</span>
         &nbsp;
         <span>{metric.tooltip?.title}</span>
-      </>
+      </Row>
     )
   }
   return metric.children
@@ -133,14 +135,14 @@ const getTooltipContent = (metric: IMetric) => {
       >
         {tooltipItem.icon && (
           <FlexItem>
-            <EuiIcon
+            <RiIcon
               className={styles.moreInfoOverviewIcon}
               size="m"
               type={tooltipItem.icon}
             />
           </FlexItem>
         )}
-        <FlexItem className={styles.moreInfoOverviewContent}>
+        <FlexItem className={styles.moreInfoOverviewContent} direction="row">
           {tooltipItem.content}
         </FlexItem>
         <FlexItem className={styles.moreInfoOverviewTitle}>

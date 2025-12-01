@@ -9,11 +9,7 @@ import {
   cleanup,
 } from 'uiSrc/utils/test-utils'
 import { setConnectedInstanceId } from 'uiSrc/slices/instances/instances'
-import {
-  loadKeys,
-  resetKeyInfo,
-  toggleBrowserFullScreen,
-} from 'uiSrc/slices/browser/keys'
+import { loadKeys, toggleBrowserFullScreen } from 'uiSrc/slices/browser/keys'
 import { resetErrors } from 'uiSrc/slices/app/notifications'
 import {
   setBrowserBulkActionOpen,
@@ -21,14 +17,14 @@ import {
   setBrowserSelectedKey,
 } from 'uiSrc/slices/app/context'
 import BrowserPage from './BrowserPage'
-import KeyList, { Props as KeyListProps } from './components/key-list/KeyList'
+import KeyList, { Props as KeyListProps } from './components/key-tree/KeyTree'
 import { Props as KeyDetailsWrapperProps } from './modules/key-details/KeyDetails'
 import { KeyDetails } from './modules'
 import AddKey, { Props as AddKeyProps } from './components/add-key/AddKey'
 import BrowserSearchPanel from './components/browser-search-panel'
 import { Props as KeysHeaderProps } from './components/keys-header/KeysHeader'
 
-jest.mock('./components/key-list/KeyList', () => ({
+jest.mock('./components/key-tree/KeyTree', () => ({
   __esModule: true,
   namedExport: jest.fn(),
   default: jest.fn(),
@@ -140,38 +136,11 @@ describe('BrowserPage', () => {
     ])
   })
 
-  it('should call handleAddKeyPanel', () => {
-    render(<BrowserPage />)
-    const afterRenderActions = [...store.getActions()]
-
-    fireEvent.click(screen.getByTestId('handleAddKeyPanel-btn'))
-
-    const expectedActions = [
-      resetKeyInfo(),
-      toggleBrowserFullScreen(false),
-      setBrowserSelectedKey(null),
-    ]
-    expect(store.getActions()).toEqual([
-      ...afterRenderActions,
-      ...expectedActions,
-    ])
-  })
-
-  it('should call handleBulkActionsPanel', () => {
-    render(<BrowserPage />)
-    const afterRenderActions = [...store.getActions()]
-
-    fireEvent.click(screen.getByTestId('handleBulkActionsPanel-btn'))
-
-    const expectedActions = [resetKeyInfo(), toggleBrowserFullScreen(false)]
-    expect(store.getActions()).toEqual([
-      ...afterRenderActions,
-      ...expectedActions,
-    ])
-  })
-
   it('should call loadMoreItems without nextCursor', () => {
     render(<BrowserPage />)
+    // select Browser/List view
+    fireEvent.click(screen.getByTestId('view-type-list-btn'))
+
     const afterRenderActions = [...store.getActions()]
 
     fireEvent.click(screen.getByTestId('loadMoreItems-btn'))

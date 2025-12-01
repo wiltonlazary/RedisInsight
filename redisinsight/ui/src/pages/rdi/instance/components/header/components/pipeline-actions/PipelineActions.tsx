@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect } from 'react'
-import { EuiToolTip } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 
@@ -29,6 +28,13 @@ import ResetPipelineButton from '../buttons/reset-pipeline-button'
 import RdiConfigFileActionMenu from '../rdi-config-file-action-menu'
 import StopPipelineButton from '../buttons/stop-pipeline-button'
 import StartPipelineButton from '../buttons/start-pipeline-button/StartPipelineButton'
+import styled from 'styled-components'
+import { Theme } from 'uiSrc/components/base/theme/types'
+
+const VerticalDelimiter = styled(FlexItem)`
+  border: ${({ theme }: { theme: Theme }) => theme.components.appBar.separator};
+  align-self: stretch;
+`
 
 export interface Props {
   collectorStatus?: CollectorStatus
@@ -38,8 +44,9 @@ export interface Props {
 const PipelineActions = ({ collectorStatus, pipelineStatus }: Props) => {
   const {
     loading: deployLoading,
-    isPipelineValid,
     schema,
+    monacoJobsSchema,
+    jobNameSchema,
     config,
     jobs,
   } = useSelector(rdiPipelineSelector)
@@ -58,7 +65,13 @@ const PipelineActions = ({ collectorStatus, pipelineStatus }: Props) => {
     }
 
     const { result, configValidationErrors, jobsValidationErrors } =
-      validatePipeline({ schema, config, jobs })
+      validatePipeline({
+        schema,
+        monacoJobsSchema,
+        jobNameSchema,
+        config,
+        jobs,
+      })
 
     dispatch(setConfigValidationErrors(configValidationErrors))
     dispatch(setJobsValidationErrors(jobsValidationErrors))
@@ -141,10 +154,9 @@ const PipelineActions = ({ collectorStatus, pipelineStatus }: Props) => {
   const isLoadingBtn = (actionBtn: PipelineAction) =>
     action === actionBtn && actionLoading
   const disabled = deployLoading || actionLoading
-  const isDeployButtonDisabled = disabled || !isPipelineValid
 
   return (
-    <Row gap="m" justify="end" align="center">
+    <Row gap="l" justify="end" align="center">
       <FlexItem>
         <ResetPipelineButton
           onClick={onReset}
@@ -152,40 +164,32 @@ const PipelineActions = ({ collectorStatus, pipelineStatus }: Props) => {
           loading={isLoadingBtn(PipelineAction.Reset)}
         />
       </FlexItem>
+      <VerticalDelimiter />
       <FlexItem>
-        {collectorStatus === CollectorStatus.Ready ? (
+        {collectorStatus === CollectorStatus.Ready &&
+        action !== PipelineAction.Start ? (
           <StopPipelineButton
             onClick={onStopPipeline}
             disabled={disabled}
             loading={isLoadingBtn(PipelineAction.Stop)}
           />
-        ) : (
+        ) : collectorStatus !== CollectorStatus.Ready &&
+          action !== PipelineAction.Stop ? (
           <StartPipelineButton
             onClick={onStartPipeline}
             disabled={disabled}
             loading={isLoadingBtn(PipelineAction.Start)}
           />
-        )}
+        ) : null}
       </FlexItem>
       <FlexItem>
-        <EuiToolTip
-          content={
-            isPipelineValid
-              ? ''
-              : 'Please fix the validation errors before deploying'
-          }
-          position="left"
-          display="inlineBlock"
-          anchorClassName="flex-row"
-        >
-          <DeployPipelineButton
-            loading={deployLoading}
-            disabled={isDeployButtonDisabled}
-            onReset={resetPipeline}
-          />
-        </EuiToolTip>
+        <DeployPipelineButton
+          loading={deployLoading}
+          disabled={disabled}
+          onReset={resetPipeline}
+        />
       </FlexItem>
-      <FlexItem style={{ margin: 0 }}>
+      <FlexItem>
         <RdiConfigFileActionMenu />
       </FlexItem>
     </Row>

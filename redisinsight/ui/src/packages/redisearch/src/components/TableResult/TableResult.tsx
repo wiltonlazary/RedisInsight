@@ -1,17 +1,24 @@
-import React, { ReactElement, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import parse from 'html-react-parser'
 import cx from 'classnames'
 import { flatten, isArray, isEmpty, map, uniq } from 'lodash'
-import {
-  EuiBasicTableColumn,
-  EuiButtonIcon,
-  EuiInMemoryTable,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
+import styled from 'styled-components'
 
-import { CommandArgument, Command } from '../../constants'
-import { formatLongName, replaceSpaces } from '../../utils'
+import { handleCopy as handleCopyUtil } from 'uiSrc/utils'
+import { Table, ColumnDef } from 'uiSrc/components/base/layout/table'
+import { ColorText } from 'uiSrc/components/base/text/ColorText'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CopyIcon } from 'uiSrc/components/base/icons'
+import { RiTooltip } from 'uiSrc/components/base/tooltip/RITooltip'
+import {
+  CommandArgument,
+  Command,
+} from 'uiSrc/packages/redisearch/src/constants'
+import {
+  formatLongName,
+  replaceSpaces,
+} from 'uiSrc/packages/redisearch/src/utils'
+import MultilineEllipsisText from 'uiSrc/components/base/text/MultilineEllipsisText'
 
 export interface Props {
   query: string
@@ -20,13 +27,17 @@ export interface Props {
   cursorId?: null | number
 }
 
-const loadingMessage = 'loading...'
+const EllipsisText = styled(ColorText)`
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
 const noResultsMessage = 'No results found.'
 
 const TableResult = React.memo((props: Props) => {
   const { result, query, matched, cursorId } = props
 
-  const [columns, setColumns] = useState<EuiBasicTableColumn<any>[]>([])
+  const [columns, setColumns] = useState<ColumnDef<any>[]>([])
 
   const checkShouldParsedHTML = (query: string) => {
     const command = query.toUpperCase()
@@ -40,7 +51,7 @@ const TableResult = React.memo((props: Props) => {
     event.preventDefault()
     event.stopPropagation()
 
-    navigator.clipboard.writeText(text)
+    handleCopyUtil(text)
   }
 
   useEffect(() => {
@@ -52,15 +63,13 @@ const TableResult = React.memo((props: Props) => {
     const uniqColumns =
       uniq(flatten(map(result, (doc) => Object.keys(doc)))) ?? []
 
-    const newColumns: EuiBasicTableColumn<any>[] = uniqColumns.map(
+    const newColumns: ColumnDef<any>[] = uniqColumns.map(
       (title: string = ' ') => ({
-        field: title,
-        name: title,
-        truncateText: true,
-        dataType: 'string',
-        'data-testid': `query-column-${title}`,
-        // sortable: (value) => (value[title] ? value[title].toLowerCase() : Infinity),
-        render: function Cell(initValue: string = ''): ReactElement | string {
+        header: title,
+        id: title,
+        accessorKey: title,
+        cell: ({ row: { original } }) => {
+          const initValue = original[title] || ''
           if (!initValue || (isArray(initValue) && isEmpty(initValue))) {
             return ''
           }
@@ -75,20 +84,27 @@ const TableResult = React.memo((props: Props) => {
           }
 
           return (
-            <div role="presentation" className={cx('tooltipContainer')}>
-              <EuiToolTip
-                position="bottom"
+            <div
+              role="presentation"
+              className={cx('tooltipContainer')}
+              data-testid={`query-column-${title}`}
+            >
+              <RiTooltip
+                position="left"
                 title={title}
-                className="text-multiline-ellipsis"
                 anchorClassName={cx('tooltip')}
-                content={formatLongName(value.toString())}
+                content={
+                  <MultilineEllipsisText lineCount={7} paddingBlock="s">
+                    {formatLongName(value.toString())}
+                  </MultilineEllipsisText>
+                }
               >
                 <div className="copy-btn-wrapper">
-                  <EuiTextColor className={cx('cell')}>
+                  <EllipsisText className={cx('cell', 'test')}>
                     {cellContent}
-                  </EuiTextColor>
-                  <EuiButtonIcon
-                    iconType="copy"
+                  </EllipsisText>
+                  <IconButton
+                    icon={CopyIcon}
                     aria-label="Copy result"
                     className="copy-near-btn"
                     onClick={(event: React.MouseEvent) =>
@@ -96,7 +112,7 @@ const TableResult = React.memo((props: Props) => {
                     }
                   />
                 </div>
-              </EuiToolTip>
+              </RiTooltip>
             </div>
           )
         },
@@ -121,20 +137,9 @@ const TableResult = React.memo((props: Props) => {
         )}
       </div>
       {isDataArr && (
-        <EuiInMemoryTable
-          pagination
-          items={result ?? []}
-          loading={!result}
-          message={loadingMessage}
-          columns={columns}
-          className={cx({
-            table: true,
-            inMemoryTableDefault: true,
-            tableWithPagination: result?.length > 10,
-          })}
-          responsive={false}
-          data-testid={`query-table-result-${query}`}
-        />
+        <div data-testid={`query-table-result-${query}`}>
+          <Table columns={columns} data={result ?? []} />
+        </div>
       )}
       {isDataEl && <div className={cx('resultEl')}>{result}</div>}
       {!isDataArr && !isDataEl && (

@@ -8,7 +8,7 @@
   overflow-x: hidden;
   max-height: calc(100% - 70px);
 
-  .accordionButton :global(.euiFlexItem) {
+  .accordionButton :global(.RI-flex-item) {
     margin: 0;
 
     .redisStackLink {
@@ -70,10 +70,6 @@
   background-color: var(--euiColorLightestShade) !important;
   margin-bottom: 6px;
   padding: 30px 18px 11px;
-
-  .accordionContent {
-    padding: 18px 0 0 !important;
-  }
 
   .footer {
     display: flex;

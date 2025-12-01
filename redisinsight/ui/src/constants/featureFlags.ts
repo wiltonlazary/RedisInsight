@@ -10,4 +10,6 @@ export enum FeatureFlags {
   enhancedCloudUI = 'enhancedCloudUI',
   cloudAds = 'cloudAds',
   databaseManagement = 'databaseManagement',
+  vectorSearch = 'vectorSearch',
+  databasesListV2 = 'databasesListV2',
 }

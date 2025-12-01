@@ -5,6 +5,7 @@ import { sidePanelsSelector } from 'uiSrc/slices/panels/sidePanels'
 import SidePanels from 'uiSrc/components/side-panels'
 
 import styles from './styles.module.scss'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
   children: React.ReactNode
@@ -14,12 +15,11 @@ export interface Props {
 const ExplorePanelTemplate = (props: Props) => {
   const { children, panelClassName } = props
   const { openedPanel } = useSelector(sidePanelsSelector)
-
   return (
-    <div className={styles.mainWrapper}>
-      <div className={cx(styles.mainPanel, { insightsOpen: !!openedPanel })}>
+    <Row full className={styles.mainWrapper}>
+      <Col className={cx(styles.mainPanel, { insightsOpen: !!openedPanel })}>
         {children}
-      </div>
+      </Col>
       <div
         className={cx(styles.insigtsWrapper, {
           [styles.insightsOpen]: !!openedPanel,
@@ -27,7 +27,7 @@ const ExplorePanelTemplate = (props: Props) => {
       >
         <SidePanels panelClassName={panelClassName} />
       </div>
-    </div>
+    </Row>
   )
 }
 

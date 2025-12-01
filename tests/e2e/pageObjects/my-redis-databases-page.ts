@@ -66,7 +66,7 @@ export class MyRedisDatabasePage extends BaseOverviewPage {
     searchInput = Selector('[data-testid=search-database-list]');
     importDatabaseInput = Selector('[data-testid=import-file-modal-filepicker]');
     //TEXT ELEMENTS
-    moduleTooltip = Selector('.euiToolTipPopover');
+    moduleTooltip = Selector('[data-radix-popper-content-wrapper]');
     moduleQuantifier = Selector('[data-testid=_module]');
     dbNameList = Selector('[data-testid^=instance-name]', { timeout: 3000 });
     tableRowContent = Selector('[data-test-subj=database-alias-column]');
@@ -84,6 +84,11 @@ export class MyRedisDatabasePage extends BaseOverviewPage {
     databaseContainer = Selector('.databaseContainer');
     connectionTypeTitle  = Selector('[data-test-subj=tableHeaderCell_connectionType_2]');
     addDatabaseImport = Selector('[data-testid=add-db_import]');
+
+    async navigateToDatabase(dbName: string): Promise<void> {
+        await t.click(this.NavigationPanel.myRedisDBButton);
+        await this.clickOnDBByName(dbName);
+    }
 
     /**
      * Click on the database by name

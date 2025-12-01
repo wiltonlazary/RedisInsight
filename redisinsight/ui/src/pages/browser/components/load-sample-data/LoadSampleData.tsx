@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { EuiButton, EuiIcon, EuiPopover, EuiText } from '@elastic/eui'
 import cx from 'classnames'
 import { useDispatch, useSelector } from 'react-redux'
 
@@ -12,6 +11,14 @@ import {
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { PlayFilledIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiPopover } from 'uiSrc/components/base'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -41,60 +48,57 @@ const LoadSampleData = (props: Props) => {
   }
 
   return (
-    <EuiPopover
+    <RiPopover
       ownFocus
-      initialFocus={false}
       id="load-sample-data-popover"
       anchorPosition="upCenter"
       isOpen={isConfirmationOpen}
       closePopover={() => setIsConfirmationOpen(false)}
-      panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popover)}
+      panelClassName={cx('popoverLikeTooltip', styles.popover)}
       panelPaddingSize="none"
       anchorClassName={cx(styles.buttonWrapper, anchorClassName)}
       button={
-        <EuiButton
-          fill
-          color="secondary"
+        <SecondaryButton
+          filled
           onClick={() => setIsConfirmationOpen(true)}
           className={styles.loadDataBtn}
-          isLoading={loading}
-          isDisabled={loading}
+          loading={loading}
+          disabled={loading}
           data-testid="load-sample-data-btn"
         >
           Load sample data
-        </EuiButton>
+        </SecondaryButton>
       }
     >
-      <Row gap="m" responsive={false}>
+      <Row gap="m" responsive={false} style={{ padding: 15 }}>
         <FlexItem>
-          <EuiIcon type="alert" className={styles.popoverIcon} />
+          <RiIcon size="m" type="ToastDangerIcon" color="attention500" />
         </FlexItem>
         <FlexItem>
-          <EuiText>Execute commands in bulk</EuiText>
-          <Spacer size="s" />
-          <EuiText color="subdued" size="s">
+          <Text variant="semiBold">Execute commands in bulk</Text>
+          <Spacer size="m" />
+          <Text size="s">
             All commands from the file will be automatically executed against
             your database. Avoid executing them in production databases.
-          </EuiText>
-          <Spacer size="s" />
+          </Text>
+          <Spacer size="l" />
           <Row justify="end">
             <FlexItem>
-              <EuiButton
-                fill
+              <PrimaryButton
                 size="s"
-                iconType="playFilled"
+                icon={PlayFilledIcon}
                 iconSide="right"
                 color="secondary"
                 onClick={handleSampleData}
                 data-testid="load-sample-data-btn-confirm"
               >
                 Execute
-              </EuiButton>
+              </PrimaryButton>
             </FlexItem>
           </Row>
         </FlexItem>
       </Row>
-    </EuiPopover>
+    </RiPopover>
   )
 }
 

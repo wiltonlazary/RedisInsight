@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
-import cx from 'classnames'
 
 import { useParams } from 'react-router-dom'
-import { EuiCheckbox } from '@elastic/eui'
 import { selectedKeySelector } from 'uiSrc/slices/browser/keys'
 import { FeatureFlags, KeyTypes } from 'uiSrc/constants'
 
@@ -17,11 +15,13 @@ import { connectedInstanceOverviewSelector } from 'uiSrc/slices/instances/instan
 import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import { TelemetryEvent, sendEventTelemetry } from 'uiSrc/telemetry'
 import Divider from 'uiSrc/components/divider/Divider'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
 import AddHashFields from './add-hash-fields/AddHashFields'
 import { HashDetailsTable } from './hash-details-table'
 import { KeyDetailsSubheader } from '../key-details-subheader/KeyDetailsSubheader'
 import { AddItemsAction } from '../key-details-actions'
 import styles from './styles.module.scss'
+import { AddKeysContainer } from '../common/AddKeysContainer.styled'
 
 export interface Props extends KeyDetailsHeaderProps {
   onRemoveKey: () => void
@@ -57,35 +57,6 @@ const HashDetails = (props: Props) => {
       onCloseAddItemPanel()
     }
   }
-
-  const Actions = ({ width }: { width: number }) => (
-    <>
-      {isExpireFieldsAvailable && (
-        <>
-          <EuiCheckbox
-            id="showTtl"
-            name="showTtl"
-            label="Show TTL"
-            className={styles.showTtlCheckbox}
-            checked={showTtl}
-            onChange={(e) => handleSelectShow(e.target.checked)}
-            data-testid="test-check-ttl"
-          />
-          <Divider
-            className={styles.divider}
-            colorVariable="separatorColor"
-            orientation="vertical"
-          />
-        </>
-      )}
-      <AddItemsAction
-        title="Add Fields"
-        width={width}
-        openAddItemPanel={openAddItemPanel}
-      />
-    </>
-  )
-
   const handleSelectShow = (show: boolean) => {
     setShowTtl(show)
 
@@ -98,6 +69,31 @@ const HashDetails = (props: Props) => {
     })
   }
 
+  const Actions = ({ width }: { width: number }) => (
+    <>
+      {isExpireFieldsAvailable && (
+        <>
+          <Checkbox
+            id="showTtl"
+            name="showTtl"
+            label="Show TTL"
+            checked={showTtl}
+            onChange={(e) => handleSelectShow(e.target.checked)}
+            data-testid="test-check-ttl"
+          />
+          <Divider
+            className={styles.divider}
+            orientation="vertical"
+          />
+        </>
+      )}
+      <AddItemsAction
+        title="Add Fields"
+        width={width}
+        openAddItemPanel={openAddItemPanel}
+      />
+    </>
+  )
   return (
     <div className="fluid flex-column relative">
       <KeyDetailsHeader {...props} key="key-details-header" />
@@ -112,12 +108,12 @@ const HashDetails = (props: Props) => {
           </div>
         )}
         {isAddItemPanelOpen && (
-          <div className={cx('formFooterBar', 'contentActive')}>
+          <AddKeysContainer>
             <AddHashFields
               isExpireFieldsAvailable={isExpireFieldsAvailable}
               closePanel={closeAddItemPanel}
             />
-          </div>
+          </AddKeysContainer>
         )}
       </div>
     </div>

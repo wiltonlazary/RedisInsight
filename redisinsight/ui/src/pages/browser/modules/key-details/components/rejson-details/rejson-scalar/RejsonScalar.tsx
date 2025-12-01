@@ -96,6 +96,17 @@ const RejsonScalar = (props: JSONScalarProps) => {
               {editing ? (
                 <div className="jsonItemEditor">
                   <InlineItemEditor
+                    styles={{
+                      inputContainer: {
+                        height: `24px`,
+                      },
+                      input: {
+                        height: `24px !important`
+                      },
+                      actionsContainer: {
+                        height: `24px`
+                      }
+                    }}
                     initialValue={changedValue}
                     controlsPosition="right"
                     placeholder="Enter JSON value"
@@ -105,13 +116,13 @@ const RejsonScalar = (props: JSONScalarProps) => {
                     onDecline={onDeclineChanges}
                     onChange={() => setError('')}
                     onApply={(value) => onApplyValue(value)}
-                    iconSize="m"
+                    iconSize="M"
                   />
                   {!!error && (
                     <div className={cx(styles.errorMessage)}>
                       <FieldMessage
                         scrollViewOnAppear
-                        icon="alert"
+                        icon="ToastDangerIcon"
                         testID="edit-json-error"
                       >
                         {error}

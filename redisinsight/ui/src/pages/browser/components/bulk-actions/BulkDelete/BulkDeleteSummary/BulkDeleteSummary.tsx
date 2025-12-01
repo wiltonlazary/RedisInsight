@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { EuiIcon, EuiText, EuiToolTip } from '@elastic/eui'
 import { useSelector } from 'react-redux'
 import { isUndefined } from 'lodash'
 
@@ -11,8 +10,11 @@ import {
   bulkActionsDeleteSummarySelector,
 } from 'uiSrc/slices/browser/bulkActions'
 import BulkActionSummary from 'uiSrc/pages/browser/components/bulk-actions/BulkActionSummary'
+import { Text } from 'uiSrc/components/base/text'
+import { RiTooltip } from 'uiSrc/components'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
 
-import styles from './styles.module.scss'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 
 const BulkDeleteSummary = () => {
   const [title, setTitle] = useState<string>('')
@@ -36,35 +38,32 @@ const BulkDeleteSummary = () => {
   }, [scanned, total, keys])
 
   return (
-    <div className={styles.container}>
+    <div>
       {isUndefined(status) && (
-        <>
-          <EuiText className={styles.title}>
-            <span>{title}</span>
-            <EuiToolTip
+        <Col gap="l">
+          <Row gap="s">
+            <Text color="primary" size="m" variant="semiBold">
+              {title}
+            </Text>
+            <RiTooltip
               position="right"
-              anchorClassName={styles.tooltipAnchor}
-              content="Expected amount is estimated based on
-              the number of keys scanned and the scan percentage.
-              The final number may be different."
+              content={
+                <Text size="XS">
+                  Expected amount is estimated based on the number of keys
+                  scanned and the scan percentage. The final number may be
+                  different.
+                </Text>
+              }
             >
-              <EuiIcon
-                color="subdued"
-                type="iInCircle"
-                data-testid="bulk-delete-tooltip"
-              />
-            </EuiToolTip>
-          </EuiText>
-          <EuiText
-            color="subdued"
-            className={styles.summaryApproximate}
-            data-testid="bulk-delete-summary"
-          >
+              <RiIcon type="InfoIcon" data-testid="bulk-delete-tooltip" />
+            </RiTooltip>
+          </Row>
+          <Text color="primary" size="S" data-testid="bulk-delete-summary">
             {`Scanned ${getApproximatePercentage(total, scanned)} `}
             {`(${numberWithSpaces(scanned)}/${nullableNumberWithSpaces(total)}) `}
             {`and found ${numberWithSpaces(keys.length)} keys`}
-          </EuiText>
-        </>
+          </Text>
+        </Col>
       )}
       {!isUndefined(status) && (
         <BulkActionSummary

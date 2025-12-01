@@ -1,21 +1,17 @@
 import React, { Ref, useRef, useState } from 'react'
-import {
-  EuiButton,
-  EuiForm,
-  EuiPopover,
-  EuiText,
-  EuiTextArea,
-  EuiTitle,
-  EuiToolTip,
-  keys,
-} from '@elastic/eui'
 
 import cx from 'classnames'
 import { isModifiedEvent } from 'uiSrc/services'
 
-import SendIcon from 'uiSrc/assets/img/icons/send.svg?react'
-
+import { Row } from 'uiSrc/components/base/layout/flex'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { SendIcon } from 'uiSrc/components/base/icons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { TextArea } from 'uiSrc/components/base/inputs'
+import * as keys from 'uiSrc/constants/keys'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -65,8 +61,8 @@ const ChatForm = (props: Props) => {
     }
   }
 
-  const handleChange = ({ target }: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(target.value)
+  const handleChange = (value: string) => {
+    setValue(value)
     updateTextAreaHeight()
   }
 
@@ -97,21 +93,19 @@ const ChatForm = (props: Props) => {
 
   return (
     <div>
-      <EuiToolTip
+      <RiTooltip
         content={
           validation ? (
             <div className={styles.tooltipContent}>
               <div>
                 {validation.title && (
                   <>
-                    <EuiTitle size="xxs">
-                      <span>{validation.title}</span>
-                    </EuiTitle>
+                    <Title size="S">{validation.title}</Title>
                     <Spacer size="s" />
                   </>
                 )}
                 {validation.content && (
-                  <EuiText size="xs">{validation.content}</EuiText>
+                  <Text size="m">{validation.content}</Text>
                 )}
               </div>
               {validation.icon}
@@ -119,45 +113,36 @@ const ChatForm = (props: Props) => {
           ) : undefined
         }
         className={styles.validationTooltip}
-        display="block"
       >
-        <EuiForm
+        <form
           className={cx(styles.wrapper, {
             [styles.isFormDisabled]: validation,
           })}
-          component="form"
           onSubmit={handleSubmitForm}
           onKeyDown={handleKeyDown}
+          role="presentation"
         >
-          <EuiTextArea
-            inputRef={textAreaRef}
+          <TextArea
+            ref={textAreaRef}
             placeholder={placeholder || 'Ask me about Redis'}
-            className={styles.textarea}
             value={value}
             onChange={handleChange}
             disabled={!!validation}
             data-testid="ai-message-textarea"
           />
-          <EuiPopover
+          <RiPopover
             ownFocus
-            initialFocus={false}
             isOpen={isAgreementsPopoverOpen}
             anchorPosition="downRight"
             closePopover={() => setIsAgreementsPopoverOpen(false)}
-            panelClassName={cx(
-              'euiToolTip',
-              'popoverLikeTooltip',
-              styles.popover,
-            )}
+            panelClassName={cx('popoverLikeTooltip', styles.popover)}
             anchorClassName={styles.popoverAnchor}
             button={
-              <EuiButton
-                fill
+              <PrimaryButton
                 size="s"
-                color="secondary"
                 disabled={!value.length || isDisabled}
                 className={styles.submitBtn}
-                iconType={SendIcon}
+                icon={SendIcon}
                 type="submit"
                 aria-label="submit"
                 data-testid="ai-submit-message-btn"
@@ -166,27 +151,28 @@ const ChatForm = (props: Props) => {
           >
             <>
               {agreements}
-              <Spacer size="m" />
-              <EuiButton
-                fill
-                color="secondary"
-                size="s"
-                className={styles.agreementsAccept}
-                onClick={submitMessage}
-                onKeyDown={(e: React.KeyboardEvent) => e.stopPropagation()}
-                type="button"
-                data-testid="ai-accept-agreements"
-              >
-                I accept
-              </EuiButton>
+              <Spacer size="l" />
+              <Row justify="end">
+                <PrimaryButton
+                  size="s"
+                  className={styles.agreementsAccept}
+                  onClick={submitMessage}
+                  onKeyDown={(e: React.KeyboardEvent) => e.stopPropagation()}
+                  type="button"
+                  data-testid="ai-accept-agreements"
+                >
+                  I accept
+                </PrimaryButton>
+              </Row>
             </>
-          </EuiPopover>
-        </EuiForm>
-      </EuiToolTip>
-      <EuiText textAlign="center" size="xs" className={styles.agreementText}>
+          </RiPopover>
+        </form>
+      </RiTooltip>
+      <Spacer size="xs" />
+      <Text textAlign="center" size="xs" className={styles.agreementText}>
         Verify the accuracy of any information provided by Redis Copilot before
         using it
-      </EuiText>
+      </Text>
     </div>
   )
 }

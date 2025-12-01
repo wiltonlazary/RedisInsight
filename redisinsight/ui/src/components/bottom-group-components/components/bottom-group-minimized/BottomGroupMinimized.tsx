@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react'
-import cx from 'classnames'
-import { EuiBadge, EuiIcon } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import { EXTERNAL_LINKS } from 'uiSrc/constants/links'
+import styled from 'styled-components'
 
+import { EXTERNAL_LINKS } from 'uiSrc/constants/links'
 import {
   clearSearchingCommand,
   cliSettingsSelector,
@@ -19,13 +18,65 @@ import {
   toggleHideMonitor,
   toggleMonitor,
 } from 'uiSrc/slices/cli/monitor'
-import SurveyIcon from 'uiSrc/assets/img/survey_icon.svg'
 import FeatureFlagComponent from 'uiSrc/components/feature-flag-component'
 import { FeatureFlags } from 'uiSrc/constants'
 
+import { Text } from 'uiSrc/components/base/text'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { HideFor, ShowFor } from 'uiSrc/components/base/utils/ShowHide'
+import { RiBadge } from 'uiSrc/components/base/display/badge/RiBadge'
+import {
+  CliIcon,
+  DocumentationIcon,
+  ProfilerIcon,
+} from 'uiSrc/components/base/icons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from '../../styles.module.scss'
+
+const ComponentBadge = styled(RiBadge)<{ isActive?: boolean }>`
+  background-color: transparent !important;
+  color: var(--euiTextSubduedColor) !important;
+  height: 18px !important;
+  border: none !important;
+  cursor: pointer;
+  user-select: none;
+
+  &[title] {
+    pointer-events: none;
+  }
+
+  ${({ isActive, theme }) => {
+    // TODO: try to replace with semantic colors once the palette is bigger. 
+    const bgColorActive =
+      theme.name === 'dark' ? theme.color.azure600 : theme.color.azure200
+    const bgColorHover =
+      theme.name === 'dark' ? theme.color.azure500 : theme.color.azure300
+
+    const color =
+      theme.name === 'dark' ? theme.color.azure200 : theme.color.azure600
+
+    return `
+    ${isActive ? `background-color: ${bgColorActive} !important;` : ''}
+    ${isActive ? `color: ${color} !important;` : ''}
+    &:hover {
+      background-color: ${bgColorHover} !important;
+      color: ${color} !important;
+    }
+  `
+  }}
+`
+
+const ContainerMinimized = styled.div`
+  display: flex;
+  align-items: center;
+  padding-left: ${({ theme }) => theme.core.space.space050};
+  height: 26px;
+  line-height: 26px;
+  border-left: 1px solid
+    ${({ theme }) => theme.semantic.color.border.neutral500};
+  border-right: 1px solid
+    ${({ theme }) => theme.semantic.color.border.neutral500};
+`
 
 const BottomGroupMinimized = () => {
   const { instanceId = '' } = useParams<{ instanceId: string }>()
@@ -85,35 +136,40 @@ const BottomGroupMinimized = () => {
   }
 
   return (
-    <div className={styles.containerMinimized}>
-      <Row align="center" responsive={false} style={{ height: '100%' }}>
+    <ContainerMinimized>
+      <Row align="center" responsive={false} style={{ height: '100%' }} gap="s">
         <FlexItem
           className={styles.componentBadgeItem}
           onClick={handleExpandCli}
           data-testid="expand-cli"
         >
-          <EuiBadge
-            className={cx(styles.componentBadge, {
-              [styles.active]: isShowCli || cliClientUuid,
-            })}
-          >
-            <EuiIcon type="console" size="m" />
-            <span>CLI</span>
-          </EuiBadge>
+          <ComponentBadge
+            withIcon
+            icon={CliIcon}
+            label={
+              <Text size="S" variant="semiBold">
+                CLI
+              </Text>
+            }
+            isActive={isShowCli || !!cliClientUuid}
+          />
         </FlexItem>
+
         <FlexItem
           className={styles.componentBadgeItem}
           onClick={handleExpandHelper}
           data-testid="expand-command-helper"
         >
-          <EuiBadge
-            className={cx(styles.componentBadge, {
-              [styles.active]: isShowHelper || isMinimizedHelper,
-            })}
-          >
-            <EuiIcon type="documents" size="m" />
-            <span>Command Helper</span>
-          </EuiBadge>
+          <ComponentBadge
+            withIcon
+            icon={DocumentationIcon}
+            label={
+              <Text size="S" variant="semiBold">
+                Command Helper
+              </Text>
+            }
+            isActive={isShowHelper || isMinimizedHelper}
+          />
         </FlexItem>
         <FeatureFlagComponent name={FeatureFlags.envDependent}>
           <FlexItem
@@ -121,14 +177,16 @@ const BottomGroupMinimized = () => {
             onClick={handleExpandMonitor}
             data-testid="expand-monitor"
           >
-            <EuiBadge
-              className={cx(styles.componentBadge, {
-                [styles.active]: isShowMonitor || isMinimizedMonitor,
-              })}
-            >
-              <EuiIcon type="inspect" size="m" />
-              <span>Profiler</span>
-            </EuiBadge>
+            <ComponentBadge
+              withIcon
+              icon={ProfilerIcon}
+              label={
+                <Text size="S" variant="semiBold">
+                  Profiler
+                </Text>
+              }
+              isActive={isShowMonitor || isMinimizedMonitor}
+            />
           </FlexItem>
         </FeatureFlagComponent>
       </Row>
@@ -141,7 +199,7 @@ const BottomGroupMinimized = () => {
           onClick={onClickSurvey}
           data-testid="user-survey-link"
         >
-          <EuiIcon type={SurveyIcon} className={styles.surveyIcon} />
+          <RiIcon type="SurveyIcon" className={styles.surveyIcon} />
           <HideFor sizes={['xs', 's']}>
             <span>Let us know what you think</span>
           </HideFor>
@@ -150,7 +208,7 @@ const BottomGroupMinimized = () => {
           </ShowFor>
         </a>
       </FeatureFlagComponent>
-    </div>
+    </ContainerMinimized>
   )
 }
 

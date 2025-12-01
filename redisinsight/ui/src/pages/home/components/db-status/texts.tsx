@@ -1,15 +1,13 @@
-import { EuiTitle } from '@elastic/eui'
 import React from 'react'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Title } from 'uiSrc/components/base/text/Title'
 
 export const CHECK_CLOUD_DATABASE = (
   <>
-    <EuiTitle size="xxs">
-      <span>Build your app with Redis Cloud</span>
-    </EuiTitle>
+    <Title size="XS">Build your app with Redis Cloud</Title>
     <Spacer size="s" />
     <div>
-      Free trial Cloud DBs auto-delete after 15 days of inactivity.
+      Free Redis Cloud DBs auto-delete after 15 days of inactivity.
       <Spacer size="s" />
       But not to worry, you can always re-create it to test your ideas.
       <br />
@@ -20,26 +18,22 @@ export const CHECK_CLOUD_DATABASE = (
 
 export const WARNING_WITH_CAPABILITY = (capability: string) => (
   <>
-    <EuiTitle size="xxs">
-      <span>Build your app with {capability}</span>
-    </EuiTitle>
+    <Title size="XS">Build your app with {capability}</Title>
     <Spacer size="s" />
     <div>
       Hey, remember your interest in {capability}?
       <br />
-      Use your free trial Redis Cloud DB to try it.
+      Use your free Redis Cloud DB to try it.
     </div>
     <Spacer size="s" />
     <div>
-      <b>Note</b>: Free trial Cloud DBs auto-delete after 15 days of inactivity.
+      <b>Note</b>: Free Cloud DBs auto-delete after 15 days of inactivity.
     </div>
   </>
 )
 export const WARNING_WITHOUT_CAPABILITY = (
   <>
-    <EuiTitle size="xxs">
-      <span>Your free trial Redis Cloud DB is waiting.</span>
-    </EuiTitle>
+    <Title size="XS">Your free Redis Cloud DB is waiting.</Title>
     <Spacer size="s" />
     <div>
       Test ideas and build prototypes.
@@ -48,7 +42,7 @@ export const WARNING_WITHOUT_CAPABILITY = (
     </div>
     <Spacer size="s" />
     <div>
-      <b>Note</b>: Free trial Cloud DBs auto-delete after 15 days of inactivity.
+      <b>Note</b>: Free Redis Cloud DBs auto-delete after 15 days of inactivity.
     </div>
   </>
 )

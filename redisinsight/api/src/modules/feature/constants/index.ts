@@ -31,6 +31,8 @@ export enum KnownFeatures {
   HashFieldExpiration = 'hashFieldExpiration',
   EnhancedCloudUI = 'enhancedCloudUI',
   DatabaseManagement = 'databaseManagement',
+  VectorSearch = 'vectorSearch',
+  DatabasesListV2 = 'databasesListV2',
 }
 
 export interface IFeatureFlag {

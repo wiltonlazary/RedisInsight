@@ -2,7 +2,6 @@ import React, { Ref, useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toNumber, isNumber } from 'lodash'
 import cx from 'classnames'
-import { EuiProgress, EuiText, EuiToolTip } from '@elastic/eui'
 import { CellMeasurerCache } from 'react-virtualized'
 import {
   appContextBrowserKeyDetails,
@@ -71,6 +70,8 @@ import {
   FormattedValue,
 } from 'uiSrc/pages/browser/modules/key-details/shared'
 import PopoverDelete from 'uiSrc/pages/browser/components/popover-delete/PopoverDelete'
+import { Text } from 'uiSrc/components/base/text'
+import { RiTooltip } from 'uiSrc/components'
 import {
   AddMembersToZSetDto,
   SearchZSetMembersResponse,
@@ -335,9 +336,9 @@ const ZSetDetailsTable = (props: Props) => {
         )
 
         return (
-          <EuiText
-            color="subdued"
-            size="s"
+          <Text
+            color="secondary"
+            component="div"
             style={{ maxWidth: '100%', whiteSpace: 'break-spaces' }}
           >
             <div
@@ -355,7 +356,7 @@ const ZSetDetailsTable = (props: Props) => {
                 tooltipContent={tooltipContent}
               />
             </div>
-          </EuiText>
+          </Text>
         )
       },
     },
@@ -398,7 +399,7 @@ const ZSetDetailsTable = (props: Props) => {
           >
             <div className="innerCellAsCell">
               {!expanded && (
-                <EuiToolTip
+                <RiTooltip
                   title="Score"
                   className={styles.tooltip}
                   anchorClassName="truncateText"
@@ -406,7 +407,7 @@ const ZSetDetailsTable = (props: Props) => {
                   content={tooltipContent}
                 >
                   <>{cellContent}</>
-                </EuiToolTip>
+                </RiTooltip>
               )}
               {expanded && score}
             </div>
@@ -441,7 +442,7 @@ const ZSetDetailsTable = (props: Props) => {
                 handleButtonClick={handleRemoveIconClick}
                 testid={`zset-remove-button-${name}`}
                 appendInfo={
-                  length === 1 ? HelpTexts.REMOVE_LAST_ELEMENT('Member') : null
+                  length === 1 ? HelpTexts.REMOVE_LAST_ELEMENT() : null
                 }
               />
             </div>
@@ -492,18 +493,9 @@ const ZSetDetailsTable = (props: Props) => {
           styles.container,
         )}
       >
-        {loading && (
-          <EuiProgress
-            color="primary"
-            size="xs"
-            position="absolute"
-            data-testid="progress-key-zset"
-          />
-        )}
         <VirtualTable
           autoHeight
           tableRef={tableRef}
-          hideProgress
           expandable
           keyName={key}
           headerHeight={headerHeight}

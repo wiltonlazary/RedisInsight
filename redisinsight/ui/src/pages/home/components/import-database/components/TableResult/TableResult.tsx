@@ -1,11 +1,11 @@
-import { EuiBasicTableColumn, EuiInMemoryTable } from '@elastic/eui'
-import cx from 'classnames'
 import React from 'react'
 
+import { Table, ColumnDef } from 'uiSrc/components/base/layout/table'
+import {
+  ImportTableResultColumn,
+  TABLE_IMPORT_RESULT_COLUMN_ID_HEADER_MAP,
+} from 'uiSrc/constants'
 import { ErrorImportResult } from 'uiSrc/slices/interfaces'
-import { Maybe } from 'uiSrc/utils'
-
-import styles from './styles.module.scss'
 
 export interface DataImportResult {
   index: number
@@ -14,6 +14,7 @@ export interface DataImportResult {
   host?: string
   port?: number
 }
+
 export interface Props {
   data: Array<DataImportResult>
 }
@@ -29,31 +30,47 @@ const TableResult = (props: Props) => {
     </ul>
   )
 
-  const columns: EuiBasicTableColumn<any>[] = [
+  const columns: ColumnDef<DataImportResult>[] = [
     {
-      name: '#',
-      field: 'index',
-      width: '4%',
-      render: (index: number) => (
-        <span data-testid={`table-index-${index}`}>({index})</span>
+      header: TABLE_IMPORT_RESULT_COLUMN_ID_HEADER_MAP.get(
+        ImportTableResultColumn.Index,
       ),
+      id: ImportTableResultColumn.Index,
+      accessorKey: ImportTableResultColumn.Index,
+      cell: ({
+        row: {
+          original: { index },
+        },
+      }) => <span data-testid={`table-index-${index}`}>({index})</span>,
+      size: 50,
     },
     {
-      name: 'Host:Port',
-      field: 'host',
-      width: '25%',
-      truncateText: true,
-      render: (_host, { host, port, index }) => (
+      header: TABLE_IMPORT_RESULT_COLUMN_ID_HEADER_MAP.get(
+        ImportTableResultColumn.Host,
+      ),
+      id: ImportTableResultColumn.Host,
+      accessorKey: ImportTableResultColumn.Host,
+      cell: ({
+        row: {
+          original: { host, port, index },
+        },
+      }) => (
         <div data-testid={`table-host-port-${index}`}>
           {host}:{port}
         </div>
       ),
     },
     {
-      name: 'Result',
-      field: 'errors',
-      width: '25%',
-      render: (errors: Maybe<ErrorImportResult[]>, { index }) => (
+      header: TABLE_IMPORT_RESULT_COLUMN_ID_HEADER_MAP.get(
+        ImportTableResultColumn.Errors,
+      ),
+      id: ImportTableResultColumn.Errors,
+      accessorKey: 'errors',
+      cell: ({
+        row: {
+          original: { errors, index },
+        },
+      }) => (
         <div data-testid={`table-result-${index}`}>
           {errors ? (
             <ErrorResult errors={errors.map((e) => e.message)} />
@@ -67,23 +84,7 @@ const TableResult = (props: Props) => {
 
   if (data?.length === 0) return null
 
-  return (
-    <div className={styles.tableWrapper}>
-      <EuiInMemoryTable
-        items={data ?? []}
-        columns={columns}
-        className={cx(
-          'inMemoryTableDefault',
-          'noBorders',
-          'stickyHeader',
-          styles.table,
-        )}
-        responsive={false}
-        itemId="index"
-        data-testid="result-log-table"
-      />
-    </div>
-  )
+  return <Table columns={columns} data={data} defaultSorting={[]} maxHeight="20rem" />
 }
 
 export default TableResult

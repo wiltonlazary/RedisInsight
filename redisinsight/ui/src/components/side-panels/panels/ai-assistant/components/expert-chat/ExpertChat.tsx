@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
-import { EuiIcon } from '@elastic/eui'
 import {
   aiExpertChatSelector,
   askExpertChatbotAction,
@@ -207,9 +206,9 @@ const ExpertChat = () => {
       return {
         title: 'Redis Query Engine capability is not available',
         content: freeInstances?.length
-          ? 'Use your free trial all-in-one Redis Cloud database to start exploring these capabilities.'
-          : 'Create a free trial Redis Stack database with Redis Query Engine capability that extends the core capabilities of open-source Redis.',
-        icon: <EuiIcon className={styles.iconTelescope} type={TelescopeImg} />,
+          ? 'Use your free all-in-one Redis Cloud database to start exploring these capabilities.'
+          : 'Create a free Redis Cloud database with Redis Query Engine capability that extends the core capabilities of open-source Redis.',
+        icon: <TelescopeImg className={styles.iconTelescope} />,
       }
     }
 

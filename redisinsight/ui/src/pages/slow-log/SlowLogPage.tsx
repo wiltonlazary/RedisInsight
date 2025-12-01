@@ -1,4 +1,3 @@
-import { EuiSuperSelect, EuiSuperSelectOption, EuiText } from '@elastic/eui'
 import { minBy, toNumber } from 'lodash'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -25,7 +24,6 @@ import {
 } from 'uiSrc/telemetry'
 import { formatLongName, getDbIndex, setTitle } from 'uiSrc/utils'
 import { numberWithSpaces } from 'uiSrc/utils/numbers'
-import AnalyticsTabs from 'uiSrc/components/analytics-tabs'
 import {
   analyticsSettingsSelector,
   setAnalyticsViewTab,
@@ -34,16 +32,21 @@ import { AnalyticsViewTab } from 'uiSrc/slices/interfaces/analytics'
 
 import { FormatedDate } from 'uiSrc/components'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Text, Title } from 'uiSrc/components/base/text'
+import { defaultValueRender } from 'uiSrc/components/base/forms/select/RiSelect'
 import { SlowLog } from 'apiSrc/modules/slow-log/models'
+import { AnalysisPageContainer } from 'uiSrc/pages/database-analysis/components/analysis-page-container'
+import { AnalyticsPageHeader } from 'uiSrc/pages/database-analysis/components/analytics-page-header'
 
 import { Actions, EmptySlowLog, SlowLogTable } from './components'
 
-import styles from './styles.module.scss'
+import { StyledSelect, ContentWrapper } from './SlowLogPage.styles'
+import { Container } from '../database-analysis/components/header/Header.styles'
 
 const HIDE_TIMESTAMP_FROM_WIDTH = 850
 const DEFAULT_COUNT_VALUE = '50'
 const MAX_COUNT_VALUE = '-1'
-const countOptions: EuiSuperSelectOption<string>[] = [
+const countOptions = [
   { value: '10', inputDisplay: '10' },
   { value: '25', inputDisplay: '25' },
   { value: '50', inputDisplay: '50' },
@@ -140,106 +143,109 @@ const SlowLogPage = () => {
   const isEmptySlowLog = !data.length
 
   return (
-    <div className={styles.main} data-testid="slow-log-page">
-      <Row
-        className={styles.header}
-        align="center"
-        justify="between"
-      >
-        <FlexItem>
-          <AnalyticsTabs />
-        </FlexItem>
-
-        <FlexItem>
-          {connectionType !== ConnectionType.Cluster && config && (
-            <EuiText size="xs" color="subdued" data-testid="config-info">
-              Execution time:{' '}
-              {numberWithSpaces(
-                convertNumberByUnits(slowlogLogSlowerThan, durationUnit),
-              )}
-              &nbsp;
-              {durationUnit === DurationUnits.milliSeconds
-                ? DurationUnits.mSeconds
-                : DurationUnits.microSeconds}
-              , Max length: {numberWithSpaces(slowlogMaxLen)}
-            </EuiText>
-          )}
-        </FlexItem>
-      </Row>
-
+    <AnalysisPageContainer data-testid="slow-log-page">
       <AutoSizer disableHeight>
         {({ width }) => (
           <div style={{ width }}>
-            <Row
-              className={styles.actionsLine}
-              align="center"
-              justify="between"
-            >
-              <FlexItem>
-                <Row align="center" gap="s">
-                  <FlexItem>
-                    <EuiText color="subdued">
-                      {connectionType === ConnectionType.Cluster
-                        ? 'Display per node:'
-                        : 'Display up to:'}
-                    </EuiText>
-                  </FlexItem>
-                  <FlexItem>
-                    <EuiSuperSelect
-                      options={countOptions}
-                      valueOfSelected={count}
-                      onChange={(value) => setCount(value)}
-                      className={styles.countSelect}
-                      popoverClassName={styles.countSelectWrapper}
-                      data-testid="count-select"
-                    />
-                  </FlexItem>
-                  {width > HIDE_TIMESTAMP_FROM_WIDTH && (
-                    <FlexItem style={{ marginLeft: 12 }}>
-                      <EuiText
-                        size="xs"
-                        color="subdued"
-                        data-testid="entries-from-timestamp"
-                      >
-                        ({data.length} entries
-                        {lastTimestamp && (
-                          <>
-                            <span>&nbsp;from &nbsp;</span>
-                            <FormatedDate date={lastTimestamp * 1000} />
-                          </>
-                        )}
-                        )
-                      </EuiText>
-                    </FlexItem>
+            <AnalyticsPageHeader
+              actions={
+                <Container align="center" gap="xl">
+                  {connectionType !== ConnectionType.Cluster && config && (
+                    <Text size="s" color="secondary" data-testid="config-info">
+                      Execution time:{' '}
+                      {numberWithSpaces(
+                        convertNumberByUnits(
+                          slowlogLogSlowerThan,
+                          durationUnit,
+                        ),
+                      )}
+                      &nbsp;
+                      {durationUnit === DurationUnits.milliSeconds
+                        ? DurationUnits.mSeconds
+                        : DurationUnits.microSeconds}
+                      , Max length: {numberWithSpaces(slowlogMaxLen)}
+                    </Text>
                   )}
-                </Row>
-              </FlexItem>
-              <FlexItem>
-                <Actions
-                  width={width}
-                  isEmptySlowLog={isEmptySlowLog}
-                  durationUnit={durationUnit}
-                  onClear={onClearSlowLogs}
-                  onRefresh={getSlowLogs}
-                />
-              </FlexItem>
-            </Row>
+
+                  <Actions
+                    width={width}
+                    isEmptySlowLog={isEmptySlowLog}
+                    durationUnit={durationUnit}
+                    onClear={onClearSlowLogs}
+                    onRefresh={getSlowLogs}
+                  />
+                </Container>
+              }
+            />
           </div>
         )}
       </AutoSizer>
-      {isEmptySlowLog ? (
-        <EmptySlowLog
-          slowlogLogSlowerThan={slowlogLogSlowerThan}
-          durationUnit={durationUnit}
-        />
-      ) : (
-        <SlowLogTable
-          items={data}
-          loading={loading}
-          durationUnit={durationUnit}
-        />
-      )}
-    </div>
+      <ContentWrapper>
+        <AutoSizer disableHeight>
+          {({ width }) => (
+            <div style={{ width }}>
+              <Row align="center" justify="between">
+                <FlexItem>
+                  <Title size="L" color="primary">
+                    Slow Log
+                  </Title>
+                </FlexItem>
+                <FlexItem>
+                  <Row align="center" gap="xs">
+                    <FlexItem>
+                      <Text size="s" color="primary">
+                        {connectionType === ConnectionType.Cluster
+                          ? 'Display per node:'
+                          : 'Display up to:'}
+                      </Text>
+                    </FlexItem>
+                    <FlexItem>
+                      <StyledSelect
+                        options={countOptions}
+                        valueRender={defaultValueRender}
+                        value={count}
+                        onChange={(value) => setCount(value)}
+                        data-testid="count-select"
+                      />
+                    </FlexItem>
+                    {width > HIDE_TIMESTAMP_FROM_WIDTH && (
+                      <FlexItem style={{ marginLeft: 12 }}>
+                        <Text
+                          size="s"
+                          color="secondary"
+                          data-testid="entries-from-timestamp"
+                        >
+                          ({data.length} entries
+                          {lastTimestamp && (
+                            <>
+                              <span>&nbsp;from &nbsp;</span>
+                              <FormatedDate date={lastTimestamp * 1000} />
+                            </>
+                          )}
+                          )
+                        </Text>
+                      </FlexItem>
+                    )}
+                  </Row>
+                </FlexItem>
+              </Row>
+            </div>
+          )}
+        </AutoSizer>
+        {isEmptySlowLog ? (
+          <EmptySlowLog
+            slowlogLogSlowerThan={slowlogLogSlowerThan}
+            durationUnit={durationUnit}
+          />
+        ) : (
+          <SlowLogTable
+            items={data}
+            loading={loading}
+            durationUnit={durationUnit}
+          />
+        )}
+      </ContentWrapper>
+    </AnalysisPageContainer>
   )
 }
 

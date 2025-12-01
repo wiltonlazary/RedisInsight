@@ -1,13 +1,5 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiFormRow,
-  EuiPanel,
-  EuiTextColor,
-} from '@elastic/eui'
 import { toNumber } from 'lodash'
 import {
   keysSelector,
@@ -32,7 +24,13 @@ import {
   IHashFieldState,
   INITIAL_HASH_FIELD_STATE,
 } from 'uiSrc/pages/browser/components/add-key/AddKeyHash/interfaces'
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
 import {
   AddFieldsToHashDto,
   HashFieldDto,
@@ -166,19 +164,8 @@ const AddHashFields = (props: Props) => {
     !(item.fieldName.length || item.fieldValue.length || item.fieldTTL?.length)
 
   return (
-    <>
-      <EuiPanel
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
-        data-test-subj="add-hash-field-panel"
-        className={cx(
-          styles.container,
-          'eui-yScroll',
-          'flexItemNoFullWidth',
-          'inlineFieldsNoSpace',
-        )}
-      >
+    <Col gap="m">
+      <div className={styles.container}>
         <AddMultipleFields
           items={fields}
           isClearDisabled={isClearDisabled}
@@ -186,104 +173,90 @@ const AddHashFields = (props: Props) => {
           onClickAdd={addField}
         >
           {(item, index) => (
-            <Row align="center">
+            <Row align="center" gap="m">
               <FlexItem grow={2}>
-                <EuiFormRow fullWidth>
-                  <EuiFieldText
-                    fullWidth
+                <FormField>
+                  <TextInput
                     name={`fieldName-${item.id}`}
                     id={`fieldName-${item.id}`}
                     placeholder="Enter Field"
                     value={item.fieldName}
                     disabled={loading}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleFieldChange('fieldName', item.id, e.target.value)
+                    onChange={(value) =>
+                      handleFieldChange('fieldName', item.id, value)
                     }
-                    inputRef={
+                    ref={
                       index === fields.length - 1 ? lastAddedFieldName : null
                     }
                     data-testid="hash-field"
                   />
-                </EuiFormRow>
+                </FormField>
               </FlexItem>
               <FlexItem grow={2}>
-                <EuiFormRow fullWidth>
-                  <EuiFieldText
-                    fullWidth
+                <FormField>
+                  <TextInput
                     name={`fieldValue-${item.id}`}
                     id={`fieldValue-${item.id}`}
                     placeholder="Enter Value"
                     value={item.fieldValue}
                     disabled={loading}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleFieldChange('fieldValue', item.id, e.target.value)
+                    onChange={(value) =>
+                      handleFieldChange('fieldValue', item.id, value)
                     }
                     data-testid="hash-value"
                   />
-                </EuiFormRow>
+                </FormField>
               </FlexItem>
               {isExpireFieldsAvailable && (
                 <FlexItem grow={1}>
-                  <EuiFormRow fullWidth>
-                    <EuiFieldText
-                      fullWidth
+                  <FormField>
+                    <TextInput
                       name={`fieldTTL-${item.id}`}
                       id={`fieldTTL-${item.id}`}
                       placeholder="Enter TTL"
                       value={item.fieldTTL || ''}
                       disabled={loading}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      onChange={(value) =>
                         handleFieldChange(
                           'fieldTTL',
                           item.id,
-                          validateTTLNumberForAddKey(e.target.value),
+                          validateTTLNumberForAddKey(value),
                         )
                       }
                       data-testid="hash-ttl"
                     />
-                  </EuiFormRow>
+                  </FormField>
                 </FlexItem>
               )}
             </Row>
           )}
         </AddMultipleFields>
-      </EuiPanel>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        className="flexItemNoFullWidth"
-      >
-        <Row justify="end" gap="l">
-          <FlexItem>
-            <div>
-              <EuiButton
-                color="secondary"
-                onClick={() => closePanel(true)}
-                data-testid="cancel-fields-btn"
-              >
-                <EuiTextColor color="default">Cancel</EuiTextColor>
-              </EuiButton>
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <div>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                disabled={loading}
-                isLoading={loading}
-                onClick={submitData}
-                data-testid="save-fields-btn"
-              >
-                Save
-              </EuiButton>
-            </div>
-          </FlexItem>
-        </Row>
-      </EuiPanel>
-    </>
+      </div>
+      <Row justify="end" gap="m">
+        <FlexItem>
+          <div>
+            <SecondaryButton
+              onClick={() => closePanel(true)}
+              data-testid="cancel-fields-btn"
+            >
+              Cancel
+            </SecondaryButton>
+          </div>
+        </FlexItem>
+        <FlexItem>
+          <div>
+            <PrimaryButton
+              disabled={loading}
+              loading={loading}
+              onClick={submitData}
+              data-testid="save-fields-btn"
+            >
+              Save
+            </PrimaryButton>
+          </div>
+        </FlexItem>
+      </Row>
+    </Col>
   )
 }
 

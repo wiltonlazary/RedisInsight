@@ -1,10 +1,11 @@
 import React, { ReactElement } from 'react'
-import { EuiLink, EuiText, EuiTextColor } from '@elastic/eui'
 import { useDispatch } from 'react-redux'
 import { CommandGroup } from 'uiSrc/constants'
 import { goBackFromCommand } from 'uiSrc/slices/cli/cli-settings'
 import { getDocUrlForCommand } from 'uiSrc/utils'
+import { Text } from 'uiSrc/components/base/text'
 
+import { Link } from 'uiSrc/components/base/link/Link'
 import CHCommandInfo from '../components/command-helper-info'
 import CHSearchWrapper from '../components/command-helper-search'
 import CHSearchOutput from '../components/command-helper-search-output'
@@ -44,16 +45,16 @@ const CommandHelper = (props: Props) => {
   const readMore = (commandName = '') => {
     const docUrl = getDocUrlForCommand(commandName)
     return (
-      <EuiLink
-        color="subdued"
+      <Link
         href={docUrl}
-        className={styles.link}
-        external={false}
         target="_blank"
         data-testid="read-more"
+        size="S"
+        variant="inline"
+        color="primary"
       >
         Read more
-      </EuiLink>
+      </Link>
     )
   }
 
@@ -78,31 +79,30 @@ const CommandHelper = (props: Props) => {
                 onBackClick={handleBackClick}
               />
               {summary && (
-                <EuiText
+                <Text
                   className={styles.summary}
-                  color="subdued"
                   data-testid="cli-helper-summary"
                 >
                   <span style={{ paddingRight: 5 }}>{summary}</span>{' '}
                   {readMore(commandLine)}
-                </EuiText>
+                </Text>
               )}
               {!!argList.length && (
                 <div
                   className={styles.field}
                   data-testid="cli-helper-arguments"
                 >
-                  <EuiText color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Arguments:
-                  </EuiText>
+                  </Text>
                   {argList}
                 </div>
               )}
               {since && (
                 <div className={styles.field} data-testid="cli-helper-since">
-                  <EuiText color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Since:
-                  </EuiText>
+                  </Text>
                   {since}
                 </div>
               )}
@@ -111,23 +111,23 @@ const CommandHelper = (props: Props) => {
                   className={styles.field}
                   data-testid="cli-helper-complexity"
                 >
-                  <EuiText color="subdued" className={styles.fieldTitle}>
+                  <Text color="primary" className={styles.fieldTitle}>
                     Complexity:
-                  </EuiText>
+                  </Text>
                   {complexity}
                 </div>
               )}
             </div>
           )}
           {!commandLine && (
-            <EuiTextColor
-              color="subdued"
+            <Text
+              color="primary"
               className={styles.defaultScreen}
               data-testid="cli-helper-default"
             >
               Enter any command in CLI or use search to see detailed
               information.
-            </EuiTextColor>
+            </Text>
           )}
         </div>
       )}

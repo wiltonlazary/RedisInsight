@@ -1,6 +1,6 @@
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
-import { render, screen, fireEvent } from 'uiSrc/utils/test-utils'
+import { fireEvent, render, screen } from 'uiSrc/utils/test-utils'
 import { rdiTestConnectionsSelector } from 'uiSrc/slices/rdi/testConnections'
 
 import TestConnectionsPanel, { Props } from './TestConnectionsPanel'
@@ -54,7 +54,7 @@ describe('TestConnectionsPanel', () => {
     ).toBeInTheDocument()
   })
 
-  it('should render TestConnectionsLog for source and target connections', () => {
+  it('should render TestConnectionsLog for source and target connections', async () => {
     const mockResults = {
       source: {
         success: [],

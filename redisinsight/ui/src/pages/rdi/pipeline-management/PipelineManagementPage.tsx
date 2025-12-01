@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { IRoute, PageNames, Pages } from 'uiSrc/constants'
 import { connectedInstanceSelector } from 'uiSrc/slices/rdi/instances'
 import {
+  fetchRdiPipeline,
   fetchRdiPipelineJobFunctions,
   fetchRdiPipelineSchema,
 } from 'uiSrc/slices/rdi/pipeline'
@@ -20,7 +21,11 @@ import Navigation from 'uiSrc/pages/rdi/pipeline-management/components/navigatio
 import { removeInfiniteNotification } from 'uiSrc/slices/app/notifications'
 import { InfiniteMessagesIds } from 'uiSrc/components/notifications/components'
 import PipelinePageRouter from './PipelineManagementPageRouter'
-import styles from './styles.module.scss'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import {
+  ContentContainer,
+  NavigationContainer,
+} from './PipelineManagementPage.styles'
 
 export interface Props {
   routes: IRoute[]
@@ -43,6 +48,11 @@ const PipelineManagementPage = ({ routes = [] }: Props) => {
   setTitle(`${rdiInstanceName} - Pipeline Management`)
 
   useEffect(() => {
+    if (
+      !lastViewedPage?.startsWith(Pages.rdiPipelineManagement(rdiInstanceId))
+    ) {
+      dispatch(fetchRdiPipeline(rdiInstanceId))
+    }
     dispatch(fetchRdiPipelineSchema(rdiInstanceId))
     dispatch(fetchRdiPipelineJobFunctions(rdiInstanceId))
   }, [])
@@ -79,11 +89,15 @@ const PipelineManagementPage = ({ routes = [] }: Props) => {
   }, [pathname, lastViewedPage])
 
   return (
-    <div className={styles.wrapper}>
-      <Navigation />
+    <Row>
+      <NavigationContainer>
+        <Navigation />
+      </NavigationContainer>
       <SourcePipelineDialog />
-      <PipelinePageRouter routes={routes} />
-    </div>
+      <ContentContainer>
+        <PipelinePageRouter routes={routes} />
+      </ContentContainer>
+    </Row>
   )
 }
 

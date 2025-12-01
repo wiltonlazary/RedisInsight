@@ -1,4 +1,3 @@
-import { EuiBasicTableColumn, EuiIcon, EuiToolTip } from '@elastic/eui'
 import React from 'react'
 
 import {
@@ -6,66 +5,93 @@ import {
   StatisticsConnectionStatus,
 } from 'uiSrc/slices/interfaces'
 import { formatLongName } from 'uiSrc/utils'
-import Accordion from '../components/accordion'
-import Panel from '../components/panel'
-import Table from '../components/table'
+import { ColumnDefinition, Table } from 'uiSrc/components/base/layout/table'
+import { RiTooltip } from 'uiSrc/components'
+import { Section } from '@redis-ui/components'
+import {
+  StyledRdiAnalyticsTable,
+  StyledRdiStatisticsSectionBody,
+} from 'uiSrc/pages/rdi/statistics/styles'
+import { Indicator } from 'uiSrc/components/base/text/text.styles'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
 type ConnectionData = {
-  status: string
   name: string
+  status: string
   type: string
   hostPort: string
   database: string
   user: string
 }
 
-const columns: EuiBasicTableColumn<ConnectionData>[] = [
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case StatisticsConnectionStatus.connected:
+      return 'success'
+    case StatisticsConnectionStatus.notYetUsed:
+      return 'warning'
+    default:
+      return 'danger'
+  }
+}
+
+const columns: ColumnDefinition<ConnectionData>[] = [
   {
-    name: 'Status',
-    field: 'status',
-    width: '80px',
-    render: (status: string) =>
-      status === StatisticsConnectionStatus.connected ? (
-        <EuiIcon type="dot" color="var(--buttonSuccessColor)" />
-      ) : (
-        <EuiIcon type="alert" color="danger" />
-      ),
-    align: 'center',
-    sortable: true,
-  },
-  {
-    name: 'Name',
-    field: 'name',
-    width: '15%',
-    sortable: true,
-  },
-  {
-    name: 'Type',
-    field: 'type',
-    width: '10%',
-    sortable: true,
-  },
-  {
-    name: 'Host:port',
-    field: 'hostPort',
-    sortable: true,
-    render: (hostPort: string) => (
-      <EuiToolTip content={hostPort}>
-        <span>{formatLongName(hostPort, 80, 0, '...')}</span>
-      </EuiToolTip>
+    size: 40,
+    header: 'Status',
+    id: 'status',
+    accessorKey: 'status',
+    enableSorting: true,
+    cell: ({
+      row: {
+        original: { status },
+      },
+    }) => (
+      <Row align="center" justify="center">
+        <RiTooltip content={status}>
+          <Indicator $color={getStatusColor(status)} />
+        </RiTooltip>
+      </Row>
     ),
   },
   {
-    name: 'Database',
-    field: 'database',
-    width: '15%',
-    sortable: true,
+    header: 'Name',
+    id: 'name',
+    accessorKey: 'name',
+    enableSorting: true,
   },
   {
-    name: 'Username',
-    field: 'user',
-    width: '15%',
-    sortable: true,
+    header: 'Type',
+    id: 'type',
+    accessorKey: 'type',
+    enableSorting: true,
+  },
+  {
+    header: 'Host:port',
+    id: 'hostPort',
+    accessorKey: 'hostPort',
+    enableSorting: true,
+    cell: ({
+      row: {
+        original: { hostPort },
+      },
+    }) => (
+      <RiTooltip content={hostPort}>
+        <span>{formatLongName(hostPort, 80, 0, '...')}</span>
+      </RiTooltip>
+    ),
+  },
+  {
+    header: 'Database',
+    id: 'database',
+    accessorKey: 'database',
+    enableSorting: true,
+  },
+  {
+    header: 'Username',
+    id: 'user',
+    accessorKey: 'user',
+    enableSorting: true,
   },
 ]
 
@@ -74,7 +100,7 @@ interface Props {
 }
 
 const TargetConnections = ({ data }: Props) => {
-  const connections = Object.keys(data).map((key) => {
+  const connections: ConnectionData[] = Object.keys(data).map((key) => {
     const connection = data[key]
     return {
       name: key,
@@ -84,20 +110,21 @@ const TargetConnections = ({ data }: Props) => {
   })
 
   return (
-    <Panel>
-      <Accordion
-        id="target-connections"
-        title="Target connections"
-        hideAutoRefresh
-      >
-        <Table<ConnectionData>
-          id="target-connections"
-          columns={columns}
-          items={connections}
-          initialSortField="name"
-        />
-      </Accordion>
-    </Panel>
+    <Section.Compose collapsible defaultOpen>
+      <Section.Header label="Target connections" />
+      <StyledRdiStatisticsSectionBody
+        content={
+          <StyledRdiAnalyticsTable
+            columns={columns}
+            data={connections}
+            defaultSorting={[{ id: 'name', desc: false }]}
+          >
+            <Table.Header />
+            <Table.Body />
+          </StyledRdiAnalyticsTable>
+        }
+      />
+    </Section.Compose>
   )
 }
 

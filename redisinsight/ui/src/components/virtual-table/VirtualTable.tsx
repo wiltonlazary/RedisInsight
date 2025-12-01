@@ -1,7 +1,6 @@
-import { EuiIcon, EuiProgress, EuiText } from '@elastic/eui'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
 import { findIndex, isNumber, sumBy, xor } from 'lodash'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CellMeasurer,
   CellMeasurerCache,
@@ -18,7 +17,11 @@ import { SortOrder } from 'uiSrc/constants'
 import { SCAN_COUNT_DEFAULT } from 'uiSrc/constants/api'
 
 import { isEqualBuffers, Maybe, Nullable } from 'uiSrc/utils'
+
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { RIResizeObserver } from 'uiSrc/components/base/utils'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
 import {
   ColumnWidthSizes,
   IColumnSearchState,
@@ -380,14 +383,14 @@ const VirtualTable = (props: IProps) => {
           className={styles.tableRowCell}
           style={{ justifyContent: column.alignment, whiteSpace: 'normal' }}
         >
-          <EuiText color="subdued" style={{ maxWidth: '100%' }}>
+          <Text style={{ maxWidth: '100%' }}>
             <div
               style={{ display: 'flex' }}
               className={column.truncateText ? 'truncateText' : ''}
             >
               {cellData}
             </div>
-          </EuiText>
+          </Text>
         </div>
       </CellMeasurer>
     )
@@ -433,9 +436,9 @@ const VirtualTable = (props: IProps) => {
               data-testid="score-button"
               style={{ justifyContent: column.alignment }}
             >
-              <EuiText size="m" className={cellClass}>
+              <Text size="m" className={cellClass} variant="semiBold">
                 <span>{column.label}</span>
-              </EuiText>
+              </Text>
             </button>
           </div>
         )}
@@ -451,9 +454,9 @@ const VirtualTable = (props: IProps) => {
                 flex: '1',
               }}
             >
-              <EuiText size="m" className={cellClass}>
+              <Text size="m" className={cellClass} variant="semiBold">
                 <span>{column.label}</span>
-              </EuiText>
+              </Text>
             </div>
             {column.isSearchable && searchRenderer(column)}
           </div>
@@ -469,10 +472,13 @@ const VirtualTable = (props: IProps) => {
               )}
               data-testid="header-sorting-button"
             >
-              <EuiIcon
+              <RiIcon
                 style={{ marginLeft: '4px' }}
+                size="S"
                 type={
-                  sortedColumn?.order === SortOrder.DESC ? 'sortDown' : 'sortUp'
+                  sortedColumn?.order === SortOrder.DESC
+                    ? 'ArrowDownIcon'
+                    : 'ArrowUpIcon'
                 }
               />
             </button>
@@ -494,9 +500,9 @@ const VirtualTable = (props: IProps) => {
     <>
       {noItemsMessage && (
         <div className={styles.placeholder}>
-          <EuiText textAlign="center" grow color="subdued" size="m">
+          <Text textAlign="center" size="m">
             <div>{loading ? 'loading...' : noItemsMessage}</div>
-          </EuiText>
+          </Text>
         </div>
       )}
     </>
@@ -596,12 +602,10 @@ const VirtualTable = (props: IProps) => {
           data-testid="virtual-table-container"
         >
           {loading && !hideProgress && (
-            <EuiProgress
+            <ProgressBarLoader
+              absolute
               color="primary"
-              size="xs"
-              position="absolute"
-              className={styles.progress}
-              data-testid="progress-key-list"
+              data-testid="progress-key-table"
             />
           )}
           <InfiniteLoader

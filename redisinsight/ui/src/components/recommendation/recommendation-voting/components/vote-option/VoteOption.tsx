@@ -1,15 +1,6 @@
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
-import {
-  EuiButton,
-  EuiButtonIcon,
-  EuiText,
-  EuiIcon,
-  EuiLink,
-  EuiPopover,
-  EuiToolTip,
-} from '@elastic/eui'
 import { EXTERNAL_LINKS } from 'uiSrc/constants/links'
 import { Vote } from 'uiSrc/constants/recommendations'
 import { putRecommendationVote } from 'uiSrc/slices/analytics/dbAnalysis'
@@ -20,12 +11,49 @@ import {
 } from 'uiSrc/slices/recommendations/recommendations'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { Nullable } from 'uiSrc/utils'
-import PetardIcon from 'uiSrc/assets/img/icons/petard.svg?react'
-import GithubSVG from 'uiSrc/assets/img/icons/github-white.svg?react'
 
 import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import { getVotedText, voteTooltip, iconType } from './utils'
+import { Text } from 'uiSrc/components/base/text'
+import { CancelSlimIcon, Icon } from 'uiSrc/components/base/icons'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+
+import { getVotedText, iconType, voteTooltip } from './utils'
 import styles from './styles.module.scss'
+import styled from 'styled-components'
+import { Theme } from 'uiSrc/components/base/theme/types'
+
+const GitHubLink = styled(Link)`
+  padding: 4px 8px 4px 4px;
+
+  margin-top: 10px;
+  height: 22px !important;
+  background-color: ${({ theme }: { theme: Theme }) =>
+    theme.components.button.variants.primary.normal?.bgColor};
+  color: ${({ theme }: { theme: Theme }) =>
+    theme.components.button.variants.primary.normal?.textColor};
+  &:hover {
+    text-decoration: none !important;
+    background-color: ${({ theme }: { theme: Theme }) =>
+      theme.components.button.variants.primary.hover?.bgColor};
+    color: ${({ theme }: { theme: Theme }) =>
+      theme.components.button.variants.primary.normal?.textColor};
+  }
+
+  & > span {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+`
+
+const VotingIconButton = styled(IconButton)`
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50%;
+`
 
 export interface Props {
   voteOption: Vote
@@ -96,28 +124,27 @@ const VoteOption = (props: Props) => {
       : 'Enable Analytics on the Settings page to vote for a tip'
 
   return (
-    <EuiPopover
-      initialFocus={false}
+    <RiPopover
       anchorPosition="rightCenter"
       isOpen={popover === voteOption}
       closePopover={() => setPopover('')}
       anchorClassName={styles.popoverAnchor}
-      panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popover)}
+      panelClassName={cx('popoverLikeTooltip', styles.popover)}
       button={
-        <EuiToolTip
+        <RiTooltip
           content={getTooltipContent(voteOption)}
           position="bottom"
           data-testid={`${voteOption}-vote-tooltip`}
         >
-          <EuiButtonIcon
+          <VotingIconButton
             disabled={!isAnalyticsEnable}
-            iconType={iconType[voteOption] ?? 'default'}
+            icon={iconType[voteOption] ?? 'LikeIcon'}
             className={cx('vote__btn', { selected: vote === voteOption })}
             aria-label="vote useful"
             data-testid={`${voteOption}-vote-btn`}
             onClick={() => handleClick(name)}
           />
-        </EuiToolTip>
+        </RiTooltip>
       }
     >
       <div
@@ -128,22 +155,21 @@ const VoteOption = (props: Props) => {
           <FlexItem>
             <Row>
               <FlexItem>
-                <EuiIcon type={PetardIcon} className={styles.petardIcon} />
+                <RiIcon type="PetardIcon" className={styles.petardIcon} />
               </FlexItem>
               <FlexItem grow>
                 <div>
-                  <EuiText className={styles.text} data-testid="common-text">
+                  <Text className={styles.text} data-testid="common-text">
                     Thank you for the feedback.
-                  </EuiText>
-                  <EuiText className={styles.text} data-testid="custom-text">
+                  </Text>
+                  <Text className={styles.text} data-testid="custom-text">
                     {getVotedText(voteOption)}
-                  </EuiText>
+                  </Text>
                 </div>
               </FlexItem>
               <FlexItem>
-                <EuiButtonIcon
-                  iconType="cross"
-                  color="primary"
+                <IconButton
+                  icon={CancelSlimIcon}
                   id="close-voting-popover"
                   aria-label="close popover"
                   data-testid="close-popover"
@@ -154,34 +180,26 @@ const VoteOption = (props: Props) => {
             </Row>
           </FlexItem>
           <FlexItem grow>
-            <EuiButton
-              aria-label="recommendation feedback"
-              fill
+            <GitHubLink
               data-testid="recommendation-feedback-btn"
-              className={styles.feedbackBtn}
-              color="secondary"
-              size="s"
+              className={styles.link}
+              href={EXTERNAL_LINKS.recommendationFeedback}
+              target="_blank"
+              data-test-subj="github-repo-link"
             >
-              <EuiLink
-                external={false}
-                className={styles.link}
-                href={EXTERNAL_LINKS.recommendationFeedback}
-                target="_blank"
-                data-test-subj="github-repo-link"
-              >
-                <EuiIcon
-                  className={styles.githubIcon}
-                  aria-label="redis insight github issues"
-                  type={GithubSVG}
-                  data-testid="github-repo-icon"
-                />
-                To Github
-              </EuiLink>
-            </EuiButton>
+              <RiIcon
+                className={styles.githubIcon}
+                aria-label="redis insight github issues"
+                type="GithubIcon"
+                color="informative100"
+                data-testid="github-repo-icon"
+              />
+              To Github
+            </GitHubLink>
           </FlexItem>
         </Col>
       </div>
-    </EuiPopover>
+    </RiPopover>
   )
 }
 

@@ -1,19 +1,4 @@
-import {
-  EuiBadge,
-  EuiButton,
-  EuiFieldText,
-  EuiForm,
-  EuiFormRow,
-  EuiIcon,
-} from '@elastic/eui'
-import cx from 'classnames'
-import React, {
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import React, { FormEvent, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 import {
@@ -22,11 +7,19 @@ import {
 } from 'uiSrc/slices/app/context'
 import { ConnectionType } from 'uiSrc/slices/interfaces'
 import { publishMessageAction } from 'uiSrc/slices/pubsub/pubsub'
-import UserIcon from 'uiSrc/assets/img/icons/user.svg?react'
 import { useConnectionType } from 'uiSrc/components/hooks/useConnectionType'
 
-import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
-import styles from './styles.module.scss'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { ToastCheckIcon, Icon } from 'uiSrc/components/base/icons'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { Text } from 'uiSrc/components/base/text'
+import {
+  ButtonWrapper,
+  ChannelColumn,
+  ResultWrapper,
+} from './PublishMessage.styles'
 
 const HIDE_BADGE_TIMER = 3000
 
@@ -82,89 +75,70 @@ const PublishMessage = () => {
     dispatch(publishMessageAction(instanceId, channel, message, onSuccess))
   }
 
+  const getClientsText = (clients?: number) =>
+    typeof clients !== 'number' ? 'Published' : `Published (${clients})`
+
   return (
-    <EuiForm
-      className={styles.container}
-      component="form"
-      onSubmit={onFormSubmit}
-    >
-      <FlexItem
-        grow
-        className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
-      >
-        <Row align="center">
-          <FlexItem className={styles.channelWrapper} grow>
-            <EuiFormRow fullWidth>
-              <EuiFieldText
-                fullWidth
+    <form onSubmit={onFormSubmit}>
+      <Row justify="between" gap="xl" align="end">
+        <Row grow={true} gap="m">
+          <ChannelColumn grow={false} gap="s">
+            <Text>Channel name</Text>
+            <FormField>
+              <TextInput
                 name="channel"
                 id="channel"
                 placeholder="Enter Channel Name"
                 value={channel}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setChannel(e.target.value)
-                }
+                onChange={(value) => setChannel(value)}
                 autoComplete="off"
                 data-testid="field-channel-name"
               />
-            </EuiFormRow>
-          </FlexItem>
-          <FlexItem className={styles.messageWrapper} grow>
-            <EuiFormRow fullWidth>
-              <>
-                <EuiFieldText
-                  fullWidth
-                  className={cx(styles.messageField, {
-                    [styles.showBadge]: isShowBadge,
-                  })}
-                  name="message"
-                  id="message"
-                  placeholder="Enter Message"
-                  value={message}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setMessage(e.target.value)
-                  }
-                  autoComplete="off"
-                  data-testid="field-message"
-                />
-                <EuiBadge
-                  className={cx(styles.badge, { [styles.show]: isShowBadge })}
-                  data-testid="affected-clients-badge"
-                >
-                  <EuiIcon className={styles.iconCheckBadge} type="check" />
-                  {connectionType !== ConnectionType.Cluster && (
-                    <>
-                      <span
-                        className={styles.affectedClients}
-                        data-testid="affected-clients"
-                      >
-                        {affectedClients}
-                      </span>
-                      <EuiIcon
-                        className={styles.iconUserBadge}
-                        type={UserIcon || 'user'}
-                      />
-                    </>
-                  )}
-                </EuiBadge>
-              </>
-            </EuiFormRow>
-          </FlexItem>
+            </FormField>
+          </ChannelColumn>
+
+          <Col gap="s">
+            <Text>Message</Text>
+            <TextInput
+              name="message"
+              id="message"
+              placeholder="Enter Message"
+              value={message}
+              onChange={(value) => setMessage(value)}
+              autoComplete="off"
+              data-testid="field-message"
+            />
+          </Col>
         </Row>
-      </FlexItem>
-      <Row justify="end" style={{ marginTop: 6 }}>
-        <FlexItem>
-          <EuiButton
-            fill
-            color="secondary"
-            type="submit"
-            data-testid="publish-message-submit"
-          >
-            Publish
-          </EuiButton>
-        </FlexItem>
+
+        {isShowBadge && (
+          <ResultWrapper grow={false} align="center">
+            <Icon icon={ToastCheckIcon} color="success500" />
+            <Text color="success">
+              {getClientsText(
+                connectionType !== ConnectionType.Cluster
+                  ? affectedClients
+                  : undefined,
+              )}
+            </Text>
+          </ResultWrapper>
+        )}
+
+        {!isShowBadge && (
+          <ButtonWrapper justify="end" grow={false}>
+            <FlexItem>
+              <PrimaryButton
+                size="large"
+                type="submit"
+                data-testid="publish-message-submit"
+              >
+                Publish
+              </PrimaryButton>
+            </FlexItem>
+          </ButtonWrapper>
+        )}
       </Row>
-    </EuiForm>
+    </form>
   )
 }
 

@@ -1,29 +1,41 @@
 import React from 'react'
-import { EuiIcon, EuiLink } from '@elastic/eui'
-import { EuiLinkProps } from '@elastic/eui/src/components/link/link'
+import { IconProps } from 'uiSrc/components/base/icons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { type RiLinkProps } from 'uiSrc/components/base/link/Link'
+import { StyledExternalLink } from './ExternalLink.styles'
 
-import { IconSize } from '@elastic/eui/src/components/icon/icon'
-import styles from './styles.module.scss'
-
-export type Props = EuiLinkProps & {
+export type Props = RiLinkProps & {
   href: string
   iconPosition?: 'left' | 'right'
-  iconSize?: IconSize
+  iconSize?: IconProps['size']
+  variant?: RiLinkProps['variant']
+  size?: RiLinkProps['size']
+  color?: RiLinkProps['color']
 }
 
 const ExternalLink = (props: Props) => {
-  const { iconPosition = 'right', iconSize = 'm', children, ...rest } = props
+  const {
+    iconPosition = 'right',
+    iconSize = 'S',
+    size = 'S',
+    children,
+    ...rest
+  } = props
 
   const ArrowIcon = () => (
-    <EuiIcon type="sortUp" size={iconSize} className={styles.linkIcon} />
+    <RiIcon
+      type="ArrowDiagonalIcon"
+      size={iconSize || size}
+      color="informative400"
+    />
   )
 
   return (
-    <EuiLink {...rest} external={false} target="_blank">
+    <StyledExternalLink {...rest} target="_blank" rel="noopener noreferrer">
       {iconPosition === 'left' && <ArrowIcon />}
       {children}
       {iconPosition === 'right' && <ArrowIcon />}
-    </EuiLink>
+    </StyledExternalLink>
   )
 }
 

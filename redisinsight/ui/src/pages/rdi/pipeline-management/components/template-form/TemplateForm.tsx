@@ -1,16 +1,6 @@
-import {
-  EuiButton,
-  EuiForm,
-  EuiFormRow,
-  EuiSuperSelect,
-  EuiText,
-  EuiToolTip,
-  EuiSuperSelectOption,
-} from '@elastic/eui'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import cx from 'classnames'
 
 import {
   fetchPipelineStrategies,
@@ -21,9 +11,21 @@ import {
 import { RdiPipelineTabs } from 'uiSrc/slices/interfaces/rdi'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { Title } from 'uiSrc/components/base/text'
+import { RiTooltip } from 'uiSrc/components'
+import {
+  RiSelectOption,
+  RiSelect,
+  defaultValueRender,
+} from 'uiSrc/components/base/forms/select/RiSelect'
 import { NO_TEMPLATE_VALUE, NO_OPTIONS, INGEST_OPTION } from './constants'
 
-import styles from './styles.module.scss'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
   setTemplate: (template: string) => void
@@ -61,10 +63,10 @@ const TemplateForm = (props: Props) => {
   const { rdiInstanceId } = useParams<{ rdiInstanceId: string }>()
 
   const [pipelineTypeOptions, setPipelineTypeOptions] = useState<
-    EuiSuperSelectOption<string>[]
+    RiSelectOption[]
   >([])
   const [dbTypeOptions, setDbTypeOptions] =
-    useState<EuiSuperSelectOption<string>[]>(NO_OPTIONS)
+    useState<RiSelectOption[]>(NO_OPTIONS)
   const [selectedDbType, setSelectedDbType] = useState<string>('')
   const [selectedPipelineType, setSelectedPipelineType] = useState<string>('')
 
@@ -161,71 +163,60 @@ const TemplateForm = (props: Props) => {
   }, [])
 
   return (
-    <div className={cx(styles.container)}>
-      <EuiText className={styles.title}>Select a template</EuiText>
-      <Spacer size="s" />
-      <EuiForm component="form">
+    <Col gap="l">
+      <Title size="M" color="primary">
+        Select a template
+      </Title>
+      <form>
         <Spacer size="xs" />
         {pipelineTypeOptions?.length > 1 && (
-          <EuiFormRow className={styles.formRow}>
-            <>
-              <div className={styles.rowLabel}>Pipeline type</div>
-              <EuiSuperSelect
-                options={pipelineTypeOptions}
-                valueOfSelected={selectedPipelineType}
-                onChange={(value) => setSelectedPipelineType(value)}
-                popoverClassName={styles.selectWrapper}
-                data-testid="pipeline-type-select"
-              />
-            </>
-          </EuiFormRow>
+          <FormField label="Pipeline type">
+            <RiSelect
+              options={pipelineTypeOptions}
+              valueRender={defaultValueRender}
+              value={selectedPipelineType}
+              onChange={(value) => setSelectedPipelineType(value)}
+              data-testid="pipeline-type-select"
+            />
+          </FormField>
         )}
         {source === RdiPipelineTabs.Config && (
-          <EuiFormRow className={styles.formRow}>
-            <>
-              <div className={styles.rowLabel}>Database type</div>
-              <EuiSuperSelect
-                options={dbTypeOptions}
-                valueOfSelected={selectedDbType}
-                onChange={(value) => setSelectedDbType(value)}
-                popoverClassName={styles.selectWrapper}
-                data-testid="db-type-select"
-              />
-            </>
-          </EuiFormRow>
+          <FormField label="Database type">
+            <RiSelect
+              options={dbTypeOptions}
+              valueRender={defaultValueRender}
+              value={selectedDbType}
+              onChange={(value) => setSelectedDbType(value)}
+              data-testid="db-type-select"
+            />
+          </FormField>
         )}
-      </EuiForm>
-      <div className={styles.actions}>
-        <EuiButton
-          color="secondary"
+      </form>
+      <Row gap="m" justify="end">
+        <SecondaryButton
           onClick={handleCancel}
-          size="s"
-          className={styles.btn}
+          size="m"
           data-testid="template-cancel-btn"
         >
           Cancel
-        </EuiButton>
-        <EuiToolTip
+        </SecondaryButton>
+        <RiTooltip
           content={getTooltipContent(value, isNoTemplateOptions)}
           position="bottom"
-          display="inlineBlock"
-          className={styles.btn}
           anchorClassName="flex-row"
         >
-          <EuiButton
-            fill
-            color="secondary"
-            isDisabled={isNoTemplateOptions || !!value}
+          <PrimaryButton
+            disabled={isNoTemplateOptions || !!value}
             onClick={handleApply}
-            isLoading={loading}
-            size="s"
+            loading={loading}
+            size="m"
             data-testid="template-apply-btn"
           >
             Apply
-          </EuiButton>
-        </EuiToolTip>
-      </div>
-    </div>
+          </PrimaryButton>
+        </RiTooltip>
+      </Row>
+    </Col>
   )
 }
 

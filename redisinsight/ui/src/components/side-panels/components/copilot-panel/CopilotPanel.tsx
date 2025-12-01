@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react'
-import { EuiBadge } from '@elastic/eui'
 import { Header } from 'uiSrc/components/side-panels/components'
 import styles from 'uiSrc/components/side-panels/styles.module.scss'
 import AiAssistant from 'uiSrc/components/side-panels/panels/ai-assistant'
 import { ONBOARDING_FEATURES } from 'uiSrc/components/onboarding-features'
 import { OnboardingTour } from 'uiSrc/components'
+import { Text } from 'uiSrc/components/base/text'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
   isFullScreen: boolean
@@ -18,18 +19,18 @@ const CopilotPanel = (props: Props) => {
   const CopilotHeader = useCallback(
     () => (
       <div className={styles.assistantHeader}>
-        <div className={styles.title}>
-          <OnboardingTour
-            options={ONBOARDING_FEATURES.BROWSER_COPILOT}
-            anchorPosition={isFullScreen ? 'rightUp' : 'leftUp'}
-            anchorWrapperClassName={styles.onboardingAnchorWrapper}
-            fullSize
-          >
-            <div className={styles.titleWrapper}>
-              <span className={styles.title}>Redis Copilot</span>
-            </div>
-          </OnboardingTour>
-        </div>
+        <OnboardingTour
+          options={ONBOARDING_FEATURES.BROWSER_COPILOT}
+          anchorPosition={isFullScreen ? 'rightUp' : 'leftUp'}
+          anchorWrapperClassName={styles.onboardingAnchorWrapper}
+          fullSize
+        >
+          <Row>
+            <Text size="L" color="primary">
+              Redis Copilot
+            </Text>
+          </Row>
+        </OnboardingTour>
       </div>
     ),
     [isFullScreen],

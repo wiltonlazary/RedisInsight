@@ -21,7 +21,7 @@ import {
   ClusterConnectionDetailsDto,
   RedisEnterpriseDatabase,
 } from 'src/modules/redis-enterprise/dto/cluster.dto';
-import { convertREClusterModuleName } from 'src/modules/redis-enterprise/utils/redis-enterprise-converter';
+import { convertRedisSoftwareModuleName } from 'src/modules/redis-enterprise/utils/redis-enterprise-converter';
 import { RedisEnterpriseAnalytics } from 'src/modules/redis-enterprise/redis-enterprise.analytics';
 import { AddRedisEnterpriseDatabaseResponse } from 'src/modules/redis-enterprise/dto/redis-enterprise-cluster.dto';
 import { HostingProvider } from 'src/modules/database/entities/database.entity';
@@ -61,7 +61,10 @@ export class RedisEnterpriseService {
         sessionMetadata,
       );
       const result = this.parseClusterDbsResponse(data);
-      this.analytics.sendGetREClusterDbsSucceedEvent(sessionMetadata, result);
+      this.analytics.sendGetRedisSoftwareDbsSucceedEvent(
+        sessionMetadata,
+        result,
+      );
       return result;
     } catch (error) {
       const { response } = error;
@@ -80,7 +83,10 @@ export class RedisEnterpriseService {
           ERROR_MESSAGES.INCORRECT_DATABASE_URL(`${host}:${port}`),
         );
       }
-      this.analytics.sendGetREClusterDbsFailedEvent(sessionMetadata, exception);
+      this.analytics.sendGetRedisSoftwareDbsFailedEvent(
+        sessionMetadata,
+        exception,
+      );
       throw exception;
     }
   }
@@ -91,11 +97,12 @@ export class RedisEnterpriseService {
     const result: RedisEnterpriseDatabase[] = [];
     databases.forEach((database) => {
       const {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         uid,
         name,
         crdt,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         tls_mode,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         crdt_replica_id,
         tags,
       } = database;
@@ -121,7 +128,7 @@ export class RedisEnterpriseService {
           status: database.status,
           tls: tls_mode === 'enabled',
           modules: database.module_list.map((module: IRedisEnterpriseModule) =>
-            convertREClusterModuleName(module.module_name),
+            convertRedisSoftwareModuleName(module.module_name),
           ),
           options: {
             enabledDataPersistence:
@@ -236,7 +243,7 @@ export class RedisEnterpriseService {
               name,
               nameFromProvider: name,
               password,
-              provider: HostingProvider.RE_CLUSTER,
+              provider: HostingProvider.REDIS_SOFTWARE,
               tags,
             });
             return {

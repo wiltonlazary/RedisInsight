@@ -23,15 +23,15 @@ export class AddRedisDatabaseDialog {
     showDatabasesButton = Selector('[data-testid=btn-show-databases]');
     databaseName = Selector('.euiTableCellContent.column_name');
     selectAllCheckbox = Selector('[data-test-subj=checkboxSelectAll]');
-    databaseIndexCheckbox = Selector('[data-testid=showDb]~div', { timeout: 500 });
+    databaseIndexCheckbox = Selector('[data-testid=showDb]', { timeout: 500 });
     connectToRedisStackButton = Selector('[aria-label="Connect to database"]');
     cloneDatabaseButton = Selector('[data-testid=clone-db-btn]');
     cancelButton = Selector('[data-testid=btn-cancel]');
     testConnectionBtn = Selector('[data-testid=btn-test-connection]');
     testConnectionBtnHover = Selector('[data-testid=btn-test-connection]').parent();
     backButton = Selector('[data-testid=back-btn]');
-    generalTab = Selector('[data-testid=manual-form-tab-general]');
-    securityTab = Selector('[data-testid=manual-form-tab-security]');
+    generalTab = Selector('[data-testid=manual-form-tabs] [role=tab][id*=-general]');
+    securityTab = Selector('[data-testid=manual-form-tabs] [role=tab][id*=-security]');
     decompressionTab = Selector('[data-testid=manual-form-tab-decompression]');
 
     // TEXT INPUTS (also referred to as 'Text fields')
@@ -203,7 +203,7 @@ export class AddRedisDatabaseDialog {
      * Adding a new database from RE Cluster via auto-discover flow
      * @param parameters the parameters of the database
      */
-    async addAutodiscoverREClusterDatabase(parameters: AddNewDatabaseParameters): Promise<void> {
+    async addAutodiscoverRedisSoftwareDatabase(parameters: AddNewDatabaseParameters): Promise<void> {
 
         await t
             .click(this.addDatabaseButton)
@@ -220,7 +220,7 @@ export class AddRedisDatabaseDialog {
      * Adding a new database from RE Cloud via auto-discover flow
      * @param parameters the parameters of the database
      */
-    async addAutodiscoverRECloudDatabase(cloudAPIAccessKey: string, cloudAPISecretKey: string): Promise<void> {
+    async addAutodiscoverRedisCloudDatabase(cloudAPIAccessKey: string, cloudAPISecretKey: string): Promise<void> {
 
         await t
             .click(this.addDatabaseButton)

@@ -1,4 +1,3 @@
-import { EuiIcon, EuiText, EuiToolTip } from '@elastic/eui'
 import React from 'react'
 import { useSelector } from 'react-redux'
 
@@ -13,6 +12,9 @@ import {
 import { formatBytes } from 'uiSrc/utils'
 
 import { FlexItem } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { RiTooltip } from 'uiSrc/components'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
@@ -29,14 +31,12 @@ const KeyDetailsHeaderSizeLength = ({ width }: Props) => {
     <>
       {size && (
         <FlexItem>
-          <EuiText
-            grow
-            color="subdued"
+          <Text
             size="s"
             className={styles.subtitleText}
             data-testid="key-size-text"
           >
-            <EuiToolTip
+            <RiTooltip
               title="Key Size"
               position="left"
               content={
@@ -53,9 +53,9 @@ const KeyDetailsHeaderSizeLength = ({ width }: Props) => {
                 {isSizeTooLarge && (
                   <>
                     {' '}
-                    <EuiIcon
+                    <RiIcon
                       className={styles.infoIcon}
-                      type="iInCircle"
+                      type="InfoIcon"
                       size="m"
                       style={{ cursor: 'pointer' }}
                       data-testid="key-size-info-icon"
@@ -63,14 +63,12 @@ const KeyDetailsHeaderSizeLength = ({ width }: Props) => {
                   </>
                 )}
               </>
-            </EuiToolTip>
-          </EuiText>
+            </RiTooltip>
+          </Text>
         </FlexItem>
       )}
       <FlexItem>
-        <EuiText
-          grow
-          color="subdued"
+        <Text
           size="s"
           className={styles.subtitleText}
           data-testid="key-length-text"
@@ -78,7 +76,7 @@ const KeyDetailsHeaderSizeLength = ({ width }: Props) => {
           {LENGTH_NAMING_BY_TYPE[type] ?? 'Length'}
           {': '}
           {length ?? '-'}
-        </EuiText>
+        </Text>
       </FlexItem>
     </>
   )

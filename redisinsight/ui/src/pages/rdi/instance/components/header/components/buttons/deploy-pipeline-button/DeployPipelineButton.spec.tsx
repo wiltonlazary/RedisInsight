@@ -1,16 +1,15 @@
-import { useFormikContext } from 'formik'
 import { cloneDeep } from 'lodash'
 import React from 'react'
-
-import { MOCK_RDI_PIPELINE_DATA } from 'uiSrc/mocks/data/rdi'
-import { TelemetryEvent, sendEventTelemetry } from 'uiSrc/telemetry'
+import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import {
   cleanup,
   fireEvent,
   mockedStore,
   render,
   screen,
+  within,
 } from 'uiSrc/utils/test-utils'
+import { rdiPipelineSelector } from 'uiSrc/slices/rdi/pipeline'
 import DeployPipelineButton, { Props } from './DeployPipelineButton'
 
 const mockedProps: Props = {
@@ -28,6 +27,7 @@ jest.mock('uiSrc/slices/rdi/pipeline', () => ({
   rdiPipelineSelector: jest.fn().mockReturnValue({
     loading: false,
     config: 'value',
+    isPipelineValid: true,
     jobs: [
       { name: 'job1', value: '1' },
       { name: 'job2', value: '2' },
@@ -59,8 +59,15 @@ describe('DeployPipelineButton', () => {
 
     it('should call proper telemetry on Deploy', () => {
       fireEvent.click(screen.getByTestId('deploy-rdi-pipeline'))
-      fireEvent.click(screen.getByTestId('deploy-confirm-btn'))
-      expect(sendEventTelemetry).toBeCalledWith({
+
+      const confirmDeployButton = within(
+        screen.getByRole('dialog'),
+      ).getByLabelText('Deploy')
+      expect(confirmDeployButton).toBeInTheDocument()
+
+      fireEvent.click(confirmDeployButton)
+
+      expect(sendEventTelemetry).toHaveBeenCalledWith({
         event: TelemetryEvent.RDI_DEPLOY_CLICKED,
         eventData: {
           id: 'rdiInstanceId',
@@ -76,28 +83,70 @@ describe('DeployPipelineButton', () => {
       const el = screen.getByTestId(
         'reset-pipeline-checkbox',
       ) as HTMLInputElement
-      expect(el.checked).toBe(false)
+      expect(el).toHaveAttribute('aria-checked', 'false')
       fireEvent.click(el)
-      expect(el.checked).toBe(true)
-      fireEvent.click(screen.getByTestId('deploy-confirm-btn'))
-      expect(sendEventTelemetry).toBeCalledWith({
+      expect(el).toHaveAttribute('aria-checked', 'true')
+
+      const confirmDeployButton = within(
+        screen.getByRole('dialog'),
+      ).getByLabelText('Deploy')
+      expect(confirmDeployButton).toBeInTheDocument()
+
+      fireEvent.click(confirmDeployButton)
+      expect(sendEventTelemetry).toHaveBeenCalledWith({
         event: TelemetryEvent.RDI_DEPLOY_CLICKED,
         eventData: {
           id: 'rdiInstanceId',
-          reset: false,
+          reset: true,
           jobsNumber: 2,
         },
       })
     })
   })
 
-  it('should open confirmation popover', () => {
+  it('should open confirmation popover with default message', () => {
     render(<DeployPipelineButton {...mockedProps} />)
 
     expect(screen.queryByTestId('deploy-confirm-btn')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('deploy-rdi-pipeline'))
 
-    expect(screen.queryByTestId('deploy-confirm-btn')).toBeInTheDocument()
+    const confirmDeployButton = within(
+      screen.getByRole('dialog'),
+    ).getByLabelText('Deploy')
+    expect(confirmDeployButton).toBeInTheDocument()
+    expect(
+      screen.queryByText('Are you sure you want to deploy the pipeline?'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Your RDI pipeline contains errors. Are you sure you want to continue?',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('should open confirmation popover with warning message due to validation errors', () => {
+    ;(rdiPipelineSelector as jest.Mock).mockImplementation(() => ({
+      isPipelineValid: false,
+    }))
+
+    render(<DeployPipelineButton {...mockedProps} />)
+
+    expect(screen.queryByTestId('deploy-confirm-btn')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('deploy-rdi-pipeline'))
+
+    const confirmDeployButton = within(
+      screen.getByRole('dialog'),
+    ).getByLabelText('Deploy')
+    expect(confirmDeployButton).toBeInTheDocument()
+    expect(
+      screen.queryByText('Are you sure you want to deploy the pipeline?'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Your RDI pipeline contains errors. Are you sure you want to continue?',
+      ),
+    ).toBeInTheDocument()
   })
 })

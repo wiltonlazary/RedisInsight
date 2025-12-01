@@ -1,24 +1,16 @@
 import React from 'react'
-import {
-  EuiButton,
-  EuiIcon,
-  EuiLink,
-  EuiLoadingSpinner,
-  EuiText,
-  EuiTitle,
-} from '@elastic/eui'
 import { find } from 'lodash'
-import cx from 'classnames'
 import { CloudJobName, CloudJobStep } from 'uiSrc/electron/constants'
 import ExternalLink from 'uiSrc/components/base/external-link'
-import ChampagneIcon from 'uiSrc/assets/img/icons/champagne.svg'
 import Divider from 'uiSrc/components/divider/Divider'
 import { OAuthProviders } from 'uiSrc/components/oauth/oauth-select-plan/constants'
+import { LoaderLargeIcon } from 'uiSrc/components/base/icons'
 
-import { CloudSuccessResult } from 'uiSrc/slices/interfaces'
+import { CloudSuccessResult, InfiniteMessage } from 'uiSrc/slices/interfaces'
 
 import { Maybe } from 'uiSrc/utils'
 import { getUtmExternalLink } from 'uiSrc/utils/links'
+import { Text } from 'uiSrc/components/base/text'
 import {
   EXTERNAL_LINKS,
   UTM_CAMPAINGS,
@@ -26,6 +18,9 @@ import {
 } from 'uiSrc/constants/links'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+
 import styles from './styles.module.scss'
 
 export enum InfiniteMessagesIds {
@@ -44,63 +39,61 @@ const MANAGE_DB_LINK = getUtmExternalLink(EXTERNAL_LINKS.cloudConsole, {
   medium: UTM_MEDIUMS.Main,
 })
 
-export const INFINITE_MESSAGES = {
+interface InfiniteMessagesType {
+  AUTHENTICATING: () => InfiniteMessage
+  PENDING_CREATE_DB: (step?: CloudJobStep) => InfiniteMessage
+  SUCCESS_CREATE_DB: (
+    details: Omit<CloudSuccessResult, 'resourceId'>,
+    onSuccess: () => void,
+    jobName: Maybe<CloudJobName>,
+  ) => InfiniteMessage
+  DATABASE_EXISTS: (
+    onSuccess?: () => void,
+    onClose?: () => void,
+  ) => InfiniteMessage
+  DATABASE_IMPORT_FORBIDDEN: (onClose?: () => void) => InfiniteMessage
+  SUBSCRIPTION_EXISTS: (
+    onSuccess?: () => void,
+    onClose?: () => void,
+  ) => InfiniteMessage
+  AUTO_CREATING_DATABASE: () => InfiniteMessage
+  APP_UPDATE_AVAILABLE: (
+    version: string,
+    onSuccess?: () => void,
+  ) => InfiniteMessage
+  SUCCESS_DEPLOY_PIPELINE: () => InfiniteMessage
+}
+
+export const INFINITE_MESSAGES: InfiniteMessagesType = {
   AUTHENTICATING: () => ({
     id: InfiniteMessagesIds.oAuthProgress,
-    Inner: (
-      <div role="presentation" data-testid="authenticating-notification">
-        <Row justify="end">
-          <FlexItem>
-            <EuiLoadingSpinner
-              className={cx('infiniteMessage__icon', styles.loading)}
-            />
-          </FlexItem>
-          <FlexItem grow>
-            <EuiTitle className="infiniteMessage__title">
-              <span>Authenticating…</span>
-            </EuiTitle>
-            <EuiText size="xs">
-              This may take several seconds, but it is totally worth it!
-            </EuiText>
-          </FlexItem>
-        </Row>
-      </div>
-    ),
+    message: 'Authenticating…',
+    description: 'This may take several seconds, but it is totally worth it!',
+    customIcon: LoaderLargeIcon,
   }),
   PENDING_CREATE_DB: (step?: CloudJobStep) => ({
     id: InfiniteMessagesIds.oAuthProgress,
-    Inner: (
-      <div role="presentation" data-testid="pending-create-db-notification">
-        <Row justify="end">
-          <FlexItem grow={false}>
-            <EuiLoadingSpinner
-              className={cx('infiniteMessage__icon', styles.loading)}
-            />
-          </FlexItem>
-          <FlexItem grow>
-            <EuiTitle className="infiniteMessage__title">
-              <span>
-                {(step === CloudJobStep.Credentials || !step) &&
-                  'Processing Cloud API keys…'}
-                {step === CloudJobStep.Subscription &&
-                  'Processing Cloud subscriptions…'}
-                {step === CloudJobStep.Database &&
-                  'Creating a free trial Cloud database…'}
-                {step === CloudJobStep.Import &&
-                  'Importing a free trial Cloud database…'}
-              </span>
-            </EuiTitle>
-            <EuiText size="xs">
-              This may take several minutes, but it is totally worth it!
-            </EuiText>
-            <Spacer size="m" />
-            <EuiText size="xs">
-              You can continue working in Redis Insight, and we will notify you
-              once done.
-            </EuiText>
-          </FlexItem>
-        </Row>
-      </div>
+    customIcon: LoaderLargeIcon,
+    variation: step,
+    message: (
+      <>
+        {(step === CloudJobStep.Credentials || !step) &&
+          'Processing Cloud API keys…'}
+        {step === CloudJobStep.Subscription &&
+          'Processing Cloud subscriptions…'}
+        {step === CloudJobStep.Database &&
+          'Creating a free Redis Cloud database…'}
+        {step === CloudJobStep.Import &&
+          'Importing a free Redis Cloud database…'}
+      </>
+    ),
+    description: (
+      <>
+        This may take several minutes, but it is totally worth it!
+        <Spacer size="m" />
+        You can continue working in Redis Insight, and we will notify you once
+        done.
+      </>
     ),
   }),
   SUCCESS_CREATE_DB: (
@@ -116,343 +109,169 @@ export const INFINITE_MESSAGES = {
         CloudJobName.CreateFreeSubscriptionAndDatabase,
       ].includes(jobName)
     const text = `You can now use your Redis Cloud database${withFeed ? ' with pre-loaded sample data' : ''}.`
+
     return {
       id: InfiniteMessagesIds.oAuthSuccess,
-      className: 'wide',
-      Inner: (
-        <div
-          role="presentation"
-          onMouseDown={(e) => {
-            e.preventDefault()
-          }}
-          onMouseUp={(e) => {
-            e.preventDefault()
-          }}
-          data-testid="success-create-db-notification"
-        >
-          <Row justify="end">
-            <FlexItem className="infiniteMessage__icon">
-              <EuiIcon type={ChampagneIcon} size="original" />
-            </FlexItem>
-            <FlexItem grow>
-              <EuiTitle className="infiniteMessage__title">
-                <span>Congratulations!</span>
-              </EuiTitle>
-              <EuiText size="xs">
-                {text}
-                <Spacer size="s" />
-                <b>Notice:</b> the database will be deleted after 15 days of
-                inactivity.
-              </EuiText>
-              {!!details && (
-                <>
-                  <Spacer size="m" />
-                  <Divider variant="fullWidth" />
-                  <Spacer size="m" />
-                  <Row className={styles.detailsRow} justify="between">
-                    <FlexItem>
-                      <EuiText size="xs">Plan</EuiText>
-                    </FlexItem>
-                    <FlexItem data-testid="notification-details-plan">
-                      <EuiText size="xs">Free</EuiText>
-                    </FlexItem>
-                  </Row>
-                  <Row className={styles.detailsRow} justify="between">
-                    <FlexItem>
-                      <EuiText size="xs">Cloud Vendor</EuiText>
-                    </FlexItem>
-                    <FlexItem
-                      className={styles.vendorLabel}
-                      data-testid="notification-details-vendor"
-                    >
-                      {!!vendor?.icon && <EuiIcon type={vendor?.icon} />}
-                      <EuiText size="xs">{vendor?.label}</EuiText>
-                    </FlexItem>
-                  </Row>
-                  <Row className={styles.detailsRow} justify="between">
-                    <FlexItem>
-                      <EuiText size="xs">Region</EuiText>
-                    </FlexItem>
-                    <FlexItem data-testid="notification-details-region">
-                      <EuiText size="xs">{details.region}</EuiText>
-                    </FlexItem>
-                  </Row>
-                </>
-              )}
+      message: 'Congratulations!',
+      variant: 'success',
+      description: (
+        <>
+          {text}
+          <Spacer size="m" />
+          <Text variant="semiBold" component="span">
+            Notice:
+          </Text>{' '}
+          the database will be deleted after 15 days of inactivity.
+          {!!details && (
+            <>
               <Spacer size="m" />
-              <Row justify="between" align="center">
+              <Divider />
+              <Spacer size="m" />
+              <Row className={styles.detailsRow} justify="between">
                 <FlexItem>
-                  <ExternalLink href={MANAGE_DB_LINK}>Manage DB</ExternalLink>
+                  <Text size="xs">Plan</Text>
                 </FlexItem>
-                <FlexItem>
-                  <EuiButton
-                    fill
-                    size="s"
-                    color="secondary"
-                    onClick={() => onSuccess()}
-                    data-testid="notification-connect-db"
-                  >
-                    Connect
-                  </EuiButton>
+                <FlexItem data-testid="notification-details-plan">
+                  <Text size="xs">Free</Text>
                 </FlexItem>
               </Row>
+              <Row
+                className={styles.detailsRow}
+                justify="between"
+                align="center"
+              >
+                <FlexItem>
+                  <Text size="xs">Cloud Vendor</Text>
+                </FlexItem>
+                <FlexItem
+                  className={styles.vendorLabel}
+                  data-testid="notification-details-vendor"
+                  $gap="s"
+                >
+                  {!!vendor?.icon && <RiIcon type={vendor?.icon} />}
+                  <Text size="xs">{vendor?.label}</Text>
+                </FlexItem>
+              </Row>
+              <Row className={styles.detailsRow} justify="between">
+                <FlexItem>
+                  <Text size="xs">Region</Text>
+                </FlexItem>
+                <FlexItem data-testid="notification-details-region">
+                  <Text size="xs">{details.region}</Text>
+                </FlexItem>
+              </Row>
+            </>
+          )}
+          <Spacer size="m" />
+          <Row justify="between" align="center">
+            <FlexItem>
+              <ExternalLink href={MANAGE_DB_LINK} iconSize="S" variant="inline">
+                Manage DB
+              </ExternalLink>
+            </FlexItem>
+            <FlexItem>
+              <PrimaryButton
+                size="small"
+                onClick={() => onSuccess()}
+                data-testid="notification-connect-db"
+              >
+                Connect
+              </PrimaryButton>
             </FlexItem>
           </Row>
-        </div>
+        </>
       ),
     }
   },
   DATABASE_EXISTS: (onSuccess?: () => void, onClose?: () => void) => ({
     id: InfiniteMessagesIds.databaseExists,
-    Inner: (
-      <div
-        role="presentation"
-        onMouseDown={(e) => {
-          e.preventDefault()
-        }}
-        onMouseUp={(e) => {
-          e.preventDefault()
-        }}
-        data-testid="database-exists-notification"
-      >
-        <EuiTitle className="infiniteMessage__title">
-          <span>You already have a free trial Redis Cloud subscription.</span>
-        </EuiTitle>
-        <EuiText size="xs">
-          Do you want to import your existing database into Redis Insight?
-        </EuiText>
-        <Spacer size="m" />
-        <Row justify="between">
-          <FlexItem>
-            <EuiButton
-              fill
-              size="s"
-              color="secondary"
-              onClick={() => onSuccess?.()}
-              data-testid="import-db-sso-btn"
-            >
-              Import
-            </EuiButton>
-          </FlexItem>
-          <FlexItem>
-            <EuiButton
-              size="s"
-              color="secondary"
-              className="infiniteMessage__btn"
-              onClick={() => onClose?.()}
-              data-testid="cancel-import-db-sso-btn"
-            >
-              Cancel
-            </EuiButton>
-          </FlexItem>
-        </Row>
-      </div>
-    ),
+    message: 'You already have a free Redis Cloud subscription.',
+    description:
+      'Do you want to import your existing database into Redis Insight?',
+    actions: {
+      primary: { label: 'Import', onClick: () => onSuccess?.() },
+    },
+    onClose,
   }),
   DATABASE_IMPORT_FORBIDDEN: (onClose?: () => void) => ({
     id: InfiniteMessagesIds.databaseImportForbidden,
-    Inner: (
-      <div
-        role="presentation"
-        onMouseDown={(e) => {
-          e.preventDefault()
-        }}
-        onMouseUp={(e) => {
-          e.preventDefault()
-        }}
-        data-testid="database-import-forbidden-notification"
-      >
-        <EuiTitle className="infiniteMessage__title">
-          <span>Unable to import Cloud database.</span>
-        </EuiTitle>
-        <EuiText size="xs">
-          Adding your Redis Cloud database to Redis Insight is disabled due to a
-          setting restricting database connection management.
-          <Spacer size="m" />
-          Log in to{' '}
-          <EuiLink
-            target="_blank"
-            color="text"
-            external={false}
-            tabIndex={-1}
-            href="https://cloud.redis.io/#/databases?utm_source=redisinsight&utm_medium=main&utm_campaign=disabled_db_management"
-          >
-            Redis Cloud
-          </EuiLink>{' '}
-          to check your database.
-        </EuiText>
+    message: 'Unable to import Cloud database.',
+    description: (
+      <>
+        Adding your Redis Cloud database to Redis Insight is disabled due to a
+        setting restricting database connection management.
         <Spacer size="m" />
-        <Row justify="end">
-          <FlexItem>
-            <EuiButton
-              fill
-              size="s"
-              color="secondary"
-              onClick={() => onClose?.()}
-              data-testid="database-import-forbidden-notification-ok-btn"
-            >
-              Ok
-            </EuiButton>
-          </FlexItem>
-        </Row>
-      </div>
+        Log in to{' '}
+        <ExternalLink
+          target="_blank"
+          variant="inline"
+          iconSize="XS"
+          tabIndex={-1}
+          href={getUtmExternalLink(EXTERNAL_LINKS.cloudConsole, {
+            medium: UTM_MEDIUMS.Main,
+            campaign: 'disabled_db_management',
+          })}
+        >
+          Redis Cloud
+        </ExternalLink>{' '}
+        to check your database.
+      </>
     ),
+    actions: {
+      primary: {
+        label: 'OK',
+        onClick: () => onClose?.(),
+      },
+    },
+    showCloseButton: false,
   }),
   SUBSCRIPTION_EXISTS: (onSuccess?: () => void, onClose?: () => void) => ({
     id: InfiniteMessagesIds.subscriptionExists,
-    Inner: (
-      <div
-        role="presentation"
-        onMouseDown={(e) => {
-          e.preventDefault()
-        }}
-        onMouseUp={(e) => {
-          e.preventDefault()
-        }}
-        data-testid="subscription-exists-notification"
-      >
-        <EuiTitle className="infiniteMessage__title">
-          <span>
-            Your subscription does not have a free trial Redis Cloud database.
-          </span>
-        </EuiTitle>
-        <EuiText size="xs">
-          Do you want to create a free trial database in your existing
-          subscription?
-        </EuiText>
-        <Spacer size="m" />
-        <Row justify="between">
-          <FlexItem>
-            <EuiButton
-              fill
-              size="s"
-              color="secondary"
-              onClick={() => onSuccess?.()}
-              data-testid="create-subscription-sso-btn"
-            >
-              Create
-            </EuiButton>
-          </FlexItem>
-          <FlexItem>
-            <EuiButton
-              size="s"
-              color="secondary"
-              className="infiniteMessage__btn"
-              onClick={() => onClose?.()}
-              data-testid="cancel-create-subscription-sso-btn"
-            >
-              Cancel
-            </EuiButton>
-          </FlexItem>
-        </Row>
-      </div>
-    ),
+    message: 'Your subscription does not have a free Redis Cloud database.',
+    description:
+      'Do you want to create a free database in your existing subscription?',
+    actions: {
+      primary: { label: 'Create', onClick: () => onSuccess?.() },
+    },
+    onClose,
   }),
   AUTO_CREATING_DATABASE: () => ({
     id: InfiniteMessagesIds.autoCreateDb,
-    Inner: (
-      <div role="presentation" data-testid="pending-create-db-notification">
-        <Row justify="end">
-          <FlexItem>
-            <EuiLoadingSpinner
-              className={cx('infiniteMessage__icon', styles.loading)}
-            />
-          </FlexItem>
-          <FlexItem grow>
-            <EuiTitle className="infiniteMessage__title">
-              <span>Connecting to your database</span>
-            </EuiTitle>
-            <EuiText size="xs">
-              This may take several minutes, but it is totally worth it!
-            </EuiText>
-          </FlexItem>
-        </Row>
-      </div>
-    ),
+    message: 'Connecting to your database',
+    description: 'This may take several minutes, but it is totally worth it!',
+    customIcon: LoaderLargeIcon,
   }),
   APP_UPDATE_AVAILABLE: (version: string, onSuccess?: () => void) => ({
     id: InfiniteMessagesIds.appUpdateAvailable,
-    Inner: (
-      <div
-        role="presentation"
-        onMouseDown={(e) => {
-          e.preventDefault()
-        }}
-        onMouseUp={(e) => {
-          e.preventDefault()
-        }}
-        data-testid="app-update-available-notification"
-      >
-        <EuiTitle className="infiniteMessage__title">
-          <span>New version is now available</span>
-        </EuiTitle>
-        <EuiText size="s">
-          <>
-            With Redis Insight
-            {` ${version} `}
-            you have access to new useful features and optimizations.
-            <br />
-            Restart Redis Insight to install updates.
-          </>
-        </EuiText>
-        <br />
-        <EuiButton
-          fill
-          size="s"
-          color="secondary"
-          onClick={() => onSuccess?.()}
-          data-testid="app-restart-btn"
-        >
-          Restart
-        </EuiButton>
-      </div>
+    message: 'New version is now available',
+    description: (
+      <>
+        With Redis Insight {version} you have access to new useful features and
+        optimizations.
+        <Spacer size="m" />
+        Restart Redis Insight to install updates.
+      </>
     ),
+    actions: {
+      primary: { label: 'Restart', onClick: () => onSuccess?.() },
+    },
   }),
   SUCCESS_DEPLOY_PIPELINE: () => ({
     id: InfiniteMessagesIds.pipelineDeploySuccess,
-    className: 'wide',
-    Inner: (
-      <div
-        role="presentation"
-        onMouseDown={(e) => {
-          e.preventDefault()
-        }}
-        onMouseUp={(e) => {
-          e.preventDefault()
-        }}
-        data-testid="success-deploy-pipeline-notification"
-      >
-        <Row justify="end">
-          <FlexItem className="infiniteMessage__icon">
-            <EuiIcon type={ChampagneIcon} size="original" />
-          </FlexItem>
-          <FlexItem grow>
-            <EuiTitle className="infiniteMessage__title">
-              <span>Congratulations!</span>
-            </EuiTitle>
-            <EuiText size="xs">
-              Deployment completed successfully!
-              <br />
-              Check out the pipeline statistics page.
-            </EuiText>
-            <Spacer size="m" />
-            {/* // TODO remove display none when statistics page will be available */}
-            <Row style={{ display: 'none' }} justify="end" align="center">
-              <FlexItem>
-                <EuiButton
-                  fill
-                  size="s"
-                  color="secondary"
-                  onClick={() => {}}
-                  data-testid="notification-connect-db"
-                >
-                  Statistics
-                </EuiButton>
-              </FlexItem>
-            </Row>
-          </FlexItem>
-        </Row>
-      </div>
+    message: 'Congratulations!',
+    description: (
+      <>
+        Deployment completed successfully!
+        <br />
+        Check out the pipeline statistics page.
+      </>
     ),
+    // TODO enable when statistics page will be available
+    // actions: {
+    //   primary: {
+    //     label: 'Statistics',
+    //     onClick: () => {},
+    //   }
+    // }
   }),
 }

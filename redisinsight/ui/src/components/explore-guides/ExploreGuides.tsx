@@ -1,5 +1,4 @@
 import React from 'react'
-import { EuiIcon, EuiText, EuiTitle } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useParams } from 'react-router-dom'
 import { guideLinksSelector } from 'uiSrc/slices/content/guide-links'
@@ -11,6 +10,11 @@ import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { openTutorialByPath } from 'uiSrc/slices/panels/sidePanels'
 import { findTutorialPath } from 'uiSrc/utils'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { SecondaryButton } from 'uiSrc/components/base/forms/buttons'
+import { FlexGroup } from 'uiSrc/components/base/layout/flex'
 import styles from './styles.module.scss'
 
 const ExploreGuides = () => {
@@ -39,36 +43,34 @@ const ExploreGuides = () => {
 
   return (
     <div data-testid="explore-guides">
-      <EuiTitle size="xs">
+      <Title color="primary" size="S">
         <span>Here&apos;s a good starting point</span>
-      </EuiTitle>
-      <EuiText>
-        Explore the amazing world of Redis Stack with our interactive guides
-      </EuiText>
+      </Title>
+      <Spacer size="s" />
+      <Text color="primary">
+        Explore the amazing world of Redis with our interactive guides
+      </Text>
       <Spacer size="xl" />
       {!!data.length && (
-        <div className={styles.guides}>
+        <FlexGroup gap="l" wrap justify="center" className={styles.guides}>
           {data.map(({ title, tutorialId, icon }) => (
-            <div
-              key={title}
-              role="button"
+            <SecondaryButton
+              inverted
               tabIndex={0}
-              onKeyDown={() => {}}
               onClick={() => handleLinkClick(tutorialId)}
-              className={styles.btn}
               data-testid={`guide-button-${tutorialId}`}
             >
               {icon in GUIDE_ICONS && (
-                <EuiIcon
-                  className={styles.icon}
+                <RiIcon
                   type={GUIDE_ICONS[icon]}
                   data-testid={`guide-icon-${icon}`}
+                  color="inherit"
                 />
               )}
               {title}
-            </div>
+            </SecondaryButton>
           ))}
-        </div>
+        </FlexGroup>
       )}
     </div>
   )

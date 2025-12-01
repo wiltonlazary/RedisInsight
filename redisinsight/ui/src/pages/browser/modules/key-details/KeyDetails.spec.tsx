@@ -19,6 +19,7 @@ import { apiService } from 'uiSrc/services'
 import { INSTANCE_ID_MOCK } from 'uiSrc/mocks/handlers/instances/instancesHandlers'
 import { MOCK_TRUNCATED_BUFFER_VALUE } from 'uiSrc/mocks/data/bigString'
 import KeyDetails, { Props as KeyDetailsProps } from './KeyDetails'
+import { KeyValueFormat } from 'uiSrc/constants'
 
 jest.mock('uiSrc/telemetry', () => ({
   ...jest.requireActual('uiSrc/telemetry'),
@@ -115,11 +116,12 @@ describe('KeyDetails', () => {
     })
 
     expect(sendEventTelemetry).toBeCalledWith({
-      event: TelemetryEvent.BROWSER_KEY_VALUE_VIEWED,
+      event: TelemetryEvent.TREE_VIEW_KEY_VALUE_VIEWED,
       eventData: {
         databaseId: INSTANCE_ID_MOCK,
         length: 1,
         keyType: 'hash',
+        formatter: KeyValueFormat.Unicode,
       },
     })
   })

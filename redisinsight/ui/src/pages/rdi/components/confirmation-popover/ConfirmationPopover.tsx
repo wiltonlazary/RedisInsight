@@ -1,15 +1,13 @@
 import React, { useState } from 'react'
-import {
-  EuiIcon,
-  EuiPopover,
-  EuiText,
-} from '@elastic/eui'
 
 import { formatLongName } from 'uiSrc/utils'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
 
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { Text } from 'uiSrc/components/base/text'
+import { RiPopover } from 'uiSrc/components/base'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 interface Props {
@@ -55,24 +53,22 @@ const ConfirmationPopover = (props: Props) => {
 
   return (
     <OutsideClickDetector onOutsideClick={handleClosePopover}>
-      <EuiPopover
+      <RiPopover
         id="confirmation-popover"
-        initialFocus={false}
         ownFocus
         anchorPosition="downCenter"
         isOpen={isPopoverOpen}
         closePopover={handleClosePopover}
         panelPaddingSize="m"
-        display="inlineBlock"
         panelClassName={styles.panelPopover}
         button={popoverButton}
       >
         <Row align="center">
           <FlexItem>
-            <EuiIcon type="alert" className={styles.alertIcon} />
+            <RiIcon type="ToastDangerIcon" className={styles.alertIcon} />
           </FlexItem>
           <FlexItem className="eui-textNoWrap">
-            <EuiText>{formatLongName(title, 58, 0, '...')}</EuiText>
+            <Text>{formatLongName(title, 58, 0, '...')}</Text>
           </FlexItem>
         </Row>
         <Spacer size="xs" />
@@ -82,7 +78,7 @@ const ConfirmationPopover = (props: Props) => {
           <FlexItem>{!!appendAction && appendAction}</FlexItem>
           <FlexItem>{confirmBtn}</FlexItem>
         </Row>
-      </EuiPopover>
+      </RiPopover>
     </OutsideClickDetector>
   )
 }

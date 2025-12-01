@@ -1,14 +1,17 @@
-import React, { ChangeEvent, useState } from 'react'
-import { EuiButtonIcon, EuiForm, EuiTextArea, keys } from '@elastic/eui'
+import React, { useState } from 'react'
 import cx from 'classnames'
 import jsonValidator from 'json-dup-key-validator'
 
+import * as keys from 'uiSrc/constants/keys'
+import { CancelSlimIcon, CheckThinIcon } from 'uiSrc/components/base/icons'
 import FieldMessage from 'uiSrc/components/field-message/FieldMessage'
 import { Nullable } from 'uiSrc/utils'
 import { FlexItem } from 'uiSrc/components/base/layout/flex'
 import { WindowEvent } from 'uiSrc/components/base/utils/WindowEvent'
 import { FocusTrap } from 'uiSrc/components/base/utils/FocusTrap'
 import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { TextArea } from 'uiSrc/components/base/inputs'
 import { isValidJSON } from '../../utils'
 import { JSONErrors } from '../../constants'
 
@@ -64,22 +67,19 @@ const EditEntireItemAction = (props: Props) => {
           <div>
             <WindowEvent event="keydown" handler={(e) => handleOnEsc(e)} />
             <FocusTrap>
-              <EuiForm
-                component="form"
+              <form
                 className="relative"
                 onSubmit={handleFormSubmit}
                 data-testid="json-entire-form"
                 noValidate
               >
-                <FlexItem grow inline>
-                  <EuiTextArea
-                    isInvalid={!!error}
+                <FlexItem grow>
+                  <TextArea
+                    valid={!error}
                     className={styles.fullWidthTextArea}
                     value={value}
                     placeholder="Enter JSON value"
-                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                      setValue(e.target.value)
-                    }
+                    onChange={setValue}
                     data-testid="json-value"
                   />
                 </FlexItem>
@@ -89,18 +89,15 @@ const EditEntireItemAction = (props: Props) => {
                   onConfirm={confirmApply}
                 >
                   <div className={cx(styles.controls, styles.controlsBottom)}>
-                    <EuiButtonIcon
-                      iconSize="m"
-                      iconType="cross"
-                      color="primary"
+                    <IconButton
+                      icon={CancelSlimIcon}
                       aria-label="Cancel add"
                       className={styles.declineBtn}
                       onClick={onCancel}
                       data-testid="cancel-edit-btn"
                     />
-                    <EuiButtonIcon
-                      iconSize="m"
-                      iconType="check"
+                    <IconButton
+                      icon={CheckThinIcon}
                       color="primary"
                       type="submit"
                       aria-label="Apply"
@@ -109,7 +106,7 @@ const EditEntireItemAction = (props: Props) => {
                     />
                   </div>
                 </ConfirmOverwrite>
-              </EuiForm>
+              </form>
               {error && (
                 <div
                   className={cx(
@@ -119,7 +116,7 @@ const EditEntireItemAction = (props: Props) => {
                 >
                   <FieldMessage
                     scrollViewOnAppear
-                    icon="alert"
+                    icon="ToastDangerIcon"
                     testID="edit-json-error"
                   >
                     {error}

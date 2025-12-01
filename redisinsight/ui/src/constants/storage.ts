@@ -39,6 +39,8 @@ enum BrowserStorageItem {
   aiChatSession = 'aiChatSession',
   selectedAiChat = 'selectedAiChat',
   generalChatAgreements = 'generalChatAgreements',
+  vectorSearchOnboarding = 'vectorSearchOnboarding',
+  tablePaginationState = 'tablePaginationState',
 }
 
 export default BrowserStorageItem
@@ -55,4 +57,10 @@ export enum CapabilityStorageItem {
 
 export enum AppStorageItem {
   returnUrl = 'returnUrl',
+}
+
+export enum TableStorageKey {
+  dbList = 'dbList',
+  rdiList = 'rdiList',
+  pubSubList = 'pubSubList',
 }

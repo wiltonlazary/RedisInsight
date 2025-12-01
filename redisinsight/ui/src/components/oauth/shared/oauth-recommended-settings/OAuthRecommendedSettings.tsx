@@ -1,9 +1,11 @@
 import React from 'react'
-import { EuiCheckbox, EuiIcon, EuiToolTip } from '@elastic/eui'
-import { FeatureFlagComponent } from 'uiSrc/components'
+import { FeatureFlagComponent, RiTooltip } from 'uiSrc/components'
 import { FeatureFlags } from 'uiSrc/constants'
 
-import styles from './styles.module.scss'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Spacer } from 'uiSrc/components/base/layout'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
   value?: boolean
@@ -15,16 +17,17 @@ const OAuthRecommendedSettings = (props: Props) => {
 
   return (
     <FeatureFlagComponent name={FeatureFlags.cloudSsoRecommendedSettings}>
-      <div className={styles.recommendedSettings}>
-        <EuiCheckbox
+      <Row align="start">
+        <Checkbox
           id="ouath-recommended-settings"
           name="recommended-settings"
           label="Use a pre-selected provider and region"
+          labelSize="M"
           checked={value}
           onChange={(e) => onChange(e.target.checked)}
           data-testid="oauth-recommended-settings-checkbox"
         />
-        <EuiToolTip
+        <RiTooltip
           content={
             <>
               The database will be automatically created using a pre-selected
@@ -34,11 +37,11 @@ const OAuthRecommendedSettings = (props: Props) => {
             </>
           }
           position="top"
-          anchorClassName={styles.recommendedSettingsToolTip}
         >
-          <EuiIcon type="iInCircle" size="s" />
-        </EuiToolTip>
-      </div>
+          <RiIcon type="InfoIcon" size="l" />
+        </RiTooltip>
+      </Row>
+      <Spacer size="s" />
     </FeatureFlagComponent>
   )
 }

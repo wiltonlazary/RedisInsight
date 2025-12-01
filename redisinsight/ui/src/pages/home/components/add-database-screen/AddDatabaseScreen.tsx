@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import { EuiButton, EuiButtonEmpty, EuiForm, EuiToolTip } from '@elastic/eui'
 import { useFormik } from 'formik'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory } from 'react-router'
 import { toNumber } from 'lodash'
-import { Nullable, parseRedisUrl } from 'uiSrc/utils'
 
+import { Nullable, parseRedisUrl } from 'uiSrc/utils'
 import { AddDbType, DEFAULT_TIMEOUT } from 'uiSrc/pages/home/constants'
 import { Instance } from 'uiSrc/slices/interfaces'
 import {
@@ -16,11 +15,19 @@ import {
 import { Pages } from 'uiSrc/constants'
 import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  EmptyButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { RiTooltip } from 'uiSrc/components'
 import ConnectivityOptions from './components/connectivity-options'
 import ConnectionUrl from './components/connection-url'
 import { Values } from './constants'
+import { CustomHorizontalRule } from './AddDatabaseScreen.styles'
 
-import styles from './styles.module.scss'
+import { ScrollableWrapper } from '../ManualConnection.styles'
 
 export interface Props {
   onSelectOption: (type: AddDbType, db: Nullable<Record<string, any>>) => void
@@ -97,12 +104,8 @@ const AddDatabaseScreen = (props: Props) => {
   })
 
   return (
-    <div className="eui-yScroll">
-      <EuiForm
-        component="form"
-        onSubmit={formik.handleSubmit}
-        data-testid="form"
-      >
+    <ScrollableWrapper>
+      <form onSubmit={formik.handleSubmit} data-testid="form">
         <Row responsive>
           <FlexItem grow>
             <ConnectionUrl
@@ -111,82 +114,65 @@ const AddDatabaseScreen = (props: Props) => {
             />
           </FlexItem>
         </Row>
-
-        <Row responsive justify="between">
+        <Spacer size="xxl" />
+        <Row responsive justify="between" align="center">
           <FlexItem>
-            <EuiToolTip
+            <RiTooltip
               position="top"
               anchorClassName="euiToolTip__btn-disabled"
-              content={
-                isInvalid ? (
-                  <span className="euiToolTip__content">
-                    {ConnectionUrlError}
-                  </span>
-                ) : null
-              }
+              content={isInvalid ? <span>{ConnectionUrlError}</span> : null}
             >
-              <EuiButtonEmpty
-                size="s"
+              <EmptyButton
+                size="small"
                 className="empty-btn"
-                isDisabled={!!isInvalid}
-                iconType={isInvalid ? 'iInCircle' : undefined}
+                disabled={!!isInvalid}
+                icon={isInvalid ? InfoIcon : undefined}
                 onClick={handleTestConnection}
-                isLoading={isLoading}
+                loading={isLoading}
                 data-testid="btn-test-connection"
               >
-                Test Connection
-              </EuiButtonEmpty>
-            </EuiToolTip>
+                Test connection
+              </EmptyButton>
+            </RiTooltip>
           </FlexItem>
           <FlexItem>
             <Row responsive gap="l">
               <FlexItem>
-                <EuiButton
-                  size="s"
-                  color="secondary"
+                <SecondaryButton
                   onClick={() => handleProceedForm(AddDbType.manual)}
                   data-testid="btn-connection-settings"
                 >
-                  Connection Settings
-                </EuiButton>
+                  Connection settings
+                </SecondaryButton>
               </FlexItem>
               <FlexItem>
-                <EuiToolTip
+                <RiTooltip
                   position="top"
                   anchorClassName="euiToolTip__btn-disabled"
-                  content={
-                    isInvalid ? (
-                      <span className="euiToolTip__content">
-                        {ConnectionUrlError}
-                      </span>
-                    ) : null
-                  }
+                  content={isInvalid ? <span>{ConnectionUrlError}</span> : null}
                 >
-                  <EuiButton
-                    fill
-                    size="s"
-                    color="secondary"
+                  <PrimaryButton
                     type="submit"
-                    isDisabled={!!isInvalid}
-                    iconType={isInvalid ? 'iInCircle' : undefined}
+                    disabled={!!isInvalid}
+                    icon={isInvalid ? InfoIcon : undefined}
                     data-testid="btn-submit"
                   >
-                    Add Database
-                  </EuiButton>
-                </EuiToolTip>
+                    Add database
+                  </PrimaryButton>
+                </RiTooltip>
               </FlexItem>
             </Row>
           </FlexItem>
         </Row>
-      </EuiForm>
+      </form>
       <Spacer />
-      <div className={styles.hr}>Or</div>
+      <CustomHorizontalRule>Or</CustomHorizontalRule>
       <Spacer />
       <ConnectivityOptions
         onClickOption={handleProceedForm}
         onClose={onClose}
       />
-    </div>
+    </ScrollableWrapper>
   )
 }
 

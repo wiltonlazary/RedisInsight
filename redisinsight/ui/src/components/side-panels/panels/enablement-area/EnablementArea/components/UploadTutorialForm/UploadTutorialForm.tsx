@@ -1,19 +1,20 @@
 import React, { useState } from 'react'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiFilePicker,
-  EuiText,
-  EuiToolTip,
-} from '@elastic/eui'
 import { useFormik } from 'formik'
 import { FormikErrors } from 'formik/dist/types'
 import { isEmpty } from 'lodash'
 
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { Nullable } from 'uiSrc/utils'
 import validationErrors from 'uiSrc/constants/validationErrors'
+import { RiFilePicker, RiTooltip } from 'uiSrc/components'
 
 import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
 import CreateTutorialLink from '../CreateTutorialLink'
 import styles from './styles.module.scss'
 
@@ -66,9 +67,7 @@ const UploadTutorialForm = (props: Props) => {
     if (errorsArr.length > maxErrorsCount) {
       errorsArr.splice(maxErrorsCount, errorsArr.length, ['...'])
     }
-    return isSubmitDisabled ? (
-      <span className="euiToolTip__content">{errorsArr}</span>
-    ) : null
+    return isSubmitDisabled ? <span>{errorsArr}</span> : null
   }
 
   const handleFileChange = (files: FileList | null) => {
@@ -78,11 +77,11 @@ const UploadTutorialForm = (props: Props) => {
   return (
     <div className={styles.outerWrapper}>
       <div className={styles.wrapper} data-testid="upload-tutorial-form">
-        <EuiText>Add new Tutorial</EuiText>
+        <Text>Add new Tutorial</Text>
         <Spacer size="m" />
         <div>
           <div className={styles.uploadFileWrapper}>
-            <EuiFilePicker
+            <RiFilePicker
               id="import-tutorial"
               initialPromptText="Select or drop a file"
               className={styles.fileDrop}
@@ -94,10 +93,10 @@ const UploadTutorialForm = (props: Props) => {
             />
           </div>
           <div className={styles.hr}>OR</div>
-          <EuiFieldText
+          <TextInput
             placeholder="GitHub link to tutorials"
             value={formik.values.link}
-            onChange={(e) => formik.setFieldValue('link', e.target.value)}
+            onChange={(value) => formik.setFieldValue('link', value)}
             className={styles.input}
             data-testid="tutorial-link-field"
           />
@@ -105,15 +104,14 @@ const UploadTutorialForm = (props: Props) => {
           <div className={styles.footer}>
             <CreateTutorialLink />
             <div className={styles.footerButtons}>
-              <EuiButton
-                color="secondary"
+              <SecondaryButton
                 size="s"
                 onClick={() => onCancel?.()}
                 data-testid="cancel-upload-tutorial-btn"
               >
                 Cancel
-              </EuiButton>
-              <EuiToolTip
+              </SecondaryButton>
+              <RiTooltip
                 position="top"
                 anchorClassName="euiToolTip__btn-disabled"
                 title={
@@ -125,19 +123,17 @@ const UploadTutorialForm = (props: Props) => {
                 }
                 content={getSubmitButtonContent(isSubmitDisabled)}
               >
-                <EuiButton
+                <PrimaryButton
                   className={styles.btnSubmit}
-                  color="secondary"
                   size="s"
-                  fill
                   onClick={() => formik.handleSubmit()}
-                  iconType={isSubmitDisabled ? 'iInCircle' : undefined}
+                  icon={isSubmitDisabled ? InfoIcon : undefined}
                   disabled={isSubmitDisabled}
                   data-testid="submit-upload-tutorial-btn"
                 >
                   Submit
-                </EuiButton>
-              </EuiToolTip>
+                </PrimaryButton>
+              </RiTooltip>
             </div>
           </div>
         </div>
