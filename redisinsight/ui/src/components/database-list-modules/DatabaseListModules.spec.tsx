@@ -6,9 +6,10 @@ import {
 } from 'uiSrc/slices/interfaces'
 import { fireEvent, render, act } from 'uiSrc/utils/test-utils'
 import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
-import DatabaseListModules, { Props } from './DatabaseListModules'
+import { DatabaseListModules } from './DatabaseListModules'
+import { DatabaseListModulesProps } from './DatabaseListModules.types'
 
-const mockedProps = mock<Props>()
+const mockedProps = mock<DatabaseListModulesProps>()
 
 const modulesMock: AdditionalRedisModule[] = [
   { name: RedisDefaultModules.AI },
@@ -41,7 +42,7 @@ describe('DatabaseListModules', () => {
 
     const module = queryByTestId(`${term}_module`)
 
-    await act(() => {
+    await act(async () => {
       module && fireEvent.click(module)
     })
 
