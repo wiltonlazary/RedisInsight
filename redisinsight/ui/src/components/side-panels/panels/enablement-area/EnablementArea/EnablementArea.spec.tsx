@@ -250,6 +250,7 @@ describe('EnablementArea', () => {
         expectedActions,
       )
     })
+
   })
 
   describe('Telemetry', () => {
