@@ -29,6 +29,7 @@ import { AdditionalRedisModule } from 'src/modules/database/models/additional.re
 import { SshOptions } from 'src/modules/ssh/models/ssh-options';
 import { CloudDatabaseDetails } from 'src/modules/cloud/database/models/cloud-database-details';
 import { Tag } from 'src/modules/tag/models/tag';
+import { AzureProviderDetails } from './provider-details';
 
 const CONNECTIONS_CONFIG = config.get('connections');
 
@@ -281,6 +282,17 @@ export class Database {
   @Type(() => CloudDatabaseDetails)
   @ValidateNested()
   cloudDetails?: CloudDatabaseDetails;
+
+  @ApiPropertyOptional({
+    description: 'Provider-specific metadata',
+    type: AzureProviderDetails,
+  })
+  @Expose()
+  @IsOptional()
+  @IsNotEmptyObject()
+  @Type(() => AzureProviderDetails)
+  @ValidateNested()
+  providerDetails?: AzureProviderDetails;
 
   @ApiPropertyOptional({
     description: 'Database compressor',
