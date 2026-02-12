@@ -10,10 +10,11 @@ import {
   renderHook as rtlRenderHook,
   waitFor,
   screen,
+  within,
 } from '@testing-library/react'
 
 import { ThemeProvider } from 'styled-components'
-import { themeLight } from '@redis-ui/styles'
+import { theme } from '@redis-ui/styles'
 import userEvent from '@testing-library/user-event'
 import type { RootState, ReduxStore } from 'uiSrc/slices/store'
 import { initialState as initialStateInstances } from 'uiSrc/slices/instances/instances'
@@ -60,6 +61,7 @@ import { initialState as initialStatePubSub } from 'uiSrc/slices/pubsub/pubsub'
 import { initialState as initialStateRedisearch } from 'uiSrc/slices/browser/redisearch'
 import { initialState as initialStateRecommendations } from 'uiSrc/slices/recommendations/recommendations'
 import { initialState as initialStateOAuth } from 'uiSrc/slices/oauth/cloud'
+import { initialState as initialStateAzureAuth } from 'uiSrc/slices/oauth/azure'
 import { initialState as initialStateSidePanels } from 'uiSrc/slices/panels/sidePanels'
 import { initialState as initialStateRdiPipeline } from 'uiSrc/slices/rdi/pipeline'
 import { initialState as initialStateRdi } from 'uiSrc/slices/rdi/instances'
@@ -150,6 +152,7 @@ const initialStateDefault: RootState = {
   pubsub: cloneDeep(initialStatePubSub),
   oauth: {
     cloud: cloneDeep(initialStateOAuth),
+    azure: cloneDeep(initialStateAzureAuth),
   },
   panels: {
     sidePanels: cloneDeep(initialStateSidePanels),
@@ -182,7 +185,7 @@ setStoreRef(mockedStore)
 const render = (
   ui: JSX.Element,
   {
-    initialState,
+    initialState: _initialState,
     store = mockedStore,
     withRouter,
     ...renderOptions
@@ -193,7 +196,7 @@ const render = (
   }
 
   const Wrapper = ({ children }: { children: JSX.Element }) => (
-    <ThemeProvider theme={themeLight}>
+    <ThemeProvider theme={theme}>
       <Provider store={store}>{children}</Provider>
     </ThemeProvider>
   )
@@ -206,7 +209,7 @@ const render = (
 const renderHook = <T,>(
   hook: (initialProps: unknown) => T,
   {
-    initialState,
+    initialState: _initialState,
     store = mockedStore,
     withRouter,
     ...renderOptions
@@ -236,11 +239,10 @@ const clearStoreActions = (actions: any[]) => {
   const newActions = map(actions, (action) => {
     const newAction = { ...action }
     if (newAction?.payload) {
-      const payload =
-        {
-          ...first<any>(newAction.payload),
-          key: '',
-        } || {}
+      const payload = {
+        ...first<any>(newAction.payload),
+        key: '',
+      }
       newAction.payload = [payload]
     }
     return newAction
@@ -308,8 +310,11 @@ export const waitForStack = async (timeout = 0) => {
 export const toggleAccordion = async (testId: string) => {
   const accordion = screen.getByTestId(testId)
   expect(accordion).toBeInTheDocument()
-  const btn = accordion.querySelector('button')
-  await userEvent.click(btn!)
+  // Find the collapse button by aria-label (RiAccordion renders ActionButton before CollapseButton)
+  const btn = within(accordion).getByLabelText(
+    /Expand Section|Collapse Section/,
+  )
+  await userEvent.click(btn)
 }
 
 // mock useHistory

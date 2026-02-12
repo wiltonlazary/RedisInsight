@@ -24,6 +24,7 @@ import {
 } from 'src/modules/redis/utils';
 import { RedisClient } from 'src/modules/redis/client';
 import { ReplyError } from 'src/models';
+import { CredentialStrategyProvider } from 'src/modules/database/credentials';
 
 @Injectable()
 export class DatabaseFactory {
@@ -34,6 +35,7 @@ export class DatabaseFactory {
     private databaseInfoProvider: DatabaseInfoProvider,
     private caCertificateService: CaCertificateService,
     private clientCertificateService: ClientCertificateService,
+    private credentialProvider: CredentialStrategyProvider,
   ) {}
 
   /**
@@ -44,9 +46,11 @@ export class DatabaseFactory {
    */
   async createDatabaseModel(
     sessionMetadata: SessionMetadata,
-    database: Database,
+    originalDatabase: Database,
     options: IRedisConnectionOptions = {},
   ): Promise<Database> {
+    const database = await this.credentialProvider.resolve(originalDatabase);
+
     let model = await this.createStandaloneDatabaseModel(database);
 
     const client = await this.redisClientFactory

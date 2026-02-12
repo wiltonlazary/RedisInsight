@@ -1,16 +1,21 @@
 const path = require('path');
 
+const noUnusedVarsConfig = [
+  'error',
+  {
+    argsIgnorePattern: '^_',
+    varsIgnorePattern: '^_',
+    destructuredArrayIgnorePattern: '^_',
+  },
+];
+
 module.exports = {
   root: true,
   env: {
     node: true,
     browser: true,
   },
-  extends: [
-    'airbnb-typescript',
-    'plugin:prettier/recommended',
-    'plugin:storybook/recommended',
-  ],
+  extends: ['airbnb-typescript', 'plugin:prettier/recommended'],
   plugins: ['@typescript-eslint', 'import'],
   parser: '@typescript-eslint/parser',
   rules: {
@@ -78,13 +83,7 @@ module.exports = {
         '@typescript-eslint/return-await': 'off',
         '@typescript-eslint/dot-notation': 'off',
         'import/no-extraneous-dependencies': 'off',
-        '@typescript-eslint/no-unused-vars': [
-          'error',
-          {
-            argsIgnorePattern: '^_',
-            varsIgnorePattern: '^_',
-          },
-        ],
+        '@typescript-eslint/no-unused-vars': noUnusedVarsConfig,
         // SonarJS rules (manually enabled since v2.x doesn't have recommended config)
         'sonarjs/cognitive-complexity': ['error', 15],
         'sonarjs/no-duplicate-string': 'error',
@@ -194,6 +193,7 @@ module.exports = {
         'no-unneeded-ternary': 'error',
         'prefer-template': 'error',
         'prefer-const': 'error',
+        '@typescript-eslint/no-unused-vars': noUnusedVarsConfig,
         'import/order': [
           1,
           {
@@ -234,6 +234,16 @@ module.exports = {
       env: {
         jest: true,
       },
+    },
+    // Storybook files only
+    {
+      files: [
+        '.storybook/**/*.@(ts|tsx|js|jsx)',
+        'stories/**/*.@(ts|tsx|js|jsx)',
+        '**/*.stories.@(ts|tsx|js|jsx)',
+        '**/*.story.@(ts|tsx|js|jsx)',
+      ],
+      extends: ['plugin:storybook/recommended'],
     },
     // TypeScript files (general) - MUST BE LAST to override other rules
     {
@@ -299,7 +309,6 @@ module.exports = {
         'prefer-template': 'off',
         'import/order': 'off',
         '@typescript-eslint/no-use-before-define': 'off',
-        '@typescript-eslint/no-unused-vars': 'off',
         '@typescript-eslint/no-shadow': 'off',
         '@typescript-eslint/no-unused-expressions': 'off',
         '@typescript-eslint/naming-convention': 'off',
@@ -354,7 +363,6 @@ module.exports = {
       files: ['redisinsight/ui/**/*.ts*'],
       rules: {
         'sonarjs/cognitive-complexity': 'off',
-        '@typescript-eslint/no-unused-vars': 'off',
         'import/extensions': 'off',
         'react/prop-types': 'off',
         'import/order': 'off',
@@ -373,22 +381,6 @@ module.exports = {
         // 'react/no-unescaped-entities': 'off',
         // 'no-useless-escape': 'off',
         // 'no-template-curly-in-string': 'off',
-      },
-    },
-    // Temporary disable some rules for UI packages
-    {
-      // In order to lint just UI packages
-      // make sure there's no override on 'redisinsight/ui'
-      // a.k.a. comment the above section
-      files: ['redisinsight/ui/src/packages/**/*.ts*'],
-      rules: {
-        'import/extensions': 'off',
-        'react/prop-types': 'off',
-        'react-hooks/rules-of-hooks': 'off',
-        'sonarjs/cognitive-complexity': 'off',
-        'max-len': 'off',
-        '@typescript-eslint/no-unused-vars': 'off',
-        'prefer-destructuring': 'off',
       },
     },
   ],

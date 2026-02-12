@@ -145,6 +145,10 @@ enum ApiEndpoints {
   ANALYTICS_SEND_EVENT = 'analytics/send-event',
   ANALYTICS_SEND_PAGE = 'analytics/send-page',
 
+  AZURE_AUTH_LOGIN = 'azure/auth/login',
+  AZURE_SUBSCRIPTIONS = 'azure/subscriptions',
+  AZURE_AUTODISCOVERY_DATABASES = 'azure/autodiscovery/databases',
+
   RDI_INSTANCES = 'rdi',
   RDI_PIPELINE = 'pipeline',
   RDI_PIPELINE_SCHEMA = 'pipeline/schema',

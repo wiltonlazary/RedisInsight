@@ -29,6 +29,8 @@ import {
 import { mockRedisClientListResult } from 'src/__mocks__/database-info';
 import { DatabaseOverviewKeyspace } from 'src/modules/database/constants/overview';
 import { CreateDatabaseDto } from 'src/modules/database/dto/create.database.dto';
+import { AzureAuthType } from 'src/modules/azure/constants';
+import { CloudProvider } from 'src/modules/database/models/provider-details';
 import { mockTags } from 'src/__mocks__/tags';
 
 export const mockDatabaseId = 'a77b23c1-7816-4ea4-b61f-d37795a0f805-db-id';
@@ -108,6 +110,15 @@ export const mockDatabaseWithModules = Object.assign(new Database(), {
 export const mockDatabaseWithCloudDetails = Object.assign(new Database(), {
   ...mockDatabase,
   cloudDetails: mockCloudDatabaseDetails,
+});
+
+export const mockDatabaseWithProviderDetails = Object.assign(new Database(), {
+  ...mockDatabase,
+  providerDetails: {
+    provider: CloudProvider.Azure,
+    authType: AzureAuthType.EntraId,
+    azureAccountId: 'mock-azure-account-id',
+  },
 });
 
 export const mockDatabaseEntity = Object.assign(new DatabaseEntity(), {

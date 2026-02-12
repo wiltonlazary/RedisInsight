@@ -7,15 +7,13 @@ import {
   bulkActionsSelector,
   disconnectBulkDeleteAction,
   setBulkActionConnected,
-  setBulkActionsInitialState,
   setBulkDeleteLoading,
   setDeleteOverview,
   setDeleteOverviewStatus,
-  setLoading,
 } from 'uiSrc/slices/browser/bulkActions'
+import { deleteKeysByPattern } from 'uiSrc/slices/browser/keys'
 import { getSocketApiUrl, Nullable, triggerDownloadFromUrl } from 'uiSrc/utils'
 import { sessionStorageService } from 'uiSrc/services'
-import { keysSelector } from 'uiSrc/slices/browser/keys'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { isProcessingBulkAction } from 'uiSrc/pages/browser/components/bulk-actions/utils'
 import {
@@ -33,10 +31,12 @@ import { getBaseUrl } from 'uiSrc/services/apiService'
 const BulkActionsConfig = () => {
   const { id: instanceId = '', db } = useSelector(connectedInstanceSelector)
   const { isConnected } = useSelector(bulkActionsSelector)
-  const { isActionTriggered: isDeleteTriggered, generateReport } = useSelector(
-    bulkActionsDeleteSelector,
-  )
-  const { filter, search } = useSelector(keysSelector)
+  const {
+    isActionTriggered: isDeleteTriggered,
+    generateReport,
+    filter,
+    search,
+  } = useSelector(bulkActionsDeleteSelector)
   const { token } = useSelector(appCsrfSelector)
   const socketRef = useRef<Nullable<Socket>>(null)
   const connectIo = useIoConnection(getSocketApiUrl('bulk-actions'), {
@@ -57,7 +57,6 @@ const BulkActionsConfig = () => {
     socketRef.current.on(SocketEvent.Connect, () => {
       clearTimeout(retryTimer)
       dispatch(setBulkActionConnected(true))
-
       emitBulkDelete(`${Date.now()}`)
     })
 
@@ -91,6 +90,36 @@ const BulkActionsConfig = () => {
     dispatch(setBulkDeleteLoading(true))
     sessionStorageService.set(BrowserStorageItem.bulkActionDeleteId, id)
 
+    // Register overview listener BEFORE emitting Create to avoid missing early events
+    // Server may start sending Overview events immediately after receiving Create
+    socketRef.current?.off(BulkActionsServerEvent.Overview)
+    socketRef.current?.on(BulkActionsServerEvent.Overview, (payload: any) => {
+      dispatch(setBulkDeleteLoading(isProcessingBulkAction(payload.status)))
+      dispatch(setDeleteOverview(payload))
+
+      if (payload.status === BulkActionsStatus.Failed) {
+        dispatch(disconnectBulkDeleteAction())
+      }
+
+      // Remove deleted keys from local state when bulk delete completes
+      // Use payload.filter values (what server actually used) to avoid race conditions
+      // if user changed search/filter while delete was running
+      if (payload.status === BulkActionsStatus.Completed) {
+        const deletedCount = payload.summary?.succeed || 0
+        const pattern = payload.filter?.match
+        // Only do local filtering for specific patterns, not for '*' (all keys)
+        if (pattern && pattern !== '*') {
+          dispatch(
+            deleteKeysByPattern({
+              pattern,
+              deletedCount,
+              filterType: payload.filter?.type || null,
+            }),
+          )
+        }
+      }
+    })
+
     socketRef.current?.emit(
       BulkActionsServerEvent.Create,
       {
@@ -108,15 +137,6 @@ const BulkActionsConfig = () => {
     )
   }
 
-  const getBulkAction = (id: string) => {
-    dispatch(setLoading(true))
-    socketRef.current?.emit(
-      BulkActionsServerEvent.Get,
-      { id: `${id}` },
-      fetchBulkAction,
-    )
-  }
-
   const abortBulkDelete = (id: string) => {
     dispatch(setBulkDeleteLoading(true))
     socketRef.current?.emit(
@@ -124,13 +144,6 @@ const BulkActionsConfig = () => {
       { id: `${id}` },
       onBulkDeleteAborted,
     )
-  }
-
-  const fetchBulkAction = (data: any) => {
-    if (data.status === BulkActionsServerEvent.Error) {
-      sessionStorageService.set(BrowserStorageItem.bulkActionDeleteId, '')
-      dispatch(setBulkActionsInitialState())
-    }
   }
 
   const onBulkDeleting = (data: any) => {
@@ -143,15 +156,6 @@ const BulkActionsConfig = () => {
     if ('downloadUrl' in data && data.downloadUrl) {
       triggerDownloadFromUrl(`${getBaseUrl()}${data.downloadUrl}`)
     }
-
-    socketRef.current?.on(BulkActionsServerEvent.Overview, (payload: any) => {
-      dispatch(setBulkDeleteLoading(isProcessingBulkAction(payload.status)))
-      dispatch(setDeleteOverview(payload))
-
-      if (payload.status === BulkActionsStatus.Failed) {
-        dispatch(disconnectBulkDeleteAction())
-      }
-    })
   }
 
   const onBulkDeleteAborted = (data: any) => {

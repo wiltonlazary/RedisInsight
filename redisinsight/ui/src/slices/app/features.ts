@@ -62,7 +62,13 @@ export const initialState: StateAppFeatures = {
       [FeatureFlags.vectorSearch]: {
         flag: false,
       },
+      [FeatureFlags.devVectorSearch]: {
+        flag: false,
+      },
       [FeatureFlags.databasesListV2]: {
+        flag: false,
+      },
+      [FeatureFlags.azureEntraId]: {
         flag: false,
       },
     },

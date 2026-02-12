@@ -22,9 +22,11 @@ import {
   mockDatabaseWithSshPrivateKey,
   mockSentinelDatabaseWithTlsAuth,
   mockDatabaseWithCloudDetails,
+  mockDatabaseWithProviderDetails,
   mockRedisClientFactory,
   mockRedisClientStorage,
   mockSessionMetadata,
+  mockCredentialProvider,
 } from 'src/__mocks__';
 import { DatabaseAnalytics } from 'src/modules/database/database.analytics';
 import { DatabaseService } from 'src/modules/database/database.service';
@@ -40,6 +42,7 @@ import {
   RedisConnectionSentinelMasterRequiredException,
   RedisConnectionUnavailableException,
 } from 'src/modules/redis/exceptions/connection';
+import { CredentialStrategyProvider } from 'src/modules/database/credentials';
 import { ExportDatabase } from './models/export-database';
 
 const updateDatabaseTests = [
@@ -104,6 +107,10 @@ describe('DatabaseService', () => {
         {
           provide: DatabaseAnalytics,
           useFactory: mockDatabaseAnalytics,
+        },
+        {
+          provide: CredentialStrategyProvider,
+          useFactory: mockCredentialProvider,
         },
       ],
     }).compile();
@@ -183,6 +190,17 @@ describe('DatabaseService', () => {
         mockRedisGeneralInfo,
       );
       expect(analytics.sendInstanceAddFailedEvent).not.toHaveBeenCalled();
+    });
+    it('should create new database with provider details', async () => {
+      databaseRepository.create.mockResolvedValueOnce(
+        mockDatabaseWithProviderDetails,
+      );
+      expect(
+        await service.create(
+          mockSessionMetadata,
+          mockDatabaseWithProviderDetails,
+        ),
+      ).toEqual(mockDatabaseWithProviderDetails);
     });
     it('should not fail when collecting data for analytics event', async () => {
       redisClientFactory.createClient.mockRejectedValueOnce(new Error());
@@ -632,6 +650,48 @@ describe('DatabaseService', () => {
           ERROR_MESSAGES.INVALID_DATABASE_INSTANCE_ID,
         );
       }
+    });
+
+    it('should return Azure Entra ID database without credentials and with providerDetails (withSecrets = false)', async () => {
+      databaseRepository.get.mockResolvedValueOnce(
+        mockDatabaseWithProviderDetails,
+      );
+
+      const result = await service.export(
+        mockSessionMetadata,
+        [mockDatabaseWithProviderDetails.id],
+        false,
+      );
+
+      expect(result).toHaveLength(1);
+      // Should strip username and password for Azure Entra ID databases
+      expect(result[0].username).toBeUndefined();
+      expect(result[0].password).toBeUndefined();
+      // Should include providerDetails
+      expect(result[0].providerDetails).toEqual(
+        mockDatabaseWithProviderDetails.providerDetails,
+      );
+    });
+
+    it('should return Azure Entra ID database without credentials even when withSecrets is true', async () => {
+      databaseRepository.get.mockResolvedValueOnce(
+        mockDatabaseWithProviderDetails,
+      );
+
+      const result = await service.export(
+        mockSessionMetadata,
+        [mockDatabaseWithProviderDetails.id],
+        true,
+      );
+
+      expect(result).toHaveLength(1);
+      // Credentials should always be stripped for Azure Entra ID
+      expect(result[0].username).toBeUndefined();
+      expect(result[0].password).toBeUndefined();
+      // Should include providerDetails
+      expect(result[0].providerDetails).toEqual(
+        mockDatabaseWithProviderDetails.providerDetails,
+      );
     });
   });
 

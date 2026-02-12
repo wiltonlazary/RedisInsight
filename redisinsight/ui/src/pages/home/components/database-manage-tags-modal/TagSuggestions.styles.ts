@@ -2,7 +2,9 @@ import styled from 'styled-components'
 
 export const SuggestionsListWrapper = styled.div<{ children: React.ReactNode }>`
   position: absolute;
-  background: ${({ theme }) => theme.color.gray100};
+  top: calc(100% + ${({ theme }) => theme.core.space.space050});
+  z-index: 100;
+  background: ${({ theme }) => theme.semantic.color.background.neutral100};
   border: 1px solid ${({ theme }) => theme.semantic.color.border.neutral500};
   border-radius: ${({ theme }) => theme.core.space.space050};
   overflow-y: auto;

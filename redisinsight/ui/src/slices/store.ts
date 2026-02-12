@@ -7,6 +7,7 @@ import clientCertsReducer from './instances/clientCerts'
 import clusterReducer from './instances/cluster'
 import cloudReducer from './instances/cloud'
 import sentinelReducer from './instances/sentinel'
+import azureReducer from './instances/azure'
 import keysReducer from './browser/keys'
 import stringReducer from './browser/string'
 import zsetReducer from './browser/zset'
@@ -33,6 +34,7 @@ import appsSocketConnectionReducer from './app/socket-connection'
 import appFeaturesReducer from './app/features'
 import appUrlHandlingReducer from './app/url-handling'
 import appOauthReducer from './oauth/cloud'
+import azureAuthReducer from './oauth/azure'
 import workbenchResultsReducer from './workbench/wb-results'
 import workbenchTutorialsReducer from './workbench/wb-tutorials'
 import workbenchCustomTutorialsReducer from './workbench/wb-custom-tutorials'
@@ -80,6 +82,7 @@ export const rootReducer = combineReducers({
     cluster: clusterReducer,
     cloud: cloudReducer,
     sentinel: sentinelReducer,
+    azure: azureReducer,
     tags: tagsReducer,
   }),
   browser: combineReducers({
@@ -125,6 +128,7 @@ export const rootReducer = combineReducers({
   recommendations: recommendationsReducer,
   oauth: combineReducers({
     cloud: appOauthReducer,
+    azure: azureAuthReducer,
   }),
   panels: combineReducers({
     sidePanels: sidePanelsReducer,

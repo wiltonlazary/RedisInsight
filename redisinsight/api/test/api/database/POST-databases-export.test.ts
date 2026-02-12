@@ -1,6 +1,6 @@
 import { describe, expect, deps, before, _, getMainCheckFn } from '../deps';
 import { Joi, requirements } from '../../helpers/test';
-const { localDb, request, server, constants, rte } = deps;
+const { localDb, request, server, constants } = deps;
 
 const endpoint = () =>
   request(server).post(`/${constants.API.DATABASES}/export`);
@@ -82,6 +82,11 @@ const responseSchema = Joi.array()
           }),
         )
         .allow(null),
+      providerDetails: Joi.object({
+        provider: Joi.string().required(),
+        authType: Joi.string().required(),
+        azureAccountId: Joi.string(),
+      }).allow(null),
       isPreSetup: Joi.boolean().allow(null),
     }),
   )
