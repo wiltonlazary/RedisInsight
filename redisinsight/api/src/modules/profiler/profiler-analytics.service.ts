@@ -4,11 +4,12 @@ import { TelemetryEvents } from 'src/constants';
 import { TelemetryBaseService } from 'src/modules/analytics/telemetry.base.service';
 import { CommandExecutionStatus } from 'src/modules/cli/dto/cli.dto';
 import { RedisError, ReplyError } from 'src/models';
+import { SessionMetadata } from 'src/common/models';
 
 export interface IExecResult {
   response: any;
   status: CommandExecutionStatus;
-  error?: RedisError | ReplyError | Error,
+  error?: RedisError | ReplyError | Error;
 }
 
 @Injectable()
@@ -17,33 +18,41 @@ export class ProfilerAnalyticsService extends TelemetryBaseService {
 
   constructor(protected eventEmitter: EventEmitter2) {
     super(eventEmitter);
-    this.events.set(TelemetryEvents.ProfilerLogDownloaded, this.sendLogDownloaded.bind(this));
-    this.events.set(TelemetryEvents.ProfilerLogDeleted, this.sendLogDeleted.bind(this));
+    this.events.set(
+      TelemetryEvents.ProfilerLogDownloaded,
+      this.sendLogDownloaded.bind(this),
+    );
+    this.events.set(
+      TelemetryEvents.ProfilerLogDeleted,
+      this.sendLogDeleted.bind(this),
+    );
   }
 
-  sendLogDeleted(databaseId: string, fileSizeBytes: number): void {
+  sendLogDeleted(
+    sessionMetadata: SessionMetadata,
+    databaseId: string,
+    fileSizeBytes: number,
+  ): void {
     try {
-      this.sendEvent(
-        TelemetryEvents.ProfilerLogDeleted,
-        {
-          databaseId,
-          fileSizeBytes,
-        },
-      );
+      this.sendEvent(sessionMetadata, TelemetryEvents.ProfilerLogDeleted, {
+        databaseId,
+        fileSizeBytes,
+      });
     } catch (e) {
       // continue regardless of error
     }
   }
 
-  sendLogDownloaded(databaseId: string, fileSizeBytes: number): void {
+  sendLogDownloaded(
+    sessionMetadata: SessionMetadata,
+    databaseId: string,
+    fileSizeBytes: number,
+  ): void {
     try {
-      this.sendEvent(
-        TelemetryEvents.ProfilerLogDownloaded,
-        {
-          databaseId,
-          fileSizeBytes,
-        },
-      );
+      this.sendEvent(sessionMetadata, TelemetryEvents.ProfilerLogDownloaded, {
+        databaseId,
+        fileSizeBytes,
+      });
     } catch (e) {
       // continue regardless of error
     }

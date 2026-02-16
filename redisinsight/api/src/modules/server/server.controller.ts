@@ -1,23 +1,18 @@
-import {
-  Controller,
-  Get,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Controller, Get, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiEndpoint } from 'src/decorators/api-endpoint.decorator';
 import { getBlockingCommands } from 'src/utils/cli-helper';
 import { getUnsupportedCommands } from 'src/modules/cli/utils/getUnsupportedCommands';
 import { ServerService } from 'src/modules/server/server.service';
 import { GetServerInfoResponse } from 'src/modules/server/dto/server.dto';
+import { RequestSessionMetadata } from 'src/common/decorators';
+import { SessionMetadata } from 'src/common/models';
 
 @ApiTags('Info')
 @Controller('info')
 @UsePipes(new ValidationPipe({ transform: true }))
 export class ServerController {
-  constructor(
-    private serverService: ServerService,
-  ) {}
+  constructor(private serverService: ServerService) {}
 
   @Get('')
   @ApiEndpoint({
@@ -31,8 +26,10 @@ export class ServerController {
       },
     ],
   })
-  async getInfo(): Promise<GetServerInfoResponse> {
-    return this.serverService.getInfo();
+  async getInfo(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+  ): Promise<GetServerInfoResponse> {
+    return this.serverService.getInfo(sessionMetadata);
   }
 
   @Get('/cli-unsupported-commands')

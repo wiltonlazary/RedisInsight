@@ -1,16 +1,6 @@
 import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import cx from 'classnames'
-import {
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiButtonIcon,
-  EuiText,
-  EuiToolTip,
-  EuiTextColor,
-  EuiIcon,
-} from '@elastic/eui'
 
 import {
   toggleCli,
@@ -19,13 +9,15 @@ import {
 } from 'uiSrc/slices/cli/cli-settings'
 import { BrowserStorageItem } from 'uiSrc/constants'
 import { sessionStorageService } from 'uiSrc/services'
-import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { outputSelector, resetOutputLoading } from 'uiSrc/slices/cli/cli-output'
-import { getDbIndex } from 'uiSrc/utils'
+import { resetOutputLoading } from 'uiSrc/slices/cli/cli-output'
 import { OnboardingTour } from 'uiSrc/components'
 import { ONBOARDING_FEATURES } from 'uiSrc/components/onboarding-features'
 
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { WindowControlGroup } from 'uiSrc/components/base/shared/WindowControlGroup'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 const CliHeader = () => {
@@ -33,12 +25,9 @@ const CliHeader = () => {
 
   const { instanceId = '' } = useParams<{ instanceId: string }>()
 
-  const { host, port } = useSelector(connectedInstanceSelector)
-  const { db } = useSelector(outputSelector)
-  const endpoint = `${host}:${port}${getDbIndex(db)}`
-
   const removeCliClient = () => {
-    const cliClientUuid = sessionStorageService.get(BrowserStorageItem.cliClientUuid) ?? ''
+    const cliClientUuid =
+      sessionStorageService.get(BrowserStorageItem.cliClientUuid) ?? ''
 
     cliClientUuid && dispatch(deleteCliClientAction(instanceId, cliClientUuid))
   }
@@ -54,8 +43,8 @@ const CliHeader = () => {
     sendEventTelemetry({
       event: TelemetryEvent.CLI_CLOSED,
       eventData: {
-        databaseId: instanceId
-      }
+        databaseId: instanceId,
+      },
     })
     removeCliClient()
     dispatch(resetCliSettings())
@@ -66,87 +55,32 @@ const CliHeader = () => {
     sendEventTelemetry({
       event: TelemetryEvent.CLI_MINIMIZED,
       eventData: {
-        databaseId: instanceId
-      }
+        databaseId: instanceId,
+      },
     })
     dispatch(toggleCli())
   }
 
   return (
     <div className={styles.container} id="cli-header">
-      <EuiFlexGroup
-        justifyContent="spaceBetween"
-        gutterSize="none"
-        alignItems="center"
-        responsive={false}
-        style={{ height: '100%' }}
-      >
-        <EuiFlexItem grow={false} className={styles.title}>
-          <EuiIcon type="console" size="m" />
+      <Row justify="between" align="center" style={{ height: '100%' }}>
+        <FlexItem className={styles.title} direction="row">
+          <RiIcon type="CliIcon" size="M" />
           <OnboardingTour
             options={ONBOARDING_FEATURES.BROWSER_CLI}
             anchorPosition="upLeft"
             panelClassName={styles.cliOnboardPanel}
           >
-            <EuiText>CLI</EuiText>
+            <Text>CLI</Text>
           </OnboardingTour>
-        </EuiFlexItem>
-        <EuiFlexItem grow />
-        <EuiFlexItem grow={false}>
-          <EuiToolTip
-            content={endpoint}
-            position="bottom"
-            display="inlineBlock"
-            anchorClassName="flex-row"
-          >
-            <EuiText className={cx(styles.endpointContainer)} onClick={(e) => e.stopPropagation()}>
-              <EuiTextColor color="subdued">Endpoint:</EuiTextColor>
-              <EuiTextColor
-                className={cx(styles.endpoint)}
-                data-testid={`cli-endpoint-${endpoint}`}
-              >
-                {endpoint}
-              </EuiTextColor>
-            </EuiText>
-          </EuiToolTip>
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiToolTip
-            content="Minimize"
-            position="top"
-            display="inlineBlock"
-            anchorClassName="flex-row"
-          >
-            <EuiButtonIcon
-              iconType="minus"
-              color="primary"
-              id="hide-cli"
-              aria-label="hide cli"
-              data-testid="hide-cli"
-              className={styles.icon}
-              onClick={handleHideCli}
-            />
-          </EuiToolTip>
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiToolTip
-            content="Close"
-            position="top"
-            display="inlineBlock"
-            anchorClassName="flex-row"
-          >
-            <EuiButtonIcon
-              iconType="cross"
-              color="primary"
-              id="close-cli"
-              aria-label="close cli"
-              data-testid="close-cli"
-              className={styles.icon}
-              onClick={handleCloseCli}
-            />
-          </EuiToolTip>
-        </EuiFlexItem>
-      </EuiFlexGroup>
+        </FlexItem>
+        <FlexItem grow />
+        <WindowControlGroup
+          onClose={handleCloseCli}
+          onHide={handleHideCli}
+          id="cli"
+        />
+      </Row>
     </div>
   )
 }

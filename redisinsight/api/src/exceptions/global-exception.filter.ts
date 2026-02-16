@@ -3,7 +3,7 @@ import { ArgumentsHost, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 export class GlobalExceptionFilter extends BaseExceptionFilter {
-  private staticServerLogger = new Logger('StaticServerLogger');
+  private staticServerLogger = new Logger('GlobalExceptionFilter');
 
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -15,11 +15,10 @@ export class GlobalExceptionFilter extends BaseExceptionFilter {
       const message = `Error when trying to fetch ${request.url}`;
 
       this.staticServerLogger.error(message, { ...exception } as any);
-      return response.status(statusCode)
-        .json({
-          statusCode,
-          message,
-        });
+      return response.status(statusCode).json({
+        statusCode,
+        message,
+      });
     }
 
     return super.catch(exception, host);

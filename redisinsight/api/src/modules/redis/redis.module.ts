@@ -1,18 +1,27 @@
-import { Module } from '@nestjs/common';
-import { RedisToolFactory } from 'src/modules/redis/redis-tool.factory';
-import { RedisService } from 'src/modules/redis/redis.service';
-import { RedisConnectionFactory } from 'src/modules/redis/redis-connection.factory';
+import { Module, Type } from '@nestjs/common';
+import { RedisClientFactory } from 'src/modules/redis/redis.client.factory';
+import { IoredisRedisConnectionStrategy } from 'src/modules/redis/connection/ioredis.redis.connection.strategy';
+import { NodeRedisConnectionStrategy } from 'src/modules/redis/connection/node.redis.connection.strategy';
+import { RedisClientStorage } from 'src/modules/redis/redis.client.storage';
+import { LocalRedisClientFactory } from 'src/modules/redis/local.redis.client.factory';
 
-@Module({
-  providers: [
-    RedisService,
-    RedisToolFactory,
-    RedisConnectionFactory,
-  ],
-  exports: [
-    RedisService,
-    RedisToolFactory,
-    RedisConnectionFactory,
-  ],
-})
-export class RedisModule {}
+@Module({})
+export class RedisModule {
+  static register(
+    redisClientFactory: Type<RedisClientFactory> = LocalRedisClientFactory,
+  ) {
+    return {
+      module: RedisModule,
+      providers: [
+        RedisClientStorage,
+        {
+          provide: RedisClientFactory,
+          useClass: redisClientFactory,
+        },
+        IoredisRedisConnectionStrategy,
+        NodeRedisConnectionStrategy,
+      ],
+      exports: [RedisClientStorage, RedisClientFactory],
+    };
+  }
+}

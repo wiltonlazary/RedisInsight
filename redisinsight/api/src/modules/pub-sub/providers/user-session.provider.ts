@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { UserSession } from 'src/modules/pub-sub/model/user-session';
 import { UserClient } from 'src/modules/pub-sub/model/user-client';
 import { RedisClientProvider } from 'src/modules/pub-sub/providers/redis-client.provider';
-import { ClientContext } from 'src/common/models';
+import { ClientContext, SessionMetadata } from 'src/common/models';
 
 @Injectable()
 export class UserSessionProvider {
@@ -12,21 +12,23 @@ export class UserSessionProvider {
 
   constructor(private readonly redisClientProvider: RedisClientProvider) {}
 
-  getOrCreateUserSession(userClient: UserClient) {
+  getOrCreateUserSession(
+    sessionMetadata: SessionMetadata,
+    userClient: UserClient,
+  ) {
     let session = this.getUserSession(userClient.getId());
 
     if (!session) {
       session = new UserSession(
         userClient,
-        // todo: add multi user support
         this.redisClientProvider.createClient({
-          session: undefined,
+          sessionMetadata,
           databaseId: userClient.getDatabaseId(),
           context: ClientContext.Common,
         }),
       );
       this.sessions.set(session.getId(), session);
-      this.logger.debug(`New session was added ${this}`);
+      this.logger.debug(`New session was added ${this}`, sessionMetadata);
     }
 
     return session;
@@ -45,11 +47,9 @@ export class UserSessionProvider {
   }
 
   toString() {
-    return `UserSessionProvider:${
-      JSON.stringify({
-        sessionsSize: this.sessions.size,
-        sessions: [...this.sessions.keys()],
-      })
-    }`;
+    return `UserSessionProvider:${JSON.stringify({
+      sessionsSize: this.sessions.size,
+      sessions: [...this.sessions.keys()],
+    })}`;
   }
 }

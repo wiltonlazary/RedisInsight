@@ -1,12 +1,19 @@
-@import "@elastic/eui/src/global_styling/index";
-.contentActive {
-  border: 1px solid var(--euiColorPrimary);
+.pageWrapper {
+  height: 100%;
+  overflow: hidden;
 }
 
 .page {
-  padding: 16px 0 0 !important;
+  height: 100%;
+  padding: 1px 16px 16px !important;
 
-  @include euiBreakpoint("m", "l", "xl") {
-    padding: 16px 12px 10px !important;
+  :global {
+    .homePage {
+      height: calc(100% - 60px);
+    }
   }
+}
+
+.explorePanel {
+  padding-bottom: 16px;
 }

@@ -1,11 +1,23 @@
 import { cloneDeep } from 'lodash'
 import { AxiosError } from 'axios'
-import { cleanup, initialStateDefault, mockedStore, } from 'uiSrc/utils/test-utils'
-import { IEnablementAreaItem } from 'uiSrc/slices/interfaces'
+import {
+  cleanup,
+  initialStateDefault,
+  mockedStore,
+} from 'uiSrc/utils/test-utils'
+import {
+  IBulkActionOverview,
+  IEnablementAreaItem,
+} from 'uiSrc/slices/interfaces'
 import { MOCK_CUSTOM_TUTORIALS, MOCK_TUTORIALS_ITEMS } from 'uiSrc/constants'
 import { apiService } from 'uiSrc/services'
 
-import { addErrorNotification } from 'uiSrc/slices/app/notifications'
+import {
+  addErrorNotification,
+  addMessageNotification,
+} from 'uiSrc/slices/app/notifications'
+import successMessages from 'uiSrc/components/notifications/success-messages'
+import { getFileNameFromPath } from 'uiSrc/utils/pathUtil'
 import reducer, {
   initialState,
   getWBCustomTutorials,
@@ -21,7 +33,12 @@ import reducer, {
   fetchCustomTutorials,
   deleteCustomTutorial,
   workbenchCustomTutorialsSelector,
+  uploadDataBulk,
+  uploadDataBulkSuccess,
+  uploadDataBulkFailed,
+  uploadDataBulkAction,
   defaultItems,
+  setWbCustomTutorialsState,
 } from '../../workbench/wb-custom-tutorials'
 
 let store: typeof mockedStore
@@ -51,7 +68,7 @@ describe('slices', () => {
       const loading = true
       const state = {
         ...initialState,
-        loading
+        loading,
       }
 
       // Act
@@ -78,7 +95,10 @@ describe('slices', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, getWBCustomTutorialsSuccess(customTutorials))
+      const nextState = reducer(
+        initialState,
+        getWBCustomTutorialsSuccess(customTutorials),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -99,11 +119,14 @@ describe('slices', () => {
         ...initialState,
         loading: false,
         items: defaultItems,
-        error
+        error,
       }
 
       // Act
-      const nextState = reducer(initialState, getWBCustomTutorialsFailure(error))
+      const nextState = reducer(
+        initialState,
+        getWBCustomTutorialsFailure(error),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -122,7 +145,7 @@ describe('slices', () => {
       const loading = true
       const state = {
         ...initialState,
-        loading
+        loading,
       }
 
       // Act
@@ -145,21 +168,23 @@ describe('slices', () => {
       const items: IEnablementAreaItem[] = MOCK_TUTORIALS_ITEMS
       const currentState = {
         ...initialState,
-        items: defaultItems
+        items: defaultItems,
       }
       const state = {
         ...initialState,
-        items: [{
-          ...defaultItems[0],
-          children: [
-            items[0],
-            ...(defaultItems[0].children as [])
-          ]
-        }],
+        items: [
+          {
+            ...defaultItems[0],
+            children: [items[0], ...(defaultItems[0].children as [])],
+          },
+        ],
       }
 
       // Act
-      const nextState = reducer(currentState, uploadWBCustomTutorialSuccess(items[0]))
+      const nextState = reducer(
+        currentState,
+        uploadWBCustomTutorialSuccess(items[0]),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -179,11 +204,14 @@ describe('slices', () => {
       const state = {
         ...initialState,
         loading: false,
-        error
+        error,
       }
 
       // Act
-      const nextState = reducer(initialState, uploadWBCustomTutorialFailure(error))
+      const nextState = reducer(
+        initialState,
+        uploadWBCustomTutorialFailure(error),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -201,7 +229,7 @@ describe('slices', () => {
       // Arrange
       const state = {
         ...initialState,
-        deleting: true
+        deleting: true,
       }
 
       // Act
@@ -221,21 +249,25 @@ describe('slices', () => {
   describe('deleteWBCustomTutorialSuccess', () => {
     it('should properly set state after success', () => {
       // Arrange
-      const id = 'quick-guides'
+      const id = 'tutorials'
       const currentState = {
         ...initialState,
-        items: [{
-          ...defaultItems[0],
-          children: MOCK_TUTORIALS_ITEMS
-        }]
+        items: [
+          {
+            ...defaultItems[0],
+            children: MOCK_TUTORIALS_ITEMS,
+          },
+        ],
       }
 
       const state = {
         ...initialState,
-        items: [{
-          ...defaultItems[0],
-          children: currentState.items[0].children.slice(1)
-        }]
+        items: [
+          {
+            ...defaultItems[0],
+            children: currentState.items[0].children.slice(1),
+          },
+        ],
       }
 
       // Act
@@ -259,11 +291,14 @@ describe('slices', () => {
       const state = {
         ...initialState,
         deleting: false,
-        error
+        error,
       }
 
       // Act
-      const nextState = reducer(initialState, deleteWBCustomTutorialFailure(error))
+      const nextState = reducer(
+        initialState,
+        deleteWBCustomTutorialFailure(error),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -273,6 +308,187 @@ describe('slices', () => {
       })
 
       expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('uploadDataBulk', () => {
+    it('should properly set loading for paths', () => {
+      // Arrange
+      const state = {
+        ...initialState,
+        bulkUpload: {
+          ...initialState.bulkUpload,
+          pathsInProgress: ['data/data'],
+        },
+      }
+
+      // Act
+      const nextState = reducer(initialState, uploadDataBulk('data/data'))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        workbench: {
+          customTutorials: nextState,
+        },
+      })
+
+      expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('uploadDataBulk', () => {
+    it('should properly remove path from loading', () => {
+      // Arrange
+      const currentState = {
+        ...initialState,
+        bulkUpload: {
+          ...initialState.bulkUpload,
+          pathsInProgress: ['data/data', 'data/another'],
+        },
+      }
+
+      const state = {
+        ...initialState,
+        bulkUpload: {
+          ...initialState.bulkUpload,
+          pathsInProgress: ['data/another'],
+        },
+      }
+
+      // Act
+      const nextState = reducer(
+        currentState,
+        uploadDataBulkSuccess('data/data'),
+      )
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        workbench: {
+          customTutorials: nextState,
+        },
+      })
+
+      expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+    })
+  })
+
+  describe('uploadDataBulkFailed', () => {
+    it('should properly remove path from loading', () => {
+      // Arrange
+      const currentState = {
+        ...initialState,
+        bulkUpload: {
+          ...initialState.bulkUpload,
+          pathsInProgress: ['data/data'],
+        },
+      }
+
+      const state = {
+        ...initialState,
+        bulkUpload: {
+          ...initialState.bulkUpload,
+          pathsInProgress: [],
+        },
+      }
+
+      // Act
+      const nextState = reducer(currentState, uploadDataBulkFailed('data/data'))
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        workbench: {
+          customTutorials: nextState,
+        },
+      })
+
+      expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+    })
+
+    describe('setWbCustomTutorialsState', () => {
+      it('should properly set open state', () => {
+        // Arrange
+        const currentState = {
+          ...initialState,
+          items: [
+            {
+              ...defaultItems[0],
+              args: {
+                initialIsOpen: false,
+              },
+              children: MOCK_TUTORIALS_ITEMS,
+            },
+          ],
+        }
+
+        const state = {
+          ...initialState,
+          items: [
+            {
+              ...defaultItems[0],
+              args: {
+                defaultInitialIsOpen: false,
+                initialIsOpen: true,
+              },
+              children: MOCK_TUTORIALS_ITEMS,
+            },
+          ],
+        }
+
+        // Act
+        const nextState = reducer(currentState, setWbCustomTutorialsState(true))
+
+        // Assert
+        const rootState = Object.assign(initialStateDefault, {
+          workbench: {
+            customTutorials: nextState,
+          },
+        })
+
+        expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+      })
+
+      it('should properly return open state', () => {
+        // Arrange
+        const currentState = {
+          ...initialState,
+          items: [
+            {
+              ...defaultItems[0],
+              args: {
+                defaultInitialIsOpen: false,
+                initialIsOpen: true,
+              },
+              children: MOCK_TUTORIALS_ITEMS,
+            },
+          ],
+        }
+
+        const state = {
+          ...initialState,
+          items: [
+            {
+              ...defaultItems[0],
+              args: {
+                defaultInitialIsOpen: false,
+                initialIsOpen: false,
+              },
+              children: MOCK_TUTORIALS_ITEMS,
+            },
+          ],
+        }
+
+        // Act
+        const nextState = reducer(currentState, setWbCustomTutorialsState())
+
+        // Assert
+        const rootState = Object.assign(initialStateDefault, {
+          workbench: {
+            customTutorials: nextState,
+          },
+        })
+
+        expect(workbenchCustomTutorialsSelector(rootState)).toEqual(state)
+      })
     })
   })
 
@@ -409,6 +625,61 @@ describe('slices', () => {
       const expectedActions = [
         deleteWbCustomTutorial(),
         deleteWBCustomTutorialFailure(errorMessage),
+        addErrorNotification(responsePayload as AxiosError),
+      ]
+
+      expect(mockedStore.getActions()).toEqual(expectedActions)
+    })
+  })
+
+  describe('uploadDataBulkAction', () => {
+    it('succeed to upload data', async () => {
+      // Arrange
+      const instanceId = '1'
+      const path = 'data/data'
+      const data = {}
+      const responsePayload = { status: 200, data }
+
+      apiService.post = jest.fn().mockResolvedValue(responsePayload)
+
+      // Act
+      await store.dispatch<any>(uploadDataBulkAction(instanceId, path))
+
+      // Assert
+      const expectedActions = [
+        uploadDataBulk(path),
+        uploadDataBulkSuccess(path),
+        addMessageNotification(
+          successMessages.UPLOAD_DATA_BULK(
+            data as IBulkActionOverview,
+            getFileNameFromPath(path),
+          ),
+        ),
+      ]
+
+      expect(mockedStore.getActions()).toEqual(expectedActions)
+    })
+
+    it('failed to delete tutorial', async () => {
+      // Arrange
+      const instanceId = '1'
+      const path = 'data/data'
+      const errorMessage = 'Something was wrong!'
+      const responsePayload = {
+        response: {
+          status: 500,
+          data: { message: errorMessage },
+        },
+      }
+      apiService.post = jest.fn().mockRejectedValue(responsePayload)
+
+      // Act
+      await store.dispatch<any>(uploadDataBulkAction(instanceId, path))
+
+      // Assert
+      const expectedActions = [
+        uploadDataBulk(path),
+        uploadDataBulkFailed(path),
         addErrorNotification(responsePayload as AxiosError),
       ]
 

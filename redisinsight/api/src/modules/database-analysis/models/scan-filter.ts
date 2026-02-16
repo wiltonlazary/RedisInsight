@@ -1,7 +1,5 @@
-import { RedisDataType } from 'src/modules/browser/dto';
-import {
-  IsEnum, IsInt, IsOptional, IsString,
-} from 'class-validator';
+import { RedisDataType } from 'src/modules/browser/keys/dto';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
@@ -13,7 +11,11 @@ export class ScanFilter {
   })
   @IsOptional()
   @Expose()
-  @IsEnum(RedisDataType)
+  @IsEnum(RedisDataType, {
+    message: `type must be a valid enum value. Valid values: ${Object.values(
+      RedisDataType,
+    )}.`,
+  })
   type?: RedisDataType = null;
 
   @ApiProperty({
@@ -42,7 +44,7 @@ export class ScanFilter {
    * Generate scan args array for filter
    */
   getScanArgsArray(): Array<number | string> {
-    const args = ['count', this.count, 'match', this.match];
+    const args = ['match', this.match];
 
     if (this.type) {
       args.push('type', this.type);

@@ -1,9 +1,11 @@
 import { describe, it, deps, validateApiCall, before, expect } from '../deps';
 import { Joi } from '../../helpers/test';
-const { localDb, request, server, constants, rte } = deps;
+const { localDb, request, server, constants } = deps;
 
 const endpoint = (instanceId = constants.TEST_INSTANCE_ID) =>
-  request(server).get(`/${constants.API.DATABASES}/${instanceId}/plugins/commands`);
+  request(server).get(
+    `/${constants.API.DATABASES}/${instanceId}/plugins/commands`,
+  );
 
 const responseSchema = Joi.array().items(Joi.string()).required();
 
@@ -23,19 +25,20 @@ describe('GET /databases/:instanceId/plugins/commands', () => {
     {
       name: 'Should get plugin commands whitelist',
       responseSchema,
-      checkFn: ({body}) => {
+      checkFn: ({ body }) => {
         expect(body).to.include('get');
         expect(body).to.not.include('role');
         expect(body).to.not.include('xread');
-      }
+      },
     },
     {
       endpoint: () => endpoint(constants.TEST_INSTANCE_ID_2),
       name: 'Should not connect to a database due to misconfiguration',
-      statusCode: 503,
+      statusCode: 424,
       responseBody: {
-        statusCode: 503,
-        error: 'Service Unavailable'
+        statusCode: 424,
+        error: 'RedisConnectionUnavailableException',
+        errorCode: 10904,
       },
     },
     {

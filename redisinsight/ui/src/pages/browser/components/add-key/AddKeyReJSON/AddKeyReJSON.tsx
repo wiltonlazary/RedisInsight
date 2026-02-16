@@ -1,29 +1,19 @@
 import React, { FormEvent, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
-import {
-  EuiButton,
-  EuiFormRow,
-  EuiTextColor,
-  EuiForm,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPanel,
-} from '@elastic/eui'
 
 import { Maybe, stringToBuffer } from 'uiSrc/utils'
-import { addKeyStateSelector, addReJSONKey, } from 'uiSrc/slices/browser/keys'
+import { addKeyStateSelector, addReJSONKey } from 'uiSrc/slices/browser/keys'
 
-import MonacoJson from 'uiSrc/components/monaco-json'
+import { MonacoJson } from 'uiSrc/components/monaco-editor'
 import UploadFile from 'uiSrc/components/upload-file'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { CreateRejsonRlWithExpireDto } from 'apiSrc/modules/browser/dto'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
+import { CreateRejsonRlWithExpireDto } from 'apiSrc/modules/browser/rejson-rl/dto'
 
-import {
-  AddJSONFormConfig as config
-} from '../constants/fields-config'
-
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
+import { AddJSONFormConfig as config } from '../constants/fields-config'
 
 export interface Props {
   keyName: string
@@ -64,7 +54,7 @@ const AddKeyReJSON = (props: Props) => {
   const submitData = (): void => {
     const data: CreateRejsonRlWithExpireDto = {
       keyName: stringToBuffer(keyName),
-      data: ReJSONValue
+      data: ReJSONValue,
     }
     if (keyTTL !== undefined) {
       data.expire = keyTTL
@@ -72,28 +62,18 @@ const AddKeyReJSON = (props: Props) => {
     dispatch(addReJSONKey(data, onCancel))
   }
 
-  const onFileChange = ({ target: { files } }: { target: { files: FileList | null } }) => {
-    if (files && files[0]) {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        setReJSONValue(e?.target?.result as string)
-      }
-      reader.readAsText(files[0])
-    }
-  }
-
   const onClick = () => {
     sendEventTelemetry({
       event: TelemetryEvent.BROWSER_JSON_VALUE_IMPORT_CLICKED,
       eventData: {
         databaseId: instanceId,
-      }
+      },
     })
   }
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
-      <EuiFormRow label={config.value.label} fullWidth>
+    <form onSubmit={onFormSubmit}>
+      <FormField label={config.value.label}>
         <>
           <MonacoJson
             value={ReJSONValue}
@@ -101,57 +81,27 @@ const AddKeyReJSON = (props: Props) => {
             disabled={loading}
             data-testid="json-value"
           />
-          <EuiFlexGroup justifyContent="flexEnd">
-            <EuiFlexItem grow={false}>
-              <UploadFile onClick={onClick} onFileChange={onFileChange} accept="application/json, text/plain" />
-            </EuiFlexItem>
-          </EuiFlexGroup>
+          <Row justify="end">
+            <FlexItem>
+              <UploadFile
+                onClick={onClick}
+                onFileChange={setReJSONValue}
+                accept="application/json, text/plain"
+              />
+            </FlexItem>
+          </Row>
         </>
-      </EuiFormRow>
+      </FormField>
 
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          color="transparent"
-          className="flexItemNoFullWidth"
-          hasShadow={false}
-          borderRadius="none"
-          style={{ border: 'none' }}
-        >
-          <EuiFlexGroup justifyContent="flexEnd">
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  color="secondary"
-                  onClick={() => onCancel(true)}
-                  className="btn-cancel btn-back"
-                >
-                  <EuiTextColor>Cancel</EuiTextColor>
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  fill
-                  size="m"
-                  color="secondary"
-                  className="btn-add"
-                  isLoading={loading}
-                  onClick={submitData}
-                  disabled={!isFormValid || loading}
-                  data-testid="add-key-json-btn"
-                >
-                  Add Key
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-json-btn"
+      />
+    </form>
   )
 }
 

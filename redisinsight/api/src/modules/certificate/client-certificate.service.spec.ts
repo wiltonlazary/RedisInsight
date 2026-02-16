@@ -1,15 +1,21 @@
 import { pick } from 'lodash';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import {
   mockClientCertificate,
-  mockClientCertificateRepository, mockCreateClientCertificateDto,
+  mockClientCertificateRepository,
+  mockCreateClientCertificateDto,
   MockType,
+  mockRedisClientStorage,
 } from 'src/__mocks__';
 import { KeytarEncryptionErrorException } from 'src/modules/encryption/exceptions';
 import { ClientCertificateService } from 'src/modules/certificate/client-certificate.service';
 import { ClientCertificateRepository } from 'src/modules/certificate/repositories/client-certificate.repository';
+import { RedisClientStorage } from 'src/modules/redis/redis.client.storage';
 
 describe('ClientCertificateService', () => {
   let service: ClientCertificateService;
@@ -24,6 +30,10 @@ describe('ClientCertificateService', () => {
           provide: ClientCertificateRepository,
           useFactory: mockClientCertificateRepository,
         },
+        {
+          provide: RedisClientStorage,
+          useFactory: mockRedisClientStorage,
+        },
       ],
     }).compile();
 
@@ -33,7 +43,9 @@ describe('ClientCertificateService', () => {
 
   describe('get', () => {
     it('should return client certificate model', async () => {
-      expect(await service.get(mockClientCertificate.id)).toEqual(mockClientCertificate);
+      expect(await service.get(mockClientCertificate.id)).toEqual(
+        mockClientCertificate,
+      );
     });
     it('should return NotFound error if no certificated found', async () => {
       repository.get.mockResolvedValueOnce(null);
@@ -62,10 +74,14 @@ describe('ClientCertificateService', () => {
 
   describe('create', () => {
     it('should return client certificate model', async () => {
-      expect(await service.create(mockCreateClientCertificateDto)).toEqual(mockClientCertificate);
+      expect(await service.create(mockCreateClientCertificateDto)).toEqual(
+        mockClientCertificate,
+      );
     });
     it('should throw encryption error', async () => {
-      repository.create.mockRejectedValueOnce(new KeytarEncryptionErrorException());
+      repository.create.mockRejectedValueOnce(
+        new KeytarEncryptionErrorException(),
+      );
 
       try {
         await service.create(mockCreateClientCertificateDto);
@@ -87,11 +103,38 @@ describe('ClientCertificateService', () => {
   });
 
   describe('delete', () => {
-    it('should delete client certificate', async () => {
-      expect(await service.delete(mockClientCertificate.id)).toEqual(undefined);
+    const mockId = 'mock-client-cert-id';
+    const mockAffectedDatabases = ['db1', 'db2'];
+
+    beforeEach(() => {
+      jest.clearAllMocks();
     });
+
+    it('should delete client certificate and remove affected database clients', async () => {
+      jest
+        .spyOn(repository, 'delete')
+        .mockResolvedValue({ affectedDatabases: mockAffectedDatabases });
+      jest
+        .spyOn(service['redisClientStorage'], 'removeManyByMetadata')
+        .mockResolvedValue(undefined);
+
+      await service.delete(mockId);
+
+      expect(repository.delete).toHaveBeenCalledWith(mockId);
+      expect(
+        service['redisClientStorage'].removeManyByMetadata,
+      ).toHaveBeenCalledTimes(mockAffectedDatabases.length);
+      mockAffectedDatabases.forEach((databaseId) => {
+        expect(
+          service['redisClientStorage'].removeManyByMetadata,
+        ).toHaveBeenCalledWith({ databaseId });
+      });
+    });
+
     it('should throw encryption error', async () => {
-      repository.delete.mockRejectedValueOnce(new KeytarEncryptionErrorException());
+      repository.delete.mockRejectedValueOnce(
+        new KeytarEncryptionErrorException(),
+      );
 
       try {
         await service.delete(mockClientCertificate.id);

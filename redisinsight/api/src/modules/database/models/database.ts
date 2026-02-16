@@ -3,9 +3,15 @@ import { Expose, Type } from 'class-transformer';
 import config from 'src/utils/config';
 import { CaCertificate } from 'src/modules/certificate/models/ca-certificate';
 import { ClientCertificate } from 'src/modules/certificate/models/client-certificate';
-import { Compressor, ConnectionType, HostingProvider } from 'src/modules/database/entities/database.entity';
 import {
-  IsBoolean, IsEnum,
+  Compressor,
+  ConnectionType,
+  Encoding,
+  HostingProvider,
+} from 'src/modules/database/entities/database.entity';
+import {
+  IsBoolean,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNotEmptyObject,
@@ -15,12 +21,15 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  IsArray,
 } from 'class-validator';
 import { SentinelMaster } from 'src/modules/redis-sentinel/models/sentinel-master';
 import { Endpoint } from 'src/common/models';
 import { AdditionalRedisModule } from 'src/modules/database/models/additional.redis.module';
 import { SshOptions } from 'src/modules/ssh/models/ssh-options';
-import { Default } from 'src/common/decorators';
+import { CloudDatabaseDetails } from 'src/modules/cloud/database/models/cloud-database-details';
+import { Tag } from 'src/modules/tag/models/tag';
+import { AzureProviderDetails } from './provider-details';
 
 const CONNECTIONS_CONFIG = config.get('connections');
 
@@ -34,8 +43,8 @@ export class Database {
 
   @ApiProperty({
     description:
-      'The hostname of your Redis database, for example redis.acme.com.'
-      + ' If your Redis server is running on your local machine, you can enter either 127.0.0.1 or localhost.',
+      'The hostname of your Redis database, for example redis.acme.com.' +
+      ' If your Redis server is running on your local machine, you can enter either 127.0.0.1 or localhost.',
     type: String,
     default: 'localhost',
   })
@@ -81,19 +90,17 @@ export class Database {
   })
   @Expose()
   @IsString({ always: true })
-  @IsNotEmpty()
   @IsOptional()
   username?: string;
 
   @ApiPropertyOptional({
     description:
-      'The password, if any, for your Redis database. '
-      + 'If your database doesn’t require a password, leave this field empty.',
+      'The password, if any, for your Redis database. ' +
+      'If your database doesn’t require a password, leave this field empty.',
     type: String,
   })
   @Expose()
   @IsString({ always: true })
-  @IsNotEmpty()
   @IsOptional()
   password?: string;
 
@@ -108,7 +115,6 @@ export class Database {
   @Min(1_000)
   @Max(1_000_000_000)
   @IsInt({ always: true })
-  @Default(CONNECTIONS_CONFIG.timeout)
   timeout?: number = CONNECTIONS_CONFIG.timeout;
 
   @ApiProperty({
@@ -130,7 +136,7 @@ export class Database {
 
   @ApiPropertyOptional({
     description: 'The redis database hosting provider',
-    example: HostingProvider.RE_CLOUD,
+    example: HostingProvider.REDIS_CLOUD,
   })
   @Expose()
   @IsOptional()
@@ -144,7 +150,14 @@ export class Database {
     example: '2021-01-06T12:44:39.000Z',
   })
   @Expose()
-  lastConnection: Date;
+  lastConnection?: Date;
+
+  @ApiProperty({
+    description: 'Date of creation',
+    type: Date,
+  })
+  @Expose()
+  createdAt?: Date;
 
   @ApiPropertyOptional({
     description: 'Redis OSS Sentinel master group.',
@@ -173,6 +186,9 @@ export class Database {
     isArray: true,
   })
   @Expose()
+  @IsOptional()
+  @IsArray()
+  @Type(() => AdditionalRedisModule)
   modules?: AdditionalRedisModule[];
 
   @ApiPropertyOptional({
@@ -257,12 +273,92 @@ export class Database {
   sshOptions?: SshOptions;
 
   @ApiPropertyOptional({
+    description: 'Cloud details',
+    type: CloudDatabaseDetails,
+  })
+  @Expose()
+  @IsOptional()
+  @IsNotEmptyObject()
+  @Type(() => CloudDatabaseDetails)
+  @ValidateNested()
+  cloudDetails?: CloudDatabaseDetails;
+
+  @ApiPropertyOptional({
+    description: 'Provider-specific metadata',
+    type: AzureProviderDetails,
+  })
+  @Expose()
+  @IsOptional()
+  @IsNotEmptyObject()
+  @Type(() => AzureProviderDetails)
+  @ValidateNested()
+  providerDetails?: AzureProviderDetails;
+
+  @ApiPropertyOptional({
     description: 'Database compressor',
     default: Compressor.NONE,
     enum: Compressor,
   })
   @Expose()
-  @IsEnum(Compressor)
+  @IsEnum(Compressor, {
+    message: `compressor must be a valid enum value. Valid values: ${Object.values(
+      Compressor,
+    )}.`,
+  })
   @IsOptional()
   compressor?: Compressor = Compressor.NONE;
+
+  @ApiPropertyOptional({
+    description: 'Key name format',
+    default: Encoding.UNICODE,
+    enum: Encoding,
+  })
+  @Expose()
+  @IsEnum(Encoding, {
+    message: `Key name format must be a valid enum value. Valid values: ${Object.values(
+      Encoding,
+    )}.`,
+  })
+  @IsOptional()
+  keyNameFormat?: Encoding = Encoding.UNICODE;
+
+  @ApiPropertyOptional({
+    description: 'The version your Redis server',
+    type: String,
+  })
+  @Expose()
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  version?: string;
+
+  @ApiPropertyOptional({
+    description: 'Force client connection as standalone',
+    type: Boolean,
+  })
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  forceStandalone?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Tags associated with the database.',
+    type: Tag,
+    isArray: true,
+  })
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @Type(() => Tag)
+  tags?: Tag[];
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the database was created from a file or environment variables at startup',
+    type: Boolean,
+  })
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  isPreSetup?: boolean;
 }

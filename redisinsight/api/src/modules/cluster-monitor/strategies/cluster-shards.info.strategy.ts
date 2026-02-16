@@ -1,20 +1,25 @@
-import { Cluster, Command } from 'ioredis';
 import { chunk } from 'lodash';
 import { AbstractInfoStrategy } from 'src/modules/cluster-monitor/strategies/abstract.info.strategy';
-import { convertStringsArrayToObject } from 'src/utils';
-import { ClusterNodeDetails, NodeRole } from 'src/modules/cluster-monitor/models';
+import {
+  ClusterNodeDetails,
+  NodeRole,
+} from 'src/modules/cluster-monitor/models';
+import { convertArrayReplyToObject } from 'src/modules/redis/utils';
+import { RedisClient } from 'src/modules/redis/client';
 
 export class ClusterShardsInfoStrategy extends AbstractInfoStrategy {
-  async getClusterNodesFromRedis(client: Cluster) {
-    const resp = await client.sendCommand(new Command('cluster', ['shards'], {
+  async getClusterNodesFromRedis(client: RedisClient) {
+    const resp = (await client.sendCommand(['cluster', 'shards'], {
       replyEncoding: 'utf8',
     })) as any[];
 
-    return [].concat(...resp.map((shardArray) => {
-      const shard = convertStringsArrayToObject(shardArray);
-      const slots = ClusterShardsInfoStrategy.calculateSlots(shard.slots);
-      return ClusterShardsInfoStrategy.processShardNodes(shard.nodes, slots);
-    }));
+    return [].concat(
+      ...resp.map((shardArray) => {
+        const shard = convertArrayReplyToObject(shardArray);
+        const slots = ClusterShardsInfoStrategy.calculateSlots(shard.slots);
+        return ClusterShardsInfoStrategy.processShardNodes(shard.nodes, slots);
+      }),
+    );
   }
 
   static calculateSlots(slots: number[]): string[] {
@@ -27,14 +32,18 @@ export class ClusterShardsInfoStrategy extends AbstractInfoStrategy {
     });
   }
 
-  static processShardNodes(shardNodes: any[], slots: string[]): Partial<ClusterNodeDetails>[] {
+  static processShardNodes(
+    shardNodes: any[],
+    slots: string[],
+  ): Partial<ClusterNodeDetails>[] {
     let primary;
     const nodes = shardNodes.map((nodeArray) => {
-      const nodeObj = convertStringsArrayToObject(nodeArray);
+      const nodeObj = convertArrayReplyToObject(nodeArray);
       const node = {
         id: nodeObj.id,
         host: nodeObj.ip,
-        port: nodeObj.port,
+        port: nodeObj.port || nodeObj['tls-port'],
+        tlsPort: nodeObj['tls-port'],
         role: nodeObj.role === 'master' ? NodeRole.Primary : NodeRole.Replica,
         health: nodeObj.health,
       };
@@ -47,16 +56,17 @@ export class ClusterShardsInfoStrategy extends AbstractInfoStrategy {
       return node;
     });
 
-    return nodes.map((node) => {
-      if (node.role !== NodeRole.Primary) {
-        return {
-          ...node,
-          primary,
-        };
-      }
+    return nodes
+      .map((node) => {
+        if (node.role !== NodeRole.Primary) {
+          return {
+            ...node,
+            primary,
+          };
+        }
 
-      return node;
-    })
+        return node;
+      })
       .filter((node) => node.role === NodeRole.Primary); // tmp work with primary nodes only
   }
 }

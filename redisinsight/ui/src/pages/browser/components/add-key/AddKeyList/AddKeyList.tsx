@@ -1,25 +1,23 @@
-import React, { ChangeEvent, FormEvent, useState, useEffect } from 'react'
+import React, { FormEvent, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-
-import {
-  EuiButton,
-  EuiFormRow,
-  EuiTextColor,
-  EuiForm,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPanel,
-  EuiFieldText,
-} from '@elastic/eui'
 
 import { Maybe, stringToBuffer } from 'uiSrc/utils'
 import { addKeyStateSelector, addListKey } from 'uiSrc/slices/browser/keys'
-import { CreateListWithExpireDto } from 'apiSrc/modules/browser/dto'
-
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
 import {
-  AddListFormConfig as config,
-} from '../constants/fields-config'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
+  optionsDestinations,
+  TAIL_DESTINATION,
+} from 'uiSrc/pages/browser/modules/key-details/components/list-details/add-list-elements/AddListElements'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { Spacer } from 'uiSrc/components/base/layout'
+import {
+  CreateListWithExpireDto,
+  ListElementDestination,
+} from 'apiSrc/modules/browser/list/dto'
+
+import { AddListFormConfig as config } from '../constants/fields-config'
+import AddMultipleFields from '../../add-multiple-fields'
 
 export interface Props {
   keyName: string
@@ -29,7 +27,10 @@ export interface Props {
 
 const AddKeyList = (props: Props) => {
   const { keyName = '', keyTTL, onCancel } = props
-  const [element, setElement] = useState<string>('')
+  const [elements, setElements] = useState<string[]>([''])
+  const [destination, setDestination] =
+    useState<ListElementDestination>(TAIL_DESTINATION)
+
   const [isFormValid, setIsFormValid] = useState<boolean>(false)
 
   const { loading } = useSelector(addKeyStateSelector)
@@ -47,10 +48,32 @@ const AddKeyList = (props: Props) => {
     }
   }
 
+  const addField = () => {
+    setElements([...elements, ''])
+  }
+
+  const onClickRemove = (_item: string, index?: number) => {
+    if (elements.length === 1) {
+      setElements([''])
+    } else {
+      setElements(elements.filter((_el, i) => i !== index))
+    }
+  }
+
+  const isClearDisabled = (item: string) =>
+    elements.length === 1 && !item.length
+
+  const handleElementChange = (value: string, index: number) => {
+    const newElements = [...elements]
+    newElements[index] = value
+    setElements(newElements)
+  }
+
   const submitData = (): void => {
     const data: CreateListWithExpireDto = {
+      destination,
       keyName: stringToBuffer(keyName),
-      element: stringToBuffer(element),
+      elements: elements.map((el) => stringToBuffer(el)),
     }
     if (keyTTL !== undefined) {
       data.expire = keyTTL
@@ -59,58 +82,41 @@ const AddKeyList = (props: Props) => {
   }
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
-      <EuiFormRow label={config.element.label} fullWidth>
-        <EuiFieldText
-          fullWidth
-          name="element"
-          id="element"
-          placeholder={config.element.placeholder}
-          value={element}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setElement(e.target.value)}
-          disabled={loading}
-          data-testid="element"
-        />
-      </EuiFormRow>
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          style={{ border: 'none' }}
-          color="transparent"
-          hasShadow={false}
-          borderRadius="none"
-        >
-          <EuiFlexGroup justifyContent="flexEnd">
-            <EuiFlexItem grow={false}>
-              <EuiButton
-                color="secondary"
-                onClick={() => onCancel(true)}
-                className="btn-cancel btn-back"
-              >
-                <EuiTextColor>Cancel</EuiTextColor>
-              </EuiButton>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiButton
-                fill
-                size="m"
-                color="secondary"
-                className="btn-add"
-                isLoading={loading}
-                onClick={submitData}
-                disabled={!isFormValid || loading}
-                data-testid="add-key-list-btn"
-              >
-                Add Key
-              </EuiButton>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+    <form onSubmit={onFormSubmit}>
+      <RiSelect
+        value={destination}
+        options={optionsDestinations}
+        onChange={(value) => setDestination(value as ListElementDestination)}
+        data-testid="destination-select"
+      />
+      <Spacer size="m" />
+      <AddMultipleFields
+        items={elements}
+        onClickRemove={onClickRemove}
+        onClickAdd={addField}
+        isClearDisabled={isClearDisabled}
+      >
+        {(item, index) => (
+          <TextInput
+            name={`element-${index}`}
+            id={`element-${index}`}
+            placeholder={config.element.placeholder}
+            value={item}
+            disabled={loading}
+            onChange={(value) => handleElementChange(value, index)}
+            data-testid={`element-${index}`}
+          />
+        )}
+      </AddMultipleFields>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-list-btn"
+      />
+    </form>
   )
 }
 

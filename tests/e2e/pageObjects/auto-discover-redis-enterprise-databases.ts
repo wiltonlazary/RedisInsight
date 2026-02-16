@@ -1,6 +1,7 @@
 import { Selector } from 'testcafe';
+import { BasePage } from './base-page';
 
-export class AutoDiscoverREDatabases {
+export class AutoDiscoverREDatabases extends BasePage {
     //-------------------------------------------------------------------------------------------
     //DECLARATION OF SELECTORS
     //*Declare all elements/components of the relevant page.
@@ -14,5 +15,10 @@ export class AutoDiscoverREDatabases {
     viewDatabasesButton = Selector('[data-testid=btn-view-databases]');
     //TEXT INPUTS (also referred to as 'Text fields')
     title = Selector('[data-testid=title]');
-    databaseNames = Selector('[data-testid^=db_name_]');
+    databaseName = Selector('[data-testid^=db_name_]', { timeout: 15000 });
+
+    // Get databases name
+    async getDatabaseName(): Promise<string> {
+        return this.databaseName.textContent;
+    }
 }

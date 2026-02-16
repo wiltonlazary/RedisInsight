@@ -1,42 +1,59 @@
-import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiIcon,
-  EuiOutsideClickDetector,
-  EuiProgress,
-  EuiToolTip,
-  keys
-} from '@elastic/eui'
-import cx from 'classnames'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
-import { GroupBadge } from 'uiSrc/components'
+import React, { useEffect, useRef, useState } from 'react'
+
+import * as keys from 'uiSrc/constants/keys'
+import { GroupBadge, RiTooltip } from 'uiSrc/components'
+import { OutsideClickDetector } from 'uiSrc/components/base/utils'
 import { Nullable } from 'uiSrc/utils'
 
-import styles from './styles.module.scss'
+import {
+  CancelSlimIcon,
+  SearchIcon,
+  SwitchIcon,
+} from 'uiSrc/components/base/icons'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
+import {
+  StyledAutoSuggestions,
+  StyledClearButton,
+  StyledClearHistory,
+  StyledMultiSearch,
+  StyledMultiSearchWrapper,
+  StyledSearchInput,
+  StyledSuggestion,
+  StyledSuggestionOption,
+  StyledSuggestionRemoveBtn,
+  StyledSuggestionText,
+} from './MultiSearch.styles'
+
+import { Text } from 'uiSrc/components/base/text'
+
+interface MultiSearchSuggestion {
+  options: null | Array<{
+    id: string
+    option?: Nullable<string>
+    value: string
+  }>
+  buttonTooltipTitle: string
+  onApply: (suggestion: any) => void
+  onDelete: (ids: string[]) => void
+  loading?: boolean
+}
 
 export interface Props {
   value: string
-  options: string[]
+  options?: string[]
   placeholder: string
   disableSubmit?: boolean
   onSubmit: () => void
   onKeyDown?: (e: React.KeyboardEvent) => void
-  suggestions?: {
-    options: null | Array<{
-      id: string
-      option?: Nullable<string>
-      value: string
-    }>
-    buttonTooltipTitle: string
-    onApply: (suggestion: any) => void
-    onDelete: (ids: string[]) => void
-    loading?: boolean
-  }
+  suggestions?: MultiSearchSuggestion
   onChange: (value: string) => void
   onChangeOptions?: (options: string[]) => void
   onClear?: () => void
   className?: string
   compressed?: boolean
+  appendRight?: React.ReactNode
   [key: string]: any
 }
 
@@ -54,6 +71,7 @@ const MultiSearch = (props: Props) => {
     onClear = () => {},
     className,
     compressed,
+    appendRight,
     ...rest
   } = props
   const [isInputFocus, setIsInputFocus] = useState<boolean>(false)
@@ -64,7 +82,8 @@ const MultiSearch = (props: Props) => {
 
   const { options: suggestionOptions = [] } = suggestions ?? {}
 
-  const isArrowUpOrDown = (key: string) => [keys.ARROW_DOWN, keys.ARROW_UP].includes(key)
+  const isArrowUpOrDown = (key: string) =>
+    [keys.ARROW_DOWN, keys.ARROW_UP].includes(key)
 
   useEffect(() => {
     if (!suggestionOptions?.length) {
@@ -114,12 +133,14 @@ const MultiSearch = (props: Props) => {
     if (isArrowUpOrDown(e.key)) {
       e.preventDefault()
       const diff = focusedItem + (keys.ARROW_DOWN === e.key ? 1 : -1)
-      setFocusedItem(diff > max ? min : (diff < min ? max : diff))
+      setFocusedItem(diff > max ? min : diff < min ? max : diff)
     }
 
     if (e.key === 'Delete') {
       focusedItem > -1 && e.preventDefault()
-      handleDeleteSuggestion(focusedItem > -1 ? [suggestionOptions[focusedItem].id] : undefined)
+      handleDeleteSuggestion(
+        focusedItem > -1 ? [suggestionOptions[focusedItem].id] : undefined,
+      )
     }
 
     if (keys.ESCAPE === e.key) setShowAutoSuggestions(false)
@@ -140,148 +161,149 @@ const MultiSearch = (props: Props) => {
   }
 
   const SubmitBtn = () => (
-    <EuiButtonIcon
-      iconType="search"
-      color="primary"
+    <IconButton
+      icon={SearchIcon}
       aria-label="Search"
       disabled={disableSubmit}
-      className={styles.searchButton}
+      size="S"
       onClick={handleSubmit}
       data-testid="search-btn"
     />
   )
 
   return (
-    <EuiOutsideClickDetector onOutsideClick={exitAutoSuggestions}>
-      <div
-        className={cx(styles.multiSearchWrapper, className)}
+    <OutsideClickDetector onOutsideClick={exitAutoSuggestions}>
+      <StyledMultiSearchWrapper
+        align="center"
+        className={className}
         onKeyDown={handleKeyDown}
         role="presentation"
         data-testid="multi-search"
       >
-        <div className={cx(styles.multiSearch, { [styles.isFocused]: isInputFocus })}>
+        <StyledMultiSearch align="center" gap="m" $isFocused={isInputFocus}>
           <div>
             {options.map((option) => (
-              <GroupBadge key={option} type={option} onDelete={onDeleteOption} compressed={compressed} />
+              <GroupBadge
+                key={option}
+                type={option}
+                onDelete={onDeleteOption}
+                compressed={compressed}
+              />
             ))}
           </div>
-          <EuiFieldText
-            className={styles.multiSearchInput}
+          <StyledSearchInput
             placeholder={placeholder}
             value={value}
             onKeyDown={handleKeyDown}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+            onChange={onChange}
             onFocus={() => setIsInputFocus(true)}
             onBlur={() => setIsInputFocus(false)}
-            controlOnly
-            inputRef={inputRef}
+            ref={inputRef}
             {...rest}
           />
           {showAutoSuggestions && !!suggestionOptions?.length && (
-            <div role="presentation" className={styles.autoSuggestions} data-testid="suggestions">
+            <StyledAutoSuggestions
+              role="presentation"
+              data-testid="suggestions"
+            >
               {suggestions?.loading && (
-                <EuiProgress
-                  color="primary"
-                  size="xs"
-                  position="absolute"
+                <ProgressBarLoader
                   data-testid="progress-suggestions"
+                  color="primary"
                 />
               )}
               <ul role="listbox">
-                {suggestionOptions?.map(({ id, option, value }, index) => (
-                  value && (
-                    <li
-                      key={id}
-                      className={cx(styles.suggestion, { [styles.focused]: focusedItem === index })}
-                      onClick={() => handleApplySuggestion(index)}
-                      role="presentation"
-                      data-testid={`suggestion-item-${id}`}
-                    >
-                      {option && (
-                        <GroupBadge
-                          type={option}
-                          compressed={compressed}
-                          className={styles.suggestionOption}
+                {suggestionOptions?.map(
+                  ({ id, option, value }, index) =>
+                    value && (
+                      <StyledSuggestion
+                        key={id}
+                        $isFocused={focusedItem === index}
+                        onClick={() => handleApplySuggestion(index)}
+                        role="presentation"
+                        data-testid={`suggestion-item-${id}`}
+                      >
+                        {option && (
+                          <StyledSuggestionOption
+                            type={option}
+                            compressed={compressed}
+                          />
+                        )}
+                        <StyledSuggestionText data-testid="suggestion-item-text">
+                          {value}
+                        </StyledSuggestionText>
+                        <StyledSuggestionRemoveBtn
+                          icon={CancelSlimIcon}
+                          color="primary"
+                          aria-label="Remove History Record"
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            handleDeleteSuggestion([id])
+                          }}
+                          data-testid={`remove-suggestion-item-${id}`}
                         />
-                      )}
-                      <span className={styles.suggestionText} data-testid="suggestion-item-text">{value}</span>
-                      <EuiButtonIcon
-                        className={styles.suggestionRemoveBtn}
-                        iconType="cross"
-                        color="primary"
-                        aria-label="Remove History Record"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation()
-                          handleDeleteSuggestion([id])
-                        }}
-                        data-testid={`remove-suggestion-item-${id}`}
-                      />
-                    </li>
-                  )
-                ))}
+                      </StyledSuggestion>
+                    ),
+                )}
               </ul>
-              <div
+              <StyledClearHistory
                 role="presentation"
-                className={styles.clearHistory}
-                onClick={() => handleDeleteSuggestion(suggestionOptions?.map((item) => item.id))}
+                onClick={() =>
+                  handleDeleteSuggestion(
+                    suggestionOptions?.map((item) => item.id),
+                  )
+                }
                 data-testid="clear-history-btn"
               >
-                <EuiIcon type="eraser" style={{ marginRight: 6 }} />
-                <span>Clear history</span>
-              </div>
-            </div>
+                <RiIcon type="EraserIcon" style={{ marginRight: 6 }} />
+                <Text component="span" size="m">
+                  Clear history
+                </Text>
+              </StyledClearHistory>
+            </StyledAutoSuggestions>
           )}
           {(value || !!options.length) && (
-            <EuiToolTip
-              content="Reset Filters"
-              position="bottom"
-            >
-              <EuiButtonIcon
-                display="empty"
-                iconType="cross"
-                color="primary"
-                size="xs"
+            <RiTooltip content="Reset Filters" position="bottom">
+              <StyledClearButton
+                icon={CancelSlimIcon}
+                size="XS"
                 aria-label="Reset Filters"
                 onClick={onClear}
-                className={styles.clearButton}
                 data-testid="reset-filter-btn"
+                variant="secondary"
               />
-            </EuiToolTip>
+            </RiTooltip>
           )}
           {!!suggestionOptions?.length && (
-            <EuiToolTip
+            <RiTooltip
               content={suggestions?.buttonTooltipTitle}
               position="bottom"
             >
-              <EuiButtonIcon
-                display="empty"
-                iconType="sortable"
-                color="primary"
-                size="xs"
+              <IconButton
+                icon={SwitchIcon}
+                size="S"
                 aria-label={suggestions?.buttonTooltipTitle}
                 onClick={() => {
                   setShowAutoSuggestions((v) => !v)
                   inputRef.current?.focus()
                 }}
-                className={styles.historyIcon}
                 data-testid="show-suggestions-btn"
               />
-            </EuiToolTip>
+            </RiTooltip>
           )}
-        </div>
-        {disableSubmit && (
-          <EuiToolTip
-            position="top"
-            display="inlineBlock"
-            anchorClassName={styles.anchorSubmitBtn}
-            content="Please choose index in order to preform the search"
-          >
-            {SubmitBtn()}
-          </EuiToolTip>
-        )}
-        {!disableSubmit && SubmitBtn()}
-      </div>
-    </EuiOutsideClickDetector>
+          {appendRight}
+          {disableSubmit && (
+            <RiTooltip
+              position="top"
+              content="Please choose index in order to preform the search"
+            >
+              {SubmitBtn()}
+            </RiTooltip>
+          )}
+          {!disableSubmit && SubmitBtn()}
+        </StyledMultiSearch>
+      </StyledMultiSearchWrapper>
+    </OutsideClickDetector>
   )
 }
 

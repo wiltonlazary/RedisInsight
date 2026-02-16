@@ -9,18 +9,25 @@ import {
   pauseMonitor,
   setSocket,
   stopMonitor,
-  lockResume
+  lockResume,
+  setLogFileId,
+  setStartTimestamp,
 } from 'uiSrc/slices/cli/monitor'
 import { cleanup, mockedStore, render } from 'uiSrc/utils/test-utils'
 import { MonitorEvent, SocketEvent } from 'uiSrc/constants'
+import * as ioHooks from 'uiSrc/services/hooks/useIoConnection'
+import { getSocketApiUrl } from 'uiSrc/utils'
 import MonitorConfig from './MonitorConfig'
 
 let store: typeof mockedStore
 let socket: typeof MockedSocket
+let useIoConnectionSpy: jest.SpyInstance
+
 beforeEach(() => {
   cleanup()
   socket = new MockedSocket()
   socketIO.mockReturnValue(socket)
+  useIoConnectionSpy = jest.spyOn(ioHooks, 'useIoConnection')
   store = cloneDeep(mockedStore)
   store.clearActions()
 })
@@ -39,7 +46,7 @@ jest.mock('uiSrc/slices/cli/monitor', () => ({
 jest.mock('uiSrc/slices/instances/instances', () => ({
   ...jest.requireActual('uiSrc/slices/instances/instances'),
   connectedInstanceSelector: jest.fn().mockReturnValue({
-    id: '1'
+    id: '1',
   }),
 }))
 
@@ -57,11 +64,12 @@ describe('MonitorConfig', () => {
     monitorSelector.mockImplementation(monitorSelectorMock)
 
     const { unmount } = render(<MonitorConfig />)
-    const afterRenderActions = [
-      setSocket(socket),
-      setMonitorLoadingPause(true)
-    ]
+    const afterRenderActions = [setSocket(socket), setMonitorLoadingPause(true)]
     expect(store.getActions()).toEqual([...afterRenderActions])
+    expect(useIoConnectionSpy).toHaveBeenCalledWith(
+      getSocketApiUrl('monitor'),
+      { query: { instanceId: '1' }, token: '' },
+    )
 
     unmount()
   })
@@ -69,22 +77,43 @@ describe('MonitorConfig', () => {
   it(`should emit ${MonitorEvent.Monitor} event`, () => {
     const monitorSelectorMock = jest.fn().mockReturnValue({
       isRunning: true,
+      isSaveToFile: true,
     })
     monitorSelector.mockImplementation(monitorSelectorMock)
 
     const { unmount } = render(<MonitorConfig />)
 
-    socket.on(MonitorEvent.MonitorData, (data: []) => {
-      expect(data).toEqual(['message1', 'message2'])
+    socket.socketClient.on(MonitorEvent.Monitor, (data: any) => {
+      expect(data).toEqual({ logFileId: expect.any(String) })
     })
 
-    socket.socketClient.emit(MonitorEvent.MonitorData, ['message1', 'message2'])
+    socket.socketClient.emit(SocketEvent.Connect)
 
     const afterRenderActions = [
       setSocket(socket),
-      setMonitorLoadingPause(true)
+      setMonitorLoadingPause(true),
+      setLogFileId(expect.any(String)),
+      setStartTimestamp(expect.any(Number)),
     ]
     expect(store.getActions()).toEqual([...afterRenderActions])
+
+    unmount()
+  })
+
+  it(`should not emit ${MonitorEvent.Monitor} event when paused`, () => {
+    const monitorSelectorMock = jest.fn().mockReturnValue({
+      isRunning: true,
+      isPaused: true,
+    })
+    monitorSelector.mockImplementation(monitorSelectorMock)
+
+    const { unmount } = render(<MonitorConfig />)
+    const mockedMonitorEvent = jest.fn()
+
+    socket.socketClient.on(MonitorEvent.Monitor, mockedMonitorEvent)
+    socket.socketClient.emit(SocketEvent.Connect)
+
+    expect(mockedMonitorEvent).not.toBeCalled()
 
     unmount()
   })
@@ -102,12 +131,15 @@ describe('MonitorConfig', () => {
       // done()
     })
 
-    socket.socketClient.emit(MonitorEvent.Exception, { message: 'test', name: 'error' })
+    socket.socketClient.emit(MonitorEvent.Exception, {
+      message: 'test',
+      name: 'error',
+    })
 
     const afterRenderActions = [
       setSocket(socket),
       setMonitorLoadingPause(true),
-      pauseMonitor()
+      pauseMonitor(),
     ]
     expect(store.getActions()).toEqual([...afterRenderActions])
 
@@ -126,12 +158,12 @@ describe('MonitorConfig', () => {
       expect(error).toEqual({ message: 'test', name: 'error' })
     })
 
-    socket.socketClient.emit(SocketEvent.ConnectionError, { message: 'test', name: 'error' })
+    socket.socketClient.emit(SocketEvent.ConnectionError, {
+      message: 'test',
+      name: 'error',
+    })
 
-    const afterRenderActions = [
-      setSocket(socket),
-      setMonitorLoadingPause(true)
-    ]
+    const afterRenderActions = [setSocket(socket), setMonitorLoadingPause(true)]
     expect(store.getActions()).toEqual([...afterRenderActions])
 
     unmount()
@@ -152,7 +184,7 @@ describe('MonitorConfig', () => {
       setMonitorLoadingPause(true),
       pauseMonitor(),
       stopMonitor(),
-      lockResume()
+      lockResume(),
     ]
     expect(store.getActions()).toEqual([...afterRenderActions])
 

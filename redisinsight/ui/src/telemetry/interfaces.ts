@@ -6,23 +6,22 @@ export interface ITelemetryIdentify {
   sessionId: number
 }
 
-export interface ITelemetryService {
-  initialize(): Promise<void>
-  pageView(name: string, appType: string, databaseId?: string): Promise<void>
-  identify(opts: ITelemetryIdentify): Promise<void>
-  event(opts: ITelemetryEvent): Promise<void>
-  anonymousId: string
+export type EventData = {
+  [key: string]: any
+  databaseId?: string
+  provider?: string
 }
 
 export interface ITelemetrySendEvent {
   event: TelemetryEvent
-  eventData?: Object
+  eventData?: EventData
   nonTracking?: boolean
+  traits?: Object
 }
 
 export interface ITelemetrySendPageView {
   name: string
-  databaseId?: string
+  eventData?: EventData
   nonTracking?: boolean
 }
 
@@ -33,7 +32,7 @@ export interface ITelemetryEvent {
 
 export enum MatchType {
   EXACT_VALUE_NAME = 'EXACT_VALUE_NAME',
-  PATTERN = 'PATTERN'
+  PATTERN = 'PATTERN',
 }
 
 export enum RedisModules {
@@ -46,11 +45,14 @@ export enum RedisModules {
   RedisTimeSeries = 'timeseries',
 }
 
-interface IModuleSummary {
+export interface IModuleSummary {
   loaded: boolean
   version?: number
-  semanticVersion?: number
+  semanticVersion?: string
 }
-export interface IRedisModulesSummary extends Record<keyof typeof RedisModules, IModuleSummary> {
+
+export type RedisModulesKeyType = keyof typeof RedisModules
+export interface IRedisModulesSummary
+  extends Record<keyof typeof RedisModules, IModuleSummary> {
   customModules: AdditionalRedisModule[]
 }

@@ -1,15 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { CommandExecutionStatus } from 'src/modules/cli/dto/cli.dto';
-import { Endpoint } from 'src/common/models';
-
-class ClusterNode extends Endpoint {
-  @ApiPropertyOptional({
-    description: 'Cluster node slot.',
-    type: Number,
-    example: 0,
-  })
-  slot?: number;
-}
+import { Expose } from 'class-transformer';
 
 export class CommandExecutionResult {
   @ApiProperty({
@@ -17,21 +8,21 @@ export class CommandExecutionResult {
     default: CommandExecutionStatus.Success,
     enum: CommandExecutionStatus,
   })
+  @Expose()
   status: CommandExecutionStatus;
 
   @ApiProperty({
     type: String,
     description: 'Redis response',
   })
+  @Expose()
   response: any;
 
-  @ApiPropertyOptional({
-    type: () => ClusterNode,
-    description: 'Redis Cluster Node info',
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'Flag showing if response was replaced with message notification about response size limit threshold',
   })
-  node?: ClusterNode;
-
-  constructor(partial: Partial<CommandExecutionResult> = {}) {
-    Object.assign(this, partial);
-  }
+  @Expose()
+  sizeLimitExceeded?: boolean;
 }

@@ -1,7 +1,15 @@
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
+import { act } from '@testing-library/react'
 import { anyToBuffer } from 'uiSrc/utils'
-import { render, screen, fireEvent } from 'uiSrc/utils/test-utils'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitForRiTooltipVisible,
+} from 'uiSrc/utils/test-utils'
+import { MOCK_TRUNCATED_STRING_VALUE } from 'uiSrc/mocks/data/bigString'
+import { TEXT_DISABLED_ACTION_WITH_TRUNCATED_DATA } from 'uiSrc/constants'
 import PopoverDelete, { Props } from './PopoverDelete'
 
 const mockedProps = mock<Props>()
@@ -18,11 +26,38 @@ describe('PopoverDelete', () => {
         {...instance(mockedProps)}
         item="name"
         showPopover={showPopover}
-      />
+      />,
     )
     fireEvent.click(screen.getByLabelText(/remove field/i))
 
     expect(showPopover).toBeCalledTimes(1)
+  })
+
+  it('should disable delete button for truncated strings', async () => {
+    const showPopover = jest.fn()
+    render(
+      <PopoverDelete
+        {...instance(mockedProps)}
+        item={MOCK_TRUNCATED_STRING_VALUE}
+        showPopover={showPopover}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText(/remove field/i))
+
+    expect(showPopover).toBeCalledTimes(0)
+
+    const removeButton = screen.getByTestId('remove-icon')
+
+    expect(removeButton).toBeDisabled()
+
+    await act(async () => {
+      fireEvent.focus(removeButton)
+    })
+    await waitForRiTooltipVisible()
+
+    expect(screen.getByTestId('remove-tooltip')).toHaveTextContent(
+      TEXT_DISABLED_ACTION_WITH_TRUNCATED_DATA,
+    )
   })
 
   it('should call handleDeleteItem on delete', () => {
@@ -34,7 +69,7 @@ describe('PopoverDelete', () => {
         suffix="_"
         deleting="name_"
         handleDeleteItem={handleDeleteItem}
-      />
+      />,
     )
 
     const deleteBtn = screen.getByTestId('remove')
@@ -53,7 +88,7 @@ describe('PopoverDelete', () => {
         suffix="_"
         deleting="name_"
         handleDeleteItem={handleDeleteItem}
-      />
+      />,
     )
 
     const deleteBtn = screen.getByTestId('remove')
@@ -73,7 +108,7 @@ describe('PopoverDelete', () => {
         suffix="_"
         deleting="name_"
         handleDeleteItem={handleDeleteItem}
-      />
+      />,
     )
 
     const deleteBtn = screen.getByTestId('remove')

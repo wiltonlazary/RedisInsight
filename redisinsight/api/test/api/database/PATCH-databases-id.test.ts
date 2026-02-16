@@ -6,14 +6,18 @@ import {
   validateInvalidDataTestCase,
   requirements,
   getMainCheckFn,
-  _, it, validateApiCall, after
+  _,
+  it,
+  validateApiCall,
+  after,
 } from '../deps';
 import { Joi } from '../../helpers/test';
 import { databaseSchema } from './constants';
 
 const { request, server, localDb, constants, rte } = deps;
 
-const endpoint = (id = constants.TEST_INSTANCE_ID) => request(server).patch(`/${constants.API.DATABASES}/${id}`);
+const endpoint = (id = constants.TEST_INSTANCE_ID) =>
+  request(server).patch(`/${constants.API.DATABASES}/${id}`);
 
 // input data schema
 const dataSchema = Joi.object({
@@ -24,13 +28,35 @@ const dataSchema = Joi.object({
   username: Joi.string().allow(null),
   password: Joi.string().allow(null),
   timeout: Joi.number().integer().allow(null),
-  compressor: Joi.string().valid('NONE', 'LZ4', 'GZIP', 'ZSTD', 'SNAPPY').allow(null),
+  compressor: Joi.string()
+    .valid('NONE', 'LZ4', 'GZIP', 'ZSTD', 'SNAPPY')
+    .allow(null),
   tls: Joi.boolean().allow(null),
   tlsServername: Joi.string().allow(null),
   verifyServerCert: Joi.boolean().allow(null),
-}).messages({
-  'any.required': '{#label} should not be empty',
-}).strict(true);
+  ssh: Joi.boolean().allow(null),
+  sshOptions: Joi.object({
+    host: Joi.string().allow(null),
+    port: Joi.number().allow(null),
+    username: Joi.string().allow(null),
+    password: Joi.string().allow(null),
+    privateKey: Joi.string().allow(null),
+    passphrase: Joi.string().allow(null),
+  }).allow(null),
+  caCert: Joi.object({
+    name: Joi.string(),
+    certificate: Joi.string(),
+  }).allow(null),
+  clientCert: Joi.object({
+    name: Joi.string(),
+    certificate: Joi.string(),
+    key: Joi.string(),
+  }).allow(null),
+})
+  .messages({
+    'any.required': '{#label} should not be empty',
+  })
+  .strict(true);
 
 const validInputData = {
   name: constants.getRandomString(),
@@ -44,9 +70,14 @@ const baseDatabaseData = {
   port: constants.TEST_REDIS_PORT,
   username: constants.TEST_REDIS_USER || undefined,
   password: constants.TEST_REDIS_PASSWORD || undefined,
-}
+};
 
-const responseSchema = databaseSchema.required().strict(true);
+const responseSchema = databaseSchema
+  .keys({
+    isPreSetup: Joi.boolean().allow(null),
+  })
+  .required()
+  .strict(true);
 
 const mainCheckFn = getMainCheckFn(endpoint);
 
@@ -83,11 +114,21 @@ describe(`PATCH /databases/:id`, () => {
           error: 'Bad Request',
         },
         checkFn: ({ body }) => {
-          expect(body.message).to.contain('caCert.property name should not exist');
-          expect(body.message).to.contain('caCert.property certificate should not exist');
-          expect(body.message).to.contain('clientCert.property name should not exist');
-          expect(body.message).to.contain('clientCert.property certificate should not exist');
-          expect(body.message).to.contain('clientCert.property key should not exist');
+          expect(body.message).to.contain(
+            'caCert.property name should not exist',
+          );
+          expect(body.message).to.contain(
+            'caCert.property certificate should not exist',
+          );
+          expect(body.message).to.contain(
+            'clientCert.property name should not exist',
+          );
+          expect(body.message).to.contain(
+            'clientCert.property certificate should not exist',
+          );
+          expect(body.message).to.contain(
+            'clientCert.property key should not exist',
+          );
         },
       },
     ].map(mainCheckFn);
@@ -103,34 +144,75 @@ describe(`PATCH /databases/:id`, () => {
         },
         responseSchema,
         before: async () => {
-          oldDatabase = await localDb.getInstanceById(constants.TEST_INSTANCE_ID);
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID,
+          );
           expect(oldDatabase.name).to.not.eq(newName);
         },
         responseBody: {
           name: newName,
         },
         after: async () => {
-          newDatabase = await localDb.getInstanceById(constants.TEST_INSTANCE_ID);
+          newDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID,
+          );
           expect(newDatabase.name).to.eq(newName);
         },
       },
       {
-        name: 'Should return 503 error if incorrect connection data provided',
+        name: 'Should update database without test connections if updated fields does not affect connection details',
+        endpoint: () => endpoint(constants.TEST_INSTANCE_ID_5),
+        data: {
+          name: newName,
+          timeout: 45_000,
+        },
+        responseSchema,
+        before: async () => {
+          await localDb.createIncorrectDatabaseInstances();
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_5,
+          );
+          expect(oldDatabase.name).to.not.eq(newName);
+          // check connection
+          await validateApiCall({
+            endpoint: () =>
+              request(server).get(
+                `/${constants.API.DATABASES}/${oldDatabase.id}/connect`,
+              ),
+            statusCode: 424,
+          });
+        },
+        responseBody: {
+          name: newName,
+          timeout: 45_000,
+        },
+        after: async () => {
+          newDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_5,
+          );
+          expect(newDatabase.name).to.eq(newName);
+          expect(newDatabase.timeout).to.eq(45_000);
+        },
+      },
+      {
+        name: 'Should return 424 error if incorrect connection data provided',
         data: {
           name: 'new name',
           port: 1111,
           ssh: false,
         },
-        statusCode: 503,
+        statusCode: 424,
         responseBody: {
-          statusCode: 503,
-          // message: `Could not connect to ${constants.TEST_REDIS_HOST}:1111, please check the connection details.`,
-          // todo: verify error handling because right now messages are different
-          error: 'Service Unavailable'
+          statusCode: 424,
+          message: `Could not connect to ${constants.TEST_REDIS_HOST}:1111, please check the connection details.`,
+          error: 'RedisConnectionUnavailableException',
+          errorCode: 10904,
         },
         after: async () => {
           // check that instance wasn't changed
-          const newDb = await localDb.getInstanceById(constants.TEST_INSTANCE_ID);
+          const newDb = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID,
+          );
           expect(newDb.name).to.not.eql('new name');
           expect(newDb.port).to.eql(constants.TEST_REDIS_PORT);
         },
@@ -147,7 +229,169 @@ describe(`PATCH /databases/:id`, () => {
         responseBody: {
           statusCode: 404,
           message: 'Invalid database instance id.',
-          error: 'Not Found'
+          error: 'Not Found',
+        },
+      },
+    ].map(mainCheckFn);
+  });
+  describe('TAGS', () => {
+    const newTagsDto1 = [
+      {
+        key: constants.TEST_TAGS[1].key,
+        value: constants.TEST_TAGS[1].value,
+      },
+      {
+        key: 'newKey',
+        value: 'newValue',
+      },
+    ];
+    const newTagsDto2 = [
+      {
+        key: constants.TEST_TAGS[1].key,
+        value: constants.TEST_TAGS[1].value,
+      },
+      {
+        key: constants.TEST_TAGS[2].key,
+        value: constants.TEST_TAGS[2].value,
+      },
+    ];
+    const newTagsDto3 = [];
+    const newTagsDto4 = [
+      {
+        key: 'duplicateKey',
+        value: 'value1',
+      },
+      {
+        key: 'duplicateKey',
+        value: 'value2',
+      },
+    ];
+
+    const expectTagsCount = async (count: number) => {
+      const tags = await localDb.getAllTags();
+      expect(tags.length).to.eq(count);
+    };
+    const extractTagPairs = (tags: any[]) =>
+      tags
+        .map(({ key, value }) => ({ key, value }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+
+    [
+      {
+        name: 'Should update database with new tags and remove unused ones (+1,-2)',
+        endpoint: () => endpoint(constants.TEST_INSTANCE_ID_6),
+        data: {
+          tags: newTagsDto1,
+        },
+        responseSchema,
+        before: async () => {
+          await localDb.createInstancesWithTags();
+
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_6,
+          );
+          const tagPairs = extractTagPairs(oldDatabase.tags);
+
+          expect(tagPairs).to.not.eql(newTagsDto1);
+          await expectTagsCount(constants.TEST_TAGS.length);
+        },
+        responseBody: {
+          tags: newTagsDto1,
+        },
+        after: async () => {
+          newDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_6,
+          );
+          const tagPairs = extractTagPairs(newDatabase.tags);
+
+          expect(tagPairs).to.eql(newTagsDto1);
+          await expectTagsCount(constants.TEST_TAGS.length - 1);
+        },
+      },
+      {
+        name: 'Should update database with new tags and remove unused ones (+0,+0)',
+        endpoint: () => endpoint(constants.TEST_INSTANCE_ID_7),
+        data: {
+          tags: newTagsDto2,
+        },
+        responseSchema,
+        before: async () => {
+          await localDb.createInstancesWithTags();
+
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_7,
+          );
+          const tagPairs = extractTagPairs(oldDatabase.tags);
+
+          expect(tagPairs).to.not.eql(newTagsDto2);
+          await expectTagsCount(constants.TEST_TAGS.length);
+        },
+        responseBody: {
+          tags: newTagsDto2,
+        },
+        after: async () => {
+          newDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_7,
+          );
+          const tagPairs = extractTagPairs(newDatabase.tags);
+
+          expect(tagPairs).to.eql(newTagsDto2);
+          await expectTagsCount(constants.TEST_TAGS.length);
+        },
+      },
+      {
+        name: 'Should update database with new tags and remove unused ones (+0,-2)',
+        endpoint: () => endpoint(constants.TEST_INSTANCE_ID_6),
+        data: {
+          tags: newTagsDto3,
+        },
+        responseSchema,
+        before: async () => {
+          await localDb.createInstancesWithTags();
+
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_6,
+          );
+          const tagPairs = extractTagPairs(oldDatabase.tags);
+
+          expect(tagPairs).to.not.eql(newTagsDto3);
+          await expectTagsCount(constants.TEST_TAGS.length);
+        },
+        responseBody: {
+          tags: newTagsDto3,
+        },
+        after: async () => {
+          newDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_6,
+          );
+          const tagPairs = extractTagPairs(newDatabase.tags);
+
+          expect(tagPairs).to.eql(newTagsDto3);
+          await expectTagsCount(constants.TEST_TAGS.length - 2);
+        },
+      },
+      {
+        name: 'Should not allow adding duplicated tags by key to a database',
+        endpoint: () => endpoint(constants.TEST_INSTANCE_ID_6),
+        data: {
+          tags: newTagsDto4,
+        },
+        before: async () => {
+          await localDb.createInstancesWithTags();
+
+          oldDatabase = await localDb.getInstanceById(
+            constants.TEST_INSTANCE_ID_6,
+          );
+          const tagPairs = extractTagPairs(oldDatabase.tags);
+
+          expect(tagPairs).to.not.eql(newTagsDto4);
+          await expectTagsCount(constants.TEST_TAGS.length);
+        },
+        statusCode: 400,
+        responseBody: {
+          message: ['Tags must not contain duplicates by key.'],
+          error: 'Bad Request',
+          statusCode: 400,
         },
       },
     ].map(mainCheckFn);
@@ -167,11 +411,13 @@ describe(`PATCH /databases/:id`, () => {
           },
           responseSchema,
           before: async () => {
-            oldDatabase = await localDb.getInstanceById(constants.TEST_INSTANCE_ID_3);
+            oldDatabase = await localDb.getInstanceById(
+              constants.TEST_INSTANCE_ID_3,
+            );
             expect(oldDatabase.name).to.eq(constants.TEST_INSTANCE_NAME_3);
             expect(oldDatabase.modules).to.eq('[]');
-            expect(oldDatabase.host).to.not.eq(constants.TEST_REDIS_HOST)
-            expect(oldDatabase.port).to.not.eq(constants.TEST_REDIS_PORT)
+            expect(oldDatabase.host).to.not.eq(constants.TEST_REDIS_HOST);
+            expect(oldDatabase.port).to.not.eq(constants.TEST_REDIS_PORT);
           },
           responseBody: {
             host: constants.TEST_REDIS_HOST,
@@ -179,16 +425,27 @@ describe(`PATCH /databases/:id`, () => {
             timeout: constants.TEST_REDIS_TIMEOUT,
             compressor: constants.TEST_REDIS_COMPRESSOR,
             username: null,
-            password: null,
             connectionType: constants.STANDALONE,
             tls: false,
             verifyServerCert: false,
             tlsServername: null,
           },
           after: async () => {
-            newDatabase = await localDb.getInstanceById(constants.TEST_INSTANCE_ID_3);
+            newDatabase = await localDb.getInstanceById(
+              constants.TEST_INSTANCE_ID_3,
+            );
             expect(newDatabase).to.contain({
-              ..._.omit(oldDatabase, ['modules', 'provider', 'lastConnection', 'new', 'timeout', 'compressor']),
+              ..._.omit(oldDatabase, [
+                'modules',
+                'provider',
+                'lastConnection',
+                'new',
+                'timeout',
+                'compressor',
+                'version',
+                'createdAt',
+                'tags',
+              ]),
               host: constants.TEST_REDIS_HOST,
               port: constants.TEST_REDIS_PORT,
             });
@@ -201,9 +458,9 @@ describe(`PATCH /databases/:id`, () => {
         it('Should throw an error if db index specified', async () => {
           await validateApiCall({
             endpoint,
-            statusCode: 400,
+            statusCode: 424,
             data: {
-              db: constants.TEST_REDIS_DB_INDEX
+              db: constants.TEST_REDIS_DB_INDEX,
             },
           });
         });
@@ -212,7 +469,6 @@ describe(`PATCH /databases/:id`, () => {
         requirements('!rte.re');
         it('Update standalone with particular db index', async () => {
           let addedId;
-          const dbName = constants.getRandomString();
           const cliUuid = constants.getRandomString();
           const browserKeyName = constants.getRandomString();
           const cliKeyName = constants.getRandomString();
@@ -228,44 +484,59 @@ describe(`PATCH /databases/:id`, () => {
             },
             checkFn: ({ body }) => {
               addedId = body.id;
-            }
+            },
           });
 
           // Create string using Browser API to particular db index
           await validateApiCall({
-            endpoint: () => request(server).post(`/${constants.API.DATABASES}/${addedId}/string`),
+            endpoint: () =>
+              request(server).post(
+                `/${constants.API.DATABASES}/${addedId}/string`,
+              ),
             statusCode: 201,
             data: {
               keyName: browserKeyName,
-              value: 'somevalue'
+              value: 'somevalue',
             },
           });
 
           // Create client for CLI
           await validateApiCall({
-            endpoint: () => request(server).patch(`/${constants.API.DATABASES}/${addedId}/cli/${cliUuid}`),
+            endpoint: () =>
+              request(server).patch(
+                `/${constants.API.DATABASES}/${addedId}/cli/${cliUuid}`,
+              ),
             statusCode: 200,
           });
 
           // Create string using CLI API to 0 db index
           await validateApiCall({
-            endpoint: () => request(server).post(`/${constants.API.DATABASES}/${addedId}/cli/${cliUuid}/send-command`),
+            endpoint: () =>
+              request(server).post(
+                `/${constants.API.DATABASES}/${addedId}/cli/${cliUuid}/send-command`,
+              ),
             statusCode: 200,
             data: {
               command: `set ${cliKeyName} somevalue`,
             },
           });
 
-
           // check data created by db index
-          await rte.data.executeCommand('select', `${constants.TEST_REDIS_DB_INDEX}`);
-          expect(await rte.data.executeCommand('exists', cliKeyName)).to.eql(1)
-          expect(await rte.data.executeCommand('exists', browserKeyName)).to.eql(1)
+          await rte.data.executeCommand(
+            'select',
+            `${constants.TEST_REDIS_DB_INDEX}`,
+          );
+          expect(await rte.data.executeCommand('exists', cliKeyName)).to.eql(1);
+          expect(
+            await rte.data.executeCommand('exists', browserKeyName),
+          ).to.eql(1);
 
           // check data created by db index
           await rte.data.executeCommand('select', '0');
-          expect(await rte.data.executeCommand('exists', cliKeyName)).to.eql(0)
-          expect(await rte.data.executeCommand('exists', browserKeyName)).to.eql(0)
+          expect(await rte.data.executeCommand('exists', cliKeyName)).to.eql(0);
+          expect(
+            await rte.data.executeCommand('exists', browserKeyName),
+          ).to.eql(0);
 
           // switch back to db index 0
           await validateApiCall({
@@ -279,7 +550,7 @@ describe(`PATCH /databases/:id`, () => {
             },
             checkFn: ({ body }) => {
               addedId = body.id;
-            }
+            },
           });
         });
       });
@@ -306,7 +577,7 @@ describe(`PATCH /databases/:id`, () => {
             host: constants.TEST_REDIS_HOST,
             port: constants.TEST_REDIS_PORT,
             username: null,
-            password: constants.TEST_REDIS_PASSWORD,
+            password: true,
             connectionType: constants.STANDALONE,
           },
         });
@@ -376,10 +647,15 @@ describe(`PATCH /databases/:id`, () => {
             expect(body.caCert.name).to.eq(newCaName);
             expect(body.caCert.certificate).to.be.undefined;
 
-            const ca: any = await (await localDb.getRepository(localDb.repositories.CA_CERT_REPOSITORY))
-              .findOneBy({ id: body.caCert.id });
+            const ca: any = await (
+              await localDb.getRepository(
+                localDb.repositories.CA_CERT_REPOSITORY,
+              )
+            ).findOneBy({ id: body.caCert.id });
 
-            expect(ca.certificate).to.eql(localDb.encryptData(constants.TEST_REDIS_TLS_CA));
+            expect(ca.certificate).to.eql(
+              localDb.encryptData(constants.TEST_REDIS_TLS_CA),
+            );
           },
         });
 
@@ -393,7 +669,7 @@ describe(`PATCH /databases/:id`, () => {
 
         await validateApiCall({
           endpoint: () => endpoint(constants.TEST_INSTANCE_ID_2),
-          statusCode: 400,
+          statusCode: 424,
           data: {
             name: dbName,
             host: constants.TEST_REDIS_HOST,
@@ -403,10 +679,10 @@ describe(`PATCH /databases/:id`, () => {
             caCert: null,
           },
           responseBody: {
-            statusCode: 400,
-            // todo: verify error handling because right now messages are different
-            // message: 'Could not connect to',
-            error: 'Bad Request'
+            statusCode: 424,
+            message:
+              'Could not connect to redis:6379, please check the CA or Client certificate.',
+            error: 'RedisConnectionIncorrectCertificateException',
           },
         });
 
@@ -419,7 +695,7 @@ describe(`PATCH /databases/:id`, () => {
 
         await validateApiCall({
           endpoint: () => endpoint(constants.TEST_INSTANCE_ID_2),
-          statusCode: 400,
+          statusCode: 424,
           data: {
             name: dbName,
             host: constants.TEST_REDIS_HOST,
@@ -428,14 +704,14 @@ describe(`PATCH /databases/:id`, () => {
             verifyServerCert: true,
             caCert: {
               name: dbName,
-              certificate: 'invalid'
+              certificate: 'invalid',
             },
           },
           responseBody: {
-            statusCode: 400,
-            // todo: verify error handling because right now messages are different
-            // message: 'Could not connect to',
-            error: 'Bad Request'
+            statusCode: 424,
+            message:
+              'Could not connect to redis:6379, please check the CA or Client certificate.',
+            error: 'RedisConnectionIncorrectCertificateException',
           },
         });
 
@@ -445,7 +721,10 @@ describe(`PATCH /databases/:id`, () => {
     describe('TLS AUTH', function () {
       requirements('rte.tls', 'rte.tlsAuth');
 
-      let existingCACertId, existingClientCertId, existingCACertName, existingClientCertName;
+      let existingCACertId,
+        existingClientCertId,
+        existingCACertName,
+        existingClientCertName;
 
       beforeEach(localDb.initAgreements);
       after(localDb.initAgreements);
@@ -465,7 +744,6 @@ describe(`PATCH /databases/:id`, () => {
         await validateApiCall({
           endpoint,
           data: {
-            ...baseDatabaseData,
             name: dbName,
             tls: true,
             verifyServerCert: true,
@@ -499,13 +777,19 @@ describe(`PATCH /databases/:id`, () => {
             expect(body.clientCert.certificate).to.be.undefined;
             expect(body.clientCert.key).to.be.undefined;
 
-            const ca: any = await (await localDb.getRepository(localDb.repositories.CA_CERT_REPOSITORY))
-              .findOneBy({ id: body.caCert.id });
+            const ca: any = await (
+              await localDb.getRepository(
+                localDb.repositories.CA_CERT_REPOSITORY,
+              )
+            ).findOneBy({ id: body.caCert.id });
 
             expect(ca.certificate).to.eql(constants.TEST_REDIS_TLS_CA);
 
-            const clientPair: any = await (await localDb.getRepository(localDb.repositories.CLIENT_CERT_REPOSITORY))
-              .findOneBy({ id: body.clientCert.id });
+            const clientPair: any = await (
+              await localDb.getRepository(
+                localDb.repositories.CLIENT_CERT_REPOSITORY,
+              )
+            ).findOneBy({ id: body.clientCert.id });
 
             expect(clientPair.certificate).to.eql(constants.TEST_USER_TLS_CERT);
             expect(clientPair.key).to.eql(constants.TEST_USER_TLS_KEY);
@@ -516,15 +800,15 @@ describe(`PATCH /databases/:id`, () => {
       });
       it('Update standalone instance and verify users certs (new certificates)', async () => {
         const dbName = constants.getRandomString();
-        const newCaName = existingCACertName = constants.getRandomString();
-        const newClientCertName = existingClientCertName = constants.getRandomString();
+        const newCaName = (existingCACertName = constants.getRandomString());
+        const newClientCertName = (existingClientCertName =
+          constants.getRandomString());
         // preconditions
         expect(await localDb.getInstanceByName(dbName)).to.eql(null);
 
         const { body } = await validateApiCall({
           endpoint,
           data: {
-            ...baseDatabaseData,
             name: dbName,
             tls: true,
             verifyServerCert: true,
@@ -558,16 +842,28 @@ describe(`PATCH /databases/:id`, () => {
             expect(body.clientCert.certificate).to.be.undefined;
             expect(body.clientCert.key).to.be.undefined;
 
-            const ca: any = await (await localDb.getRepository(localDb.repositories.CA_CERT_REPOSITORY))
-              .findOneBy({ id: body.caCert.id });
+            const ca: any = await (
+              await localDb.getRepository(
+                localDb.repositories.CA_CERT_REPOSITORY,
+              )
+            ).findOneBy({ id: body.caCert.id });
 
-            expect(ca.certificate).to.eql(localDb.encryptData(constants.TEST_REDIS_TLS_CA));
+            expect(ca.certificate).to.eql(
+              localDb.encryptData(constants.TEST_REDIS_TLS_CA),
+            );
 
-            const clientPair: any = await (await localDb.getRepository(localDb.repositories.CLIENT_CERT_REPOSITORY))
-              .findOneBy({ id: body.clientCert.id });
+            const clientPair: any = await (
+              await localDb.getRepository(
+                localDb.repositories.CLIENT_CERT_REPOSITORY,
+              )
+            ).findOneBy({ id: body.clientCert.id });
 
-            expect(clientPair.certificate).to.eql(localDb.encryptData(constants.TEST_USER_TLS_CERT));
-            expect(clientPair.key).to.eql(localDb.encryptData(constants.TEST_USER_TLS_KEY));
+            expect(clientPair.certificate).to.eql(
+              localDb.encryptData(constants.TEST_USER_TLS_CERT),
+            );
+            expect(clientPair.key).to.eql(
+              localDb.encryptData(constants.TEST_USER_TLS_KEY),
+            );
           },
         });
 
@@ -625,9 +921,8 @@ describe(`PATCH /databases/:id`, () => {
 
         await validateApiCall({
           endpoint,
-          statusCode: 400,
+
           data: {
-            ...baseDatabaseData,
             name: dbName,
             tls: true,
             verifyServerCert: true,
@@ -641,6 +936,7 @@ describe(`PATCH /databases/:id`, () => {
               key: constants.TEST_USER_TLS_KEY,
             },
           },
+          statusCode: 400,
           responseBody: {
             error: 'Bad Request',
             message: 'This client certificate name is already in use.',
@@ -659,7 +955,6 @@ describe(`PATCH /databases/:id`, () => {
 
         await validateApiCall({
           endpoint,
-          statusCode: 400,
           data: {
             ...baseDatabaseData,
             name: dbName,
@@ -675,6 +970,7 @@ describe(`PATCH /databases/:id`, () => {
               key: constants.TEST_USER_TLS_KEY,
             },
           },
+          statusCode: 400,
           responseBody: {
             error: 'Bad Request',
             message: 'This ca certificate name is already in use.',
@@ -696,15 +992,11 @@ describe(`PATCH /databases/:id`, () => {
         await validateApiCall({
           endpoint: () => endpoint(constants.TEST_INSTANCE_ID_3),
           data: {
-            ...baseDatabaseData,
             name: dbName,
           },
           responseSchema,
           responseBody: {
             name: dbName,
-            port: constants.TEST_REDIS_PORT,
-            connectionType: constants.CLUSTER,
-            nodes: rte.env.nodes,
           },
         });
       });
@@ -713,12 +1005,12 @@ describe(`PATCH /databases/:id`, () => {
 
         await validateApiCall({
           endpoint: () => endpoint(constants.TEST_INSTANCE_ID_3),
-          statusCode: 400,
+          statusCode: 424,
           data: {
             name: dbName,
             host: constants.TEST_REDIS_HOST,
             port: constants.TEST_REDIS_PORT,
-            db: constants.TEST_REDIS_DB_INDEX
+            db: constants.TEST_REDIS_DB_INDEX,
           },
         });
       });
@@ -731,28 +1023,20 @@ describe(`PATCH /databases/:id`, () => {
         await validateApiCall({
           endpoint: () => endpoint(constants.TEST_INSTANCE_ID_3),
           data: {
-            ...baseDatabaseData,
             name: dbName,
-            tls: true,
-            verifyServerCert: false,
           },
           responseSchema,
           responseBody: {
             name: dbName,
-            connectionType: constants.CLUSTER,
-            tls: true,
-            nodes: rte.env.nodes,
-            verifyServerCert: false,
           },
         });
       });
       it('Should create instance tls and create new CA cert', async () => {
         const dbName = constants.getRandomString();
 
-        const { body } = await validateApiCall({
-          endpoint: () => endpoint(constants.TEST_INSTANCE_ID_3),
+        await validateApiCall({
+          endpoint,
           data: {
-            ...baseDatabaseData,
             name: dbName,
             tls: true,
             verifyServerCert: true,
@@ -772,8 +1056,168 @@ describe(`PATCH /databases/:id`, () => {
           },
         });
       });
-      // todo: Should throw an error without CA cert when cert validation enabled
-      // todo: Should throw an error with invalid CA cert
+      it('Should throw an error without CA cert', async () => {
+        await validateApiCall({
+          endpoint,
+          data: {
+            caCert: null,
+          },
+          statusCode: 424,
+          responseBody: {
+            error: 'RedisConnectionIncorrectCertificateException',
+            statusCode: 424,
+            errorCode: 10907,
+          },
+        });
+      });
+      it('Should throw an error without invalid cert', async () => {
+        const newClientName = constants.getRandomString();
+
+        await validateApiCall({
+          endpoint: () => endpoint(constants.TEST_INSTANCE_ID_3),
+          data: {
+            clientCert: {
+              name: newClientName,
+              certificate: '-----BEGIN CERTIFICATE REQUEST-----dasdas',
+              key: constants.TEST_USER_TLS_KEY,
+            },
+          },
+          statusCode: 400,
+          responseBody: {
+            statusCode: 400,
+          },
+        });
+      });
+    });
+  });
+
+  describe('STANDALONE SSH', () => {
+    requirements('rte.type=STANDALONE', 'rte.ssh');
+    it('Should not update database with incorrect sshOptions', async () => {
+      await validateApiCall({
+        endpoint,
+        data: {
+          sshOptions: {
+            passphrase: 'incorrect passphrase',
+          },
+        },
+        statusCode: 500,
+        responseBody: {
+          error: 'Bad Request',
+          statusCode: 500,
+        },
+      });
+    });
+    describe('TLS AUTH', function () {
+      requirements('rte.tls', 'rte.tlsAuth');
+
+      it('Should update database with partial sshOptions', async () => {
+        await validateApiCall({
+          endpoint,
+          data: {
+            sshOptions: {
+              username: constants.TEST_SSH_USER,
+              password: constants.TEST_SSH_PASSWORD,
+            },
+          },
+        });
+      });
+
+      it('Should update standalone instance with existing certificates + ssh (pk)', async () => {
+        await validateApiCall({
+          endpoint,
+          data: {
+            tls: true,
+            verifyServerCert: true,
+            caCert: {
+              id: constants.TEST_CA_ID,
+            },
+            clientCert: {
+              id: constants.TEST_USER_CERT_ID,
+            },
+            ssh: true,
+            sshOptions: {
+              host: constants.TEST_SSH_HOST,
+              port: constants.TEST_SSH_PORT,
+              username: constants.TEST_SSH_USER,
+              privateKey: constants.TEST_SSH_PRIVATE_KEY,
+            },
+          },
+        });
+      });
+
+      it('Should test standalone instance with existing certificates + ssh (pkp)', async () => {
+        const dbName = constants.getRandomString();
+        // preconditions
+        expect(await localDb.getInstanceByName(dbName)).to.eql(null);
+        await validateApiCall({
+          endpoint,
+          data: {
+            tls: true,
+            verifyServerCert: true,
+            caCert: {
+              id: constants.TEST_CA_ID,
+            },
+            clientCert: {
+              id: constants.TEST_USER_CERT_ID,
+            },
+            ssh: true,
+            sshOptions: {
+              host: constants.TEST_SSH_HOST,
+              port: constants.TEST_SSH_PORT,
+              username: constants.TEST_SSH_USER,
+              privateKey: constants.TEST_SSH_PRIVATE_KEY_P,
+              passphrase: constants.TEST_SSH_PASSPHRASE,
+            },
+          },
+        });
+
+        expect(await localDb.getInstanceByName(dbName)).to.be.an('object');
+      });
+    });
+  });
+
+  describe('SENTINEL', () => {
+    describe('PASS', function () {
+      requirements('rte.type=SENTINEL', '!rte.tls', 'rte.pass');
+      it('Should update database without full sentinel master information', async () => {
+        const dbName = constants.getRandomString();
+
+        expect(await localDb.getInstanceByName(dbName)).to.eql(null);
+
+        await validateApiCall({
+          endpoint,
+          data: {
+            name: dbName,
+            sentinelMaster: {
+              password: constants.TEST_SENTINEL_MASTER_PASS || null,
+            },
+          },
+        });
+
+        expect(await localDb.getInstanceByName(dbName)).to.be.an('object');
+      });
+
+      it('Should throw Unauthorized error', async () => {
+        const dbName = constants.getRandomString();
+
+        await validateApiCall({
+          endpoint,
+          statusCode: 424,
+          data: {
+            name: dbName,
+            sentinelMaster: {
+              password: 'incorrect password',
+            },
+          },
+          responseBody: {
+            statusCode: 424,
+            message:
+              'Failed to authenticate, please check the username or password.',
+            error: 'RedisConnectionUnauthorizedException',
+          },
+        });
+      });
     });
   });
 });

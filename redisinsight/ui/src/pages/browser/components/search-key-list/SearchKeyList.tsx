@@ -1,10 +1,13 @@
-import { keys } from '@elastic/eui'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
 
+import * as keys from 'uiSrc/constants/keys'
 import MultiSearch from 'uiSrc/components/multi-search/MultiSearch'
-import { SCAN_COUNT_DEFAULT, SCAN_TREE_COUNT_DEFAULT } from 'uiSrc/constants/api'
+import {
+  SCAN_COUNT_DEFAULT,
+  SCAN_TREE_COUNT_DEFAULT,
+} from 'uiSrc/constants/api'
 import { replaceSpaces } from 'uiSrc/utils'
 import {
   deleteSearchHistoryAction,
@@ -13,15 +16,35 @@ import {
   keysSearchHistorySelector,
   keysSelector,
   setFilter,
-  setSearchMatch
+  setSearchMatch,
 } from 'uiSrc/slices/browser/keys'
-import { SearchMode, KeyViewType, SearchHistoryItem } from 'uiSrc/slices/interfaces/keys'
+import {
+  setBulkDeleteFilter,
+  setBulkDeleteKeyCount,
+  setBulkDeleteSearch,
+} from 'uiSrc/slices/browser/bulkActions'
+import {
+  KeyViewType,
+  SearchHistoryItem,
+  SearchMode,
+} from 'uiSrc/slices/interfaces/keys'
 import {
   redisearchHistorySelector,
-  redisearchSelector
+  redisearchSelector,
 } from 'uiSrc/slices/browser/redisearch'
 
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
+import { resetBrowserTree } from 'uiSrc/slices/app/context'
+
+import { changeSidePanel } from 'uiSrc/slices/panels/sidePanels'
+import { AiChatType } from 'uiSrc/slices/interfaces/aiAssistant'
+import { setSelectedTab } from 'uiSrc/slices/panels/aiAssistant'
+import { SidePanels } from 'uiSrc/slices/interfaces/insights'
+
+import { FeatureFlags } from 'uiSrc/constants'
+import { FeatureFlagComponent } from 'uiSrc/components'
+import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 const placeholders = {
@@ -31,20 +54,19 @@ const placeholders = {
 
 const SearchKeyList = () => {
   const { id } = useSelector(connectedInstanceSelector)
-  const { search, viewType, filter, searchMode } = useSelector(keysSelector)
-  const { search: redisearchQuery, selectedIndex } = useSelector(redisearchSelector)
-  const { data: rediSearchHistory, loading: rediSearchHistoryLoading } = useSelector(redisearchHistorySelector)
-  const { data: searchHistory, loading: searchHistoryLoading } = useSelector(keysSearchHistorySelector)
+  const { search, filter, viewType, searchMode } = useSelector(keysSelector)
+  const { search: redisearchQuery, selectedIndex } =
+    useSelector(redisearchSelector)
+  const { data: rediSearchHistory, loading: rediSearchHistoryLoading } =
+    useSelector(redisearchHistorySelector)
+  const { data: searchHistory, loading: searchHistoryLoading } = useSelector(
+    keysSearchHistorySelector,
+  )
 
-  const [options, setOptions] = useState<string[]>(filter ? [filter] : [])
   const [value, setValue] = useState(search || '')
   const [disableSubmit, setDisableSubmit] = useState(false)
 
   const dispatch = useDispatch()
-
-  useEffect(() => {
-    setOptions(filter ? [filter] : [])
-  }, [filter])
 
   useEffect(() => {
     if (id) {
@@ -60,26 +82,50 @@ const SearchKeyList = () => {
     setDisableSubmit(searchMode === SearchMode.Redisearch && !selectedIndex)
   }, [searchMode, selectedIndex])
 
-  const mapOptions = (data: null | Array<SearchHistoryItem>) => data?.map((item) => ({
-    id: item.id,
-    option: item.filter?.type,
-    value: item.filter?.match
-  })) || []
+  const mapOptions = (data: null | Array<SearchHistoryItem>) =>
+    data?.map((item) => ({
+      id: item.id,
+      option: item.filter?.type,
+      value: item.filter?.match,
+    })) || []
 
-  const handleApply = (match = value, telemetryProperties: {} = {}) => {
+  const handleApply = (
+    match = value,
+    telemetryProperties: {} = {},
+    filterOverride?: typeof filter,
+  ) => {
     if (disableSubmit) return
+
+    const effectiveFilter =
+      filterOverride !== undefined ? filterOverride : filter
 
     dispatch(setSearchMatch(match, searchMode))
 
-    dispatch(fetchKeys(
-      {
-        searchMode,
-        cursor: '0',
-        count: viewType === KeyViewType.Browser ? SCAN_COUNT_DEFAULT : SCAN_TREE_COUNT_DEFAULT,
-        telemetryProperties
-      },
-      () => { dispatch(fetchSearchHistoryAction(searchMode)) }
-    ))
+    // Sync to bulk delete state
+    dispatch(setBulkDeleteSearch(match))
+    dispatch(setBulkDeleteFilter(effectiveFilter))
+    dispatch(setBulkDeleteKeyCount(null))
+
+    if (viewType === KeyViewType.Tree) {
+      dispatch(resetBrowserTree())
+    }
+
+    dispatch(
+      fetchKeys(
+        {
+          searchMode,
+          cursor: '0',
+          count:
+            viewType === KeyViewType.Browser
+              ? SCAN_COUNT_DEFAULT
+              : SCAN_TREE_COUNT_DEFAULT,
+          telemetryProperties,
+        },
+        () => {
+          dispatch(fetchSearchHistoryAction(searchMode))
+        },
+      ),
+    )
   }
 
   const handleChangeValue = (initValue: string) => {
@@ -89,10 +135,13 @@ const SearchKeyList = () => {
   const handleChangeOptions = () => {
     // now only one filter, so we delete option
     dispatch(setFilter(null))
-    handleApply()
+    handleApply(value, {}, null)
   }
 
-  const handleApplySuggestion = (suggestion?: { option: string, value: string }) => {
+  const handleApplySuggestion = (suggestion?: {
+    option: string
+    value: string
+  }) => {
     if (!suggestion) {
       handleApply()
       return
@@ -100,7 +149,11 @@ const SearchKeyList = () => {
 
     dispatch(setFilter(suggestion.option))
     setValue(suggestion.value)
-    handleApply(suggestion.value, { source: 'history' })
+    handleApply(
+      suggestion.value,
+      { source: 'history' },
+      suggestion.option as typeof filter,
+    )
   }
 
   const handleDeleteSuggestions = (ids: string[]) => {
@@ -116,11 +169,20 @@ const SearchKeyList = () => {
   const onClear = () => {
     handleChangeValue('')
     dispatch(setFilter(null))
-    handleApply('')
+    handleApply('', {}, null)
+  }
+
+  const handleClickAskCopilot = () => {
+    dispatch(setSelectedTab(AiChatType.Query))
+    dispatch(changeSidePanel(SidePanels.AiAssistant))
   }
 
   return (
-    <div className={cx(styles.container, { [styles.redisearchMode]: searchMode === SearchMode.Redisearch })}>
+    <div
+      className={cx(styles.container, {
+        [styles.redisearchMode]: searchMode === SearchMode.Redisearch,
+      })}
+    >
       <MultiSearch
         value={value}
         onSubmit={handleApply}
@@ -128,14 +190,34 @@ const SearchKeyList = () => {
         onChange={handleChangeValue}
         onChangeOptions={handleChangeOptions}
         onClear={onClear}
-        options={searchMode === SearchMode.Pattern ? options : []}
         suggestions={{
-          options: mapOptions(searchMode === SearchMode.Pattern ? searchHistory : rediSearchHistory),
+          options: mapOptions(
+            searchMode === SearchMode.Pattern
+              ? searchHistory
+              : rediSearchHistory,
+          ),
           buttonTooltipTitle: 'Show History',
-          loading: searchMode === SearchMode.Pattern ? searchHistoryLoading : rediSearchHistoryLoading,
+          loading:
+            searchMode === SearchMode.Pattern
+              ? searchHistoryLoading
+              : rediSearchHistoryLoading,
           onApply: handleApplySuggestion,
           onDelete: handleDeleteSuggestions,
         }}
+        appendRight={
+          searchMode === SearchMode.Redisearch ? (
+            <FeatureFlagComponent name={FeatureFlags.databaseChat}>
+              <EmptyButton
+                className={styles.askCopilotBtn}
+                size="small"
+                onClick={handleClickAskCopilot}
+                data-testid="ask-redis-copilot-btn"
+              >
+                <RiIcon className={styles.cloudIcon} type="StarsIcon" />
+              </EmptyButton>
+            </FeatureFlagComponent>
+          ) : undefined
+        }
         disableSubmit={disableSubmit}
         placeholder={placeholders[searchMode]}
         className={styles.input}

@@ -6,7 +6,8 @@ import { addErrorNotification } from 'uiSrc/slices/app/notifications'
 import { StatePubSub } from 'uiSrc/slices/interfaces/pubsub'
 import { AppDispatch, RootState } from 'uiSrc/slices/store'
 import { getApiErrorMessage, getUrl, isStatusSuccessful } from 'uiSrc/utils'
-import { SubscriptionDto } from 'apiSrc/modules/pub-sub/dto/subscription.dto'
+import { DEFAULT_SEARCH_MATCH } from 'uiSrc/constants/api'
+import { SubscriptionType } from 'uiSrc/constants/pubSub'
 import { MessagesResponse } from 'apiSrc/modules/pub-sub/dto/messages.response'
 import { PublishResponse } from 'apiSrc/modules/pub-sub/dto/publish.response'
 
@@ -19,7 +20,7 @@ export const initialState: StatePubSub = {
   isConnected: false,
   isSubscribed: false,
   messages: [],
-  count: 0
+  count: 0,
 }
 
 export const PUB_SUB_ITEMS_MAX_COUNT = 5_000
@@ -32,9 +33,18 @@ const pubSubSlice = createSlice({
     setPubSubConnected: (state, { payload }: PayloadAction<boolean>) => {
       state.isConnected = payload
     },
-    toggleSubscribeTriggerPubSub: (state, { payload }: PayloadAction<SubscriptionDto[]>) => {
+    toggleSubscribeTriggerPubSub: (
+      state,
+      { payload }: PayloadAction<string>,
+    ) => {
+      const channels = payload.trim() || DEFAULT_SEARCH_MATCH
+      const subs = channels.split(' ').map((channel) => ({
+        channel,
+        type: SubscriptionType.PSubscribe,
+      }))
+
       state.isSubscribeTriggered = !state.isSubscribeTriggered
-      state.subscriptions = payload
+      state.subscriptions = subs
     },
     setIsPubSubSubscribed: (state) => {
       state.isSubscribed = true
@@ -42,7 +52,10 @@ const pubSubSlice = createSlice({
     setIsPubSubUnSubscribed: (state) => {
       state.isSubscribed = false
     },
-    concatPubSubMessages: (state, { payload }: PayloadAction<MessagesResponse>) => {
+    concatPubSubMessages: (
+      state,
+      { payload }: PayloadAction<MessagesResponse>,
+    ) => {
       state.count += payload.count
       if (payload.messages.length >= PUB_SUB_ITEMS_MAX_COUNT) {
         state.messages = [...payload.messages.slice(-PUB_SUB_ITEMS_MAX_COUNT)]
@@ -80,8 +93,8 @@ const pubSubSlice = createSlice({
     publishMessageError: (state, { payload }) => {
       state.publishing = false
       state.error = payload
-    }
-  }
+    },
+  },
 })
 
 export const {
@@ -96,7 +109,7 @@ export const {
   disconnectPubSub,
   publishMessage,
   publishMessageSuccess,
-  publishMessageError
+  publishMessageError,
 } = pubSubSlice.actions
 
 export const pubSubSelector = (state: RootState) => state.pubsub
@@ -115,14 +128,11 @@ export function publishMessageAction(
     try {
       dispatch(publishMessage())
       const { data, status } = await apiService.post<PublishResponse>(
-        getUrl(
-          instanceId,
-          ApiEndpoints.PUB_SUB_MESSAGES
-        ),
+        getUrl(instanceId, ApiEndpoints.PUB_SUB_MESSAGES),
         {
           channel,
-          message
-        }
+          message,
+        },
       )
 
       if (isStatusSuccessful(status)) {

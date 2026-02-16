@@ -1,9 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TelemetryEvents } from 'src/constants';
-import {
-  mockSentinelMasterDto,
-} from 'src/__mocks__';
+import { mockSentinelMasterDto, mockSessionMetadata } from 'src/__mocks__';
 import { InternalServerErrorException } from '@nestjs/common';
 import { RedisSentinelAnalytics } from 'src/modules/redis-sentinel/redis-sentinel.analytics';
 import { SentinelMasterStatus } from 'src/modules/redis-sentinel/models/sentinel-master';
@@ -16,10 +14,7 @@ describe('RedisSentinelAnalytics', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EventEmitter2,
-        RedisSentinelAnalytics,
-      ],
+      providers: [EventEmitter2, RedisSentinelAnalytics],
     }).compile();
 
     service = await module.get<RedisSentinelAnalytics>(RedisSentinelAnalytics);
@@ -35,12 +30,13 @@ describe('RedisSentinelAnalytics', () => {
 
   describe('sendGetSentinelMastersSucceedEvent', () => {
     it('should emit event with active master groups', () => {
-      service.sendGetSentinelMastersSucceedEvent([
+      service.sendGetSentinelMastersSucceedEvent(mockSessionMetadata, [
         mockSentinelMasterDto,
         mockSentinelMasterDto,
       ]);
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoverySucceed,
         {
           numberOfAvailablePrimaryGroups: 2,
@@ -50,7 +46,7 @@ describe('RedisSentinelAnalytics', () => {
       );
     });
     it('should emit event with active and not active master groups', () => {
-      service.sendGetSentinelMastersSucceedEvent([
+      service.sendGetSentinelMastersSucceedEvent(mockSessionMetadata, [
         mockSentinelMasterDto,
         {
           ...mockSentinelMasterDto,
@@ -60,6 +56,7 @@ describe('RedisSentinelAnalytics', () => {
       ]);
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoverySucceed,
         {
           numberOfAvailablePrimaryGroups: 1,
@@ -69,7 +66,7 @@ describe('RedisSentinelAnalytics', () => {
       );
     });
     it('should emit event without active groups', () => {
-      service.sendGetSentinelMastersSucceedEvent([
+      service.sendGetSentinelMastersSucceedEvent(mockSessionMetadata, [
         {
           ...mockSentinelMasterDto,
           status: SentinelMasterStatus.Down,
@@ -83,6 +80,7 @@ describe('RedisSentinelAnalytics', () => {
       ]);
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoverySucceed,
         {
           numberOfAvailablePrimaryGroups: 0,
@@ -92,9 +90,10 @@ describe('RedisSentinelAnalytics', () => {
       );
     });
     it('should emit event for empty list', () => {
-      service.sendGetSentinelMastersSucceedEvent([]);
+      service.sendGetSentinelMastersSucceedEvent(mockSessionMetadata, []);
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoverySucceed,
         {
           numberOfAvailablePrimaryGroups: 0,
@@ -104,9 +103,13 @@ describe('RedisSentinelAnalytics', () => {
       );
     });
     it('should emit event for undefined input value', () => {
-      service.sendGetSentinelMastersSucceedEvent(undefined);
+      service.sendGetSentinelMastersSucceedEvent(
+        mockSessionMetadata,
+        undefined,
+      );
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoverySucceed,
         {
           numberOfAvailablePrimaryGroups: 0,
@@ -118,16 +121,22 @@ describe('RedisSentinelAnalytics', () => {
     it('should not throw on error', () => {
       const input: any = {};
 
-      expect(() => service.sendGetSentinelMastersSucceedEvent(input)).not.toThrow();
+      expect(() =>
+        service.sendGetSentinelMastersSucceedEvent(mockSessionMetadata, input),
+      ).not.toThrow();
       expect(sendEventMethod).not.toHaveBeenCalled();
     });
   });
 
-  describe('sendGetRECloudSubsFailedEvent', () => {
+  describe('sendGetRedisCloudSubsFailedEvent', () => {
     it('should emit event', () => {
-      service.sendGetSentinelMastersFailedEvent(httpException);
+      service.sendGetSentinelMastersFailedEvent(
+        mockSessionMetadata,
+        httpException,
+      );
 
       expect(sendFailedEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SentinelMasterGroupsDiscoveryFailed,
         httpException,
       );

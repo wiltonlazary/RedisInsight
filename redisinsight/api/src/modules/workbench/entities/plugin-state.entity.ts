@@ -7,8 +7,9 @@ import {
   UpdateDateColumn,
   PrimaryColumn,
 } from 'typeorm';
-import { Expose, Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
 import { CommandExecutionEntity } from 'src/modules/workbench/entities/command-execution.entity';
+import { DataAsJsonString } from 'src/common/decorators';
 
 @Entity('plugin_state')
 export class PluginStateEntity {
@@ -16,13 +17,10 @@ export class PluginStateEntity {
   @Expose()
   commandExecutionId: string;
 
-  @ManyToOne(
-    () => CommandExecutionEntity,
-    {
-      nullable: false,
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => CommandExecutionEntity, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'commandExecutionId' })
   commandExecution: CommandExecutionEntity;
 
@@ -31,14 +29,7 @@ export class PluginStateEntity {
   visualizationId: string;
 
   @Column({ nullable: false, type: 'text' })
-  @Transform((object) => JSON.stringify(object), { toClassOnly: true })
-  @Transform((string) => {
-    try {
-      return JSON.parse(string);
-    } catch (e) {
-      return undefined;
-    }
-  }, { toPlainOnly: true })
+  @DataAsJsonString()
   @Expose()
   state: string;
 

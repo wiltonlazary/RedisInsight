@@ -63,10 +63,7 @@ export const mockRedistimeseriesCommands = {
       {
         type: 'enum',
         command: 'ENCODING',
-        enum: [
-          'UNCOMPRESSED',
-          'COMPRESSED',
-        ],
+        enum: ['UNCOMPRESSED', 'COMPRESSED'],
         optional: true,
       },
       {
@@ -79,26 +76,13 @@ export const mockRedistimeseriesCommands = {
         type: 'enum',
         command: 'DUPLICATE_POLICY',
         name: 'policy',
-        enum: [
-          'BLOCK',
-          'FIRST',
-          'LAST',
-          'MIN',
-          'MAX',
-          'SUM',
-        ],
+        enum: ['BLOCK', 'FIRST', 'LAST', 'MIN', 'MAX', 'SUM'],
         optional: true,
       },
       {
         command: 'LABELS',
-        name: [
-          'label',
-          'value',
-        ],
-        type: [
-          'string',
-          'string',
-        ],
+        name: ['label', 'value'],
+        type: ['string', 'string'],
         multiple: true,
         optional: true,
       },
@@ -106,48 +90,6 @@ export const mockRedistimeseriesCommands = {
     since: '1.0.0',
     group: 'timeseries',
     provider: 'timeseries',
-  },
-};
-
-export const mockRedisaiCommands = {
-  'AI.TENSORSET': {
-    summary: 'stores a tensor as the value of a key.',
-    complexity: 'O(1)',
-    arguments: [
-      {
-        name: 'key',
-        type: 'key',
-      },
-      {
-        name: 'type',
-        type: 'enum',
-        enum: [
-          'FLOAT', 'DOUBLE', 'INT8', 'INT16', 'INT32', 'INT64', 'UINT8', 'UINT16', 'STRING', 'BOOL',
-        ],
-      },
-      {
-        name: 'shape',
-        type: 'integer',
-        multiple: true,
-      },
-      {
-        name: 'blob',
-        command: 'BLOB',
-        type: 'string',
-        optional: true,
-      },
-      {
-        name: 'value',
-        command: 'VALUES',
-        type: 'string',
-        multiple: true,
-        optional: true,
-      },
-
-    ],
-    since: '1.2.5',
-    group: 'tensor',
-    provider: 'sai',
   },
 };
 

@@ -1,5 +1,12 @@
 import {
-  Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { CaCertificateEntity } from 'src/modules/certificate/entities/ca-certificate.entity';
 import { ClientCertificateEntity } from 'src/modules/certificate/entities/client-certificate.entity';
@@ -7,15 +14,30 @@ import { DataAsJsonString } from 'src/common/decorators';
 import { Expose, Transform, Type } from 'class-transformer';
 import { SentinelMaster } from 'src/modules/redis-sentinel/models/sentinel-master';
 import { SshOptionsEntity } from 'src/modules/ssh/entities/ssh-options.entity';
+import { CloudDatabaseDetailsEntity } from 'src/modules/cloud/database/entities/cloud-database-details.entity';
+import { DatabaseSettingsEntity } from 'src/modules/database-settings/entities/database-setting.entity';
+import { TagEntity } from 'src/modules/tag/entities/tag.entity';
 
 export enum HostingProvider {
+  REDIS_SOFTWARE = 'REDIS_SOFTWARE',
+  REDIS_CLOUD = 'REDIS_CLOUD',
+  REDIS_STACK = 'REDIS_STACK',
+  OTHER_REDIS_MANAGED = 'OTHER_REDIS_MANAGED',
+  AZURE_CACHE = 'AZURE_CACHE',
+  AZURE_CACHE_REDIS_ENTERPRISE = 'AZURE_CACHE_REDIS_ENTERPRISE',
+  REDIS_COMMUNITY_EDITION = 'REDIS_COMMUNITY_EDITION',
+  AWS_ELASTICACHE = 'AWS_ELASTICACHE',
+  AWS_MEMORYDB = 'AWS_MEMORYDB',
+  VALKEY = 'VALKEY',
+  MEMORYSTORE = 'MEMORYSTORE',
+  DRAGONFLY = 'DRAGONFLY',
+  KEYDB = 'KEYDB',
+  GARNET = 'GARNET',
+  KVROCKS = 'KVROCKS',
+  REDICT = 'REDICT',
+  UPSTASH = 'UPSTASH',
+  UNKNOWN_LOCALHOST = 'UNKNOWN_LOCALHOST',
   UNKNOWN = 'UNKNOWN',
-  LOCALHOST = 'LOCALHOST',
-  RE_CLUSTER = 'RE_CLUSTER',
-  RE_CLOUD = 'RE_CLOUD',
-  AZURE = 'AZURE',
-  AWS = 'AWS',
-  GOOGLE = 'GOOGLE',
 }
 
 export enum ConnectionType {
@@ -33,6 +55,11 @@ export enum Compressor {
   SNAPPY = 'SNAPPY',
   Brotli = 'Brotli',
   PHPGZCompress = 'PHPGZCompress',
+}
+
+export enum Encoding {
+  UNICODE = 'Unicode',
+  HEX = 'HEX',
 }
 
 @Entity('database_instance')
@@ -71,37 +98,34 @@ export class DatabaseEntity {
 
   @Expose()
   @Column({ nullable: true })
-  @Transform((_, model) => (
-    model?.sentinelMaster?.name
-  ), { toClassOnly: true })
+  @Transform(({ obj }) => obj?.sentinelMaster?.name, { toClassOnly: true })
   sentinelMasterName: string;
 
   @Expose()
   @Column({ nullable: true })
-  @Transform((_, model) => (
-    model?.sentinelMaster?.username
-  ), { toClassOnly: true })
+  @Transform(({ obj }) => obj?.sentinelMaster?.username, { toClassOnly: true })
   sentinelMasterUsername: string;
 
   @Expose()
   @Column({ nullable: true })
-  @Transform((_, model) => (
-    model?.sentinelMaster?.password
-  ), { toClassOnly: true })
+  @Transform(({ obj }) => obj?.sentinelMaster?.password, { toClassOnly: true })
   sentinelMasterPassword: string;
 
   @Expose()
-  @Transform((_, entity) => {
-    if (entity?.sentinelMasterName) {
-      return {
-        name: entity?.sentinelMasterName,
-        username: entity?.sentinelMasterUsername,
-        password: entity?.sentinelMasterPassword,
-      };
-    }
+  @Transform(
+    ({ obj }) => {
+      if (obj?.sentinelMasterName) {
+        return {
+          name: obj?.sentinelMasterName,
+          username: obj?.sentinelMasterUsername,
+          password: obj?.sentinelMasterPassword,
+        };
+      }
 
-    return undefined;
-  }, { toPlainOnly: true })
+      return undefined;
+    },
+    { toPlainOnly: true },
+  )
   @Transform(() => undefined, { toClassOnly: true })
   sentinelMaster: SentinelMaster;
 
@@ -159,6 +183,12 @@ export class DatabaseEntity {
   @Column({ type: 'datetime', nullable: true })
   lastConnection: Date;
 
+  @CreateDateColumn({
+    nullable: true,
+  })
+  @Expose()
+  createdAt: Date;
+
   @Expose()
   @Column({
     nullable: true,
@@ -183,17 +213,40 @@ export class DatabaseEntity {
   ssh: boolean;
 
   @Expose()
+  @OneToOne(() => SshOptionsEntity, (sshOptions) => sshOptions.database, {
+    eager: true,
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
+  @Type(() => SshOptionsEntity)
+  sshOptions: SshOptionsEntity;
+
+  @Expose()
   @OneToOne(
-    () => SshOptionsEntity,
-    (sshOptions) => sshOptions.database,
+    () => CloudDatabaseDetailsEntity,
+    (cloudDetails) => cloudDetails.database,
     {
       eager: true,
       onDelete: 'CASCADE',
       cascade: true,
     },
   )
-  @Type(() => SshOptionsEntity)
-  sshOptions: SshOptionsEntity;
+  @Type(() => CloudDatabaseDetailsEntity)
+  cloudDetails: CloudDatabaseDetailsEntity;
+
+  @Expose()
+  @Column({ nullable: true, type: 'text' })
+  @DataAsJsonString()
+  providerDetails: string;
+
+  @Expose()
+  @OneToOne(() => DatabaseSettingsEntity, (dbSettings) => dbSettings.database, {
+    eager: true,
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
+  @Type(() => DatabaseSettingsEntity)
+  dbSettings: DatabaseSettingsEntity;
 
   @Expose()
   @Column({
@@ -201,4 +254,40 @@ export class DatabaseEntity {
     default: Compressor.NONE,
   })
   compressor: Compressor;
+
+  @Expose()
+  @Column({ nullable: true })
+  version: string;
+
+  @Expose()
+  @Column({ nullable: true })
+  forceStandalone: boolean;
+
+  @Expose()
+  @ManyToMany(() => TagEntity, (tag) => tag.databases, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinTable({
+    name: 'database_tag',
+    joinColumn: {
+      name: 'databaseId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'tagId',
+      referencedColumnName: 'id',
+    },
+  })
+  @Type(() => TagEntity)
+  tags: TagEntity[];
+
+  @Expose()
+  @Column({ nullable: true })
+  isPreSetup: boolean;
+
+  @Expose()
+  @Column({ nullable: true, default: Encoding.UNICODE })
+  keyNameFormat: string;
 }

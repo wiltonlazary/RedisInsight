@@ -1,26 +1,30 @@
 /* eslint-disable sonarjs/no-identical-functions */
 import React from 'react'
 import { cloneDeep } from 'lodash'
-import { render, screen, fireEvent, mockedStore, cleanup } from 'uiSrc/utils/test-utils'
+import {
+  render,
+  screen,
+  fireEvent,
+  mockedStore,
+  cleanup,
+} from 'uiSrc/utils/test-utils'
 import { setConnectedInstanceId } from 'uiSrc/slices/instances/instances'
-import { loadKeys, resetKeyInfo, toggleBrowserFullScreen } from 'uiSrc/slices/browser/keys'
+import { loadKeys, toggleBrowserFullScreen } from 'uiSrc/slices/browser/keys'
 import { resetErrors } from 'uiSrc/slices/app/notifications'
 import {
   setBrowserBulkActionOpen,
   setBrowserPanelSizes,
   setBrowserSelectedKey,
-  setLastPageContext
 } from 'uiSrc/slices/app/context'
 import BrowserPage from './BrowserPage'
-import KeyList, { Props as KeyListProps } from './components/key-list/KeyList'
-import KeyDetailsWrapper, {
-  Props as KeyDetailsWrapperProps
-} from './components/key-details/KeyDetailsWrapper'
+import KeyList, { Props as KeyListProps } from './components/key-tree/KeyTree'
+import { Props as KeyDetailsWrapperProps } from './modules/key-details/KeyDetails'
+import { KeyDetails } from './modules'
 import AddKey, { Props as AddKeyProps } from './components/add-key/AddKey'
-import KeysHeader from './components/keys-header'
+import BrowserSearchPanel from './components/browser-search-panel'
 import { Props as KeysHeaderProps } from './components/keys-header/KeysHeader'
 
-jest.mock('./components/key-list/KeyList', () => ({
+jest.mock('./components/key-tree/KeyTree', () => ({
   __esModule: true,
   namedExport: jest.fn(),
   default: jest.fn(),
@@ -32,13 +36,12 @@ jest.mock('./components/add-key/AddKey', () => ({
   default: jest.fn(),
 }))
 
-jest.mock('./components/key-details/KeyDetailsWrapper', () => ({
+jest.mock('uiSrc/pages/browser/modules', () => ({
   __esModule: true,
-  namedExport: jest.fn(),
-  default: jest.fn(),
+  KeyDetails: jest.fn(),
 }))
 
-jest.mock('./components/keys-header', () => ({
+jest.mock('./components/browser-search-panel', () => ({
   __esModule: true,
   namedExport: jest.fn(),
   default: jest.fn(),
@@ -49,7 +52,9 @@ const mockKeyList = (props: KeyListProps) => (
     <button
       type="button"
       data-testid="loadMoreItems-btn"
-      onClick={() => props?.handleScanMoreClick?.({ startIndex: 1, stopIndex: 2 })}
+      onClick={() =>
+        props?.handleScanMoreClick?.({ startIndex: 1, stopIndex: 2 })
+      }
     >
       loadMoreItems
     </button>
@@ -58,17 +63,29 @@ const mockKeyList = (props: KeyListProps) => (
 
 const mockKeyDetailsWrapper = (props: KeyDetailsWrapperProps) => (
   <div>
-    <button type="button" data-testid="onCloseKey-btn" onClick={() => props.onCloseKey()}>onCloseKey</button>
+    <button
+      type="button"
+      data-testid="onCloseKey-btn"
+      onClick={() => props.onCloseKey()}
+    >
+      onCloseKey
+    </button>
   </div>
 )
 
 const mockAddKey = (props: AddKeyProps) => (
   <div>
-    <button type="button" data-testid="handleCloseKey-btn" onClick={() => props.handleCloseKey()}>handleCloseKey</button>
+    <button
+      type="button"
+      data-testid="handleCloseKey-btn"
+      onClick={() => props.handleCloseKey()}
+    >
+      handleCloseKey
+    </button>
   </div>
 )
 
-const mockKeysHeader = (props: KeysHeaderProps) => (
+const mockBrowserSearchPanel = (props: KeysHeaderProps) => (
   <div>
     <button
       type="button"
@@ -102,39 +119,28 @@ beforeEach(() => {
 describe('BrowserPage', () => {
   beforeAll(() => {
     KeyList.mockImplementation(mockKeyList)
-    KeysHeader.mockImplementation(mockKeysHeader)
-    KeyDetailsWrapper.mockImplementation(mockKeyDetailsWrapper)
+    BrowserSearchPanel.mockImplementation(mockBrowserSearchPanel)
+    KeyDetails.mockImplementation(mockKeyDetailsWrapper)
     AddKey.mockImplementation(mockAddKey)
   })
 
   it('should render', () => {
     expect(render(<BrowserPage />)).toBeTruthy()
-    const afterRenderActions = [setConnectedInstanceId('instanceId'), loadKeys(), resetErrors()]
-    expect(store.getActions().slice(0, afterRenderActions.length)).toEqual([...afterRenderActions])
-  })
-
-  it('should call handleAddKeyPanel', () => {
-    render(<BrowserPage />)
-    const afterRenderActions = [...store.getActions()]
-
-    fireEvent.click(screen.getByTestId('handleAddKeyPanel-btn'))
-
-    const expectedActions = [resetKeyInfo(), toggleBrowserFullScreen(false)]
-    expect(store.getActions()).toEqual([...afterRenderActions, ...expectedActions])
-  })
-
-  it('should call handleBulkActionsPanel', () => {
-    render(<BrowserPage />)
-    const afterRenderActions = [...store.getActions()]
-
-    fireEvent.click(screen.getByTestId('handleBulkActionsPanel-btn'))
-
-    const expectedActions = [resetKeyInfo(), toggleBrowserFullScreen(false)]
-    expect(store.getActions()).toEqual([...afterRenderActions, ...expectedActions])
+    const afterRenderActions = [
+      setConnectedInstanceId('instanceId'),
+      loadKeys(),
+      resetErrors(),
+    ]
+    expect(store.getActions().slice(0, afterRenderActions.length)).toEqual([
+      ...afterRenderActions,
+    ])
   })
 
   it('should call loadMoreItems without nextCursor', () => {
     render(<BrowserPage />)
+    // select Browser/List view
+    fireEvent.click(screen.getByTestId('view-type-list-btn'))
+
     const afterRenderActions = [...store.getActions()]
 
     fireEvent.click(screen.getByTestId('loadMoreItems-btn'))
@@ -148,7 +154,10 @@ describe('BrowserPage', () => {
 
     fireEvent.click(screen.getByTestId('onCloseKey-btn'))
 
-    expect(store.getActions()).toEqual([...afterRenderActions, toggleBrowserFullScreen(true)])
+    expect(store.getActions()).toEqual([
+      ...afterRenderActions,
+      toggleBrowserFullScreen(true),
+    ])
   })
 
   it('should call proper actions on onmount', () => {
@@ -161,9 +170,12 @@ describe('BrowserPage', () => {
       setBrowserPanelSizes(expect.any(Object)),
       setBrowserBulkActionOpen(expect.any(Boolean)),
       setBrowserSelectedKey(null),
-      setLastPageContext('browser'),
+      toggleBrowserFullScreen(false),
     ]
 
-    expect(store.getActions()).toEqual([...afterRenderActions, ...unmountActions])
+    expect(store.getActions()).toEqual([
+      ...afterRenderActions,
+      ...unmountActions,
+    ])
   })
 })

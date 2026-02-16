@@ -1,11 +1,26 @@
 import React from 'react'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { fireEvent, render, screen } from 'uiSrc/utils/test-utils'
+import {
+  render,
+  userEvent,
+  screen,
+  toggleAccordion,
+} from 'uiSrc/utils/test-utils'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import SettingsPage from './SettingsPage'
 
 jest.mock('uiSrc/telemetry', () => ({
   ...jest.requireActual('uiSrc/telemetry'),
   sendEventTelemetry: jest.fn(),
+}))
+
+jest.mock('uiSrc/slices/app/features', () => ({
+  ...jest.requireActual('uiSrc/slices/app/features'),
+  appFeatureFlagsFeaturesSelector: jest.fn().mockReturnValue({
+    cloudSso: {
+      flag: false,
+    },
+  }),
 }))
 
 /**
@@ -21,7 +36,9 @@ describe('SettingsPage', () => {
   it('Accordion "Appearance" should render', () => {
     const { container } = render(<SettingsPage />)
 
-    expect(container.querySelector('[data-test-subj="accordion-appearance"]')).toBeInTheDocument()
+    expect(
+      container.querySelector('[data-test-subj="accordion-appearance"]'),
+    ).toBeInTheDocument()
     expect(render(<SettingsPage />)).toBeTruthy()
   })
 
@@ -29,7 +46,7 @@ describe('SettingsPage', () => {
     const { container } = render(<SettingsPage />)
 
     expect(
-      container.querySelector('[data-test-subj="accordion-privacy-settings"]')
+      container.querySelector('[data-test-subj="accordion-privacy-settings"]'),
     ).toBeInTheDocument()
     expect(render(<SettingsPage />)).toBeTruthy()
   })
@@ -38,7 +55,7 @@ describe('SettingsPage', () => {
     const { container } = render(<SettingsPage />)
 
     expect(
-      container.querySelector('[data-test-subj="accordion-advanced-settings"]')
+      container.querySelector('[data-test-subj="accordion-advanced-settings"]'),
     ).toBeInTheDocument()
     expect(render(<SettingsPage />)).toBeTruthy()
   })
@@ -47,7 +64,32 @@ describe('SettingsPage', () => {
     const { container } = render(<SettingsPage />)
 
     expect(
-      container.querySelector('[data-test-subj="accordion-workbench-settings"]')
+      container.querySelector(
+        '[data-test-subj="accordion-workbench-settings"]',
+      ),
+    ).toBeInTheDocument()
+    expect(render(<SettingsPage />)).toBeTruthy()
+  })
+
+  it('should not render cloud accordion without feature flag', () => {
+    const { container } = render(<SettingsPage />)
+
+    expect(
+      container.querySelector('[data-test-subj="accordion-cloud-settings"]'),
+    ).not.toBeInTheDocument()
+    expect(render(<SettingsPage />)).toBeTruthy()
+  })
+
+  it('should render cloud accordion with feature flag', () => {
+    ;(appFeatureFlagsFeaturesSelector as jest.Mock).mockReturnValue({
+      cloudSso: {
+        flag: true,
+      },
+    })
+    const { container } = render(<SettingsPage />)
+
+    expect(
+      container.querySelector('[data-test-subj="accordion-cloud-settings"]'),
     ).toBeInTheDocument()
     expect(render(<SettingsPage />)).toBeTruthy()
   })
@@ -62,10 +104,10 @@ describe('Telemetry', () => {
     sendEventTelemetry.mockReset()
 
     render(<SettingsPage />)
+    await toggleAccordion('accordion-workbench-settings')
+    await userEvent.click(screen.getByTestId('switch-workbench-cleanup'))
 
-    fireEvent.click(screen.getByTestId('switch-workbench-cleanup'))
-
-    expect(sendEventTelemetry).toBeCalledWith({
+    expect(sendEventTelemetry).toHaveBeenCalledWith({
       event: TelemetryEvent.SETTINGS_WORKBENCH_EDITOR_CLEAR_CHANGED,
       eventData: {
         currentValue: true,

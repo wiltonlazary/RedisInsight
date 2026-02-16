@@ -1,30 +1,31 @@
-import React, {
-  ChangeEvent,
-  Ref,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
-import { capitalize } from 'lodash'
+import React, { Ref, useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
+
+import { useTheme } from '@redis-ui/styles'
+
+import * as keys from 'uiSrc/constants/keys'
+import { RiTooltip } from 'uiSrc/components/base'
+import { FlexItem } from 'uiSrc/components/base/layout/flex'
+import { WindowEvent } from 'uiSrc/components/base/utils/WindowEvent'
+import { FocusTrap } from 'uiSrc/components/base/utils/FocusTrap'
+import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { DestructiveButton } from 'uiSrc/components/base/forms/buttons'
+import ConfirmationPopover from 'uiSrc/components/confirmation-popover'
+
 import {
-  EuiButtonIcon,
-  EuiFieldText,
-  EuiFlexItem,
-  EuiForm,
-  EuiOutsideClickDetector,
-  EuiFocusTrap,
-  EuiWindowEvent,
-  EuiToolTip,
-  EuiPopover,
-  EuiButton,
-  EuiText,
-} from '@elastic/eui'
-import { IconSize } from '@elastic/eui/src/components/icon/icon'
+  ActionsContainer,
+  ActionsWrapper,
+  ApplyButton,
+  DeclineButton,
+  IIEContainer,
+  StyledTextInput,
+} from './InlineItemEditor.styles'
+
 import styles from './styles.module.scss'
 
 type Positions = 'top' | 'bottom' | 'left' | 'right' | 'inside'
 type Design = 'default' | 'separate'
+type InputVariant = 'outline' | 'underline'
 
 export interface Props {
   onDecline: (event?: React.MouseEvent<HTMLElement>) => void
@@ -44,16 +45,35 @@ export interface Props {
   disableByValidation?: (value: string) => boolean
   children?: React.ReactElement
   validation?: (value: string) => string
+  getError?: (
+    value: string,
+  ) => { title: string; content: string | React.ReactNode } | undefined
   declineOnUnmount?: boolean
-  iconSize?: IconSize
+  iconSize?: 'S' | 'M' | 'L'
   viewChildrenMode?: boolean
   autoComplete?: string
   controlsClassName?: string
-  disabledTooltipText?: { title: string, text: string }
+  disabledTooltipText?: { title: string; content: string | React.ReactNode }
   preventOutsideClick?: boolean
   disableFocusTrap?: boolean
   approveByValidation?: (value: string) => boolean
-  approveText?: { title: string, text: string }
+  approveText?: { title: string; text: string }
+  textFiledClassName?: string
+  variant?: InputVariant
+  styles?: {
+    inputContainer?: {
+      width?: string
+      height?: string
+    }
+    input?: {
+      width?: string
+      height?: string
+    }
+    actionsContainer?: {
+      width?: string
+      height?: string
+    }
+  }
 }
 
 const InlineItemEditor = (props: Props) => {
@@ -70,10 +90,10 @@ const InlineItemEditor = (props: Props) => {
     children,
     expandable,
     isLoading,
-    isInvalid,
     disableEmpty,
     disableByValidation,
     validation,
+    getError,
     declineOnUnmount = true,
     viewChildrenMode,
     iconSize,
@@ -85,20 +105,28 @@ const InlineItemEditor = (props: Props) => {
     disableFocusTrap = false,
     approveByValidation,
     approveText,
+    textFiledClassName,
+    variant,
+    styles: customStyles,
   } = props
   const containerEl: Ref<HTMLDivElement> = useRef(null)
   const [value, setValue] = useState<string>(initialValue)
   const [isError, setIsError] = useState<boolean>(false)
   const [isShowApprovePopover, setIsShowApprovePopover] = useState(false)
+  const theme = useTheme()
+
+  const size = theme.components.iconButton.sizes[iconSize ?? 'M']
 
   const inputRef: Ref<HTMLInputElement> = useRef(null)
 
-  useEffect(() =>
-    // componentWillUnmount
-    () => {
-      declineOnUnmount && onDecline()
-    },
-  [])
+  useEffect(
+    () =>
+      // componentWillUnmount
+      () => {
+        declineOnUnmount && onDecline()
+      },
+    [],
+  )
 
   useEffect(() => {
     setTimeout(() => {
@@ -107,8 +135,8 @@ const InlineItemEditor = (props: Props) => {
     }, 100)
   }, [])
 
-  const handleChangeValue = (e: ChangeEvent<HTMLInputElement>) => {
-    let newValue = e.target.value
+  const handleChangeValue = (value: string) => {
+    let newValue = value
 
     if (validation) {
       newValue = validation(newValue)
@@ -134,13 +162,13 @@ const InlineItemEditor = (props: Props) => {
   }
 
   const handleOnEsc = (e: KeyboardEvent) => {
-    if (e.code.toLowerCase() === 'escape' || e.keyCode === 27) {
+    if (e.key === keys.ESCAPE) {
       e.stopPropagation()
       onDecline()
     }
   }
 
-  const handleApplyClick = (event: React.MouseEvent) => {
+  const handleApplyClick = (event: React.MouseEvent<HTMLElement>) => {
     if (approveByValidation && !approveByValidation?.(value)) {
       setIsShowApprovePopover(true)
     } else {
@@ -151,136 +179,142 @@ const InlineItemEditor = (props: Props) => {
   const handleFormSubmit = (event: React.MouseEvent<HTMLElement>): void => {
     event.preventDefault()
     event.stopPropagation()
-    onApply(value, event)
+    if (!isDisabledApply()) {
+      onApply(value, event)
+    }
   }
 
   const isDisabledApply = (): boolean =>
     !!(isLoading || isError || isDisabled || (disableEmpty && !value.length))
 
   const ApplyBtn = (
-    <EuiToolTip
-      anchorClassName={styles.tooltip}
+    <RiTooltip
+      anchorClassName={cx(styles.tooltip, 'tooltip')}
       position="bottom"
-      display="inlineBlock"
-      title={isDisabled && disabledTooltipText?.title}
-      content={isDisabled && disabledTooltipText?.text}
+      title={
+        (isDisabled && disabledTooltipText?.title) ||
+        (getError && getError?.(value)?.title)
+      }
+      content={
+        (isDisabled && disabledTooltipText?.content) ||
+        (getError && getError?.(value)?.content)
+      }
       data-testid="apply-tooltip"
     >
-      <EuiButtonIcon
-        iconSize={iconSize ?? 'l'}
-        iconType="check"
-        color="primary"
-        aria-label="Apply"
-        className={cx(styles.btn, styles.applyBtn)}
-        isDisabled={isDisabledApply()}
+      <ApplyButton
+        size={iconSize ?? 'M'}
+        disabled={isDisabledApply()}
         onClick={handleApplyClick}
         data-testid="apply-btn"
       />
-    </EuiToolTip>
+    </RiTooltip>
   )
 
   return (
     <>
-      {viewChildrenMode
-        ? children : (
-          <EuiOutsideClickDetector onOutsideClick={handleClickOutside}>
-            <div ref={containerEl} className={styles.container}>
-              <EuiWindowEvent event="keydown" handler={handleOnEsc} />
-              <EuiFocusTrap disabled={disableFocusTrap}>
-                <EuiForm
-                  component="form"
-                  className="relative"
-                  onSubmit={handleFormSubmit}
+      {viewChildrenMode ? (
+        children
+      ) : (
+        <OutsideClickDetector
+          onOutsideClick={handleClickOutside}
+          isDisabled={isShowApprovePopover}
+        >
+          <IIEContainer ref={containerEl}>
+            <WindowEvent event="keydown" handler={handleOnEsc} />
+            <FocusTrap disabled={disableFocusTrap}>
+              <form
+                className="relative"
+                onSubmit={(e: unknown) =>
+                  handleFormSubmit(e as React.MouseEvent<HTMLElement>)
+                }
+                style={{
+                  ...customStyles?.inputContainer,
+                }}
+              >
+                <FlexItem grow>
+                  {children || (
+                    <>
+                      <StyledTextInput
+                        $width={customStyles?.input?.width}
+                        $height={customStyles?.input?.height}
+                        name={fieldName}
+                        id={fieldName}
+                        className={cx(styles.field, textFiledClassName)}
+                        maxLength={maxLength || undefined}
+                        placeholder={placeholder}
+                        value={value}
+                        onChange={handleChangeValue}
+                        loading={isLoading}
+                        data-testid="inline-item-editor"
+                        autoComplete={autoComplete}
+                        variant={variant}
+                        ref={inputRef}
+                      />
+                      {expandable && (
+                        <p className={styles.keyHiddenText}>{value}</p>
+                      )}
+                    </>
+                  )}
+                </FlexItem>
+                <ActionsContainer
+                  justify="around"
+                  gap="m"
+                  $position={controlsPosition}
+                  $design={controlsDesign}
+                  $width={customStyles?.actionsContainer?.width}
+                  $height={customStyles?.actionsContainer?.height}
+                  grow={false}
+                  className={cx(
+                    'inlineItemEditor__controls',
+                    styles.controls,
+                    controlsClassName,
+                  )}
                 >
-                  <EuiFlexItem grow component="span">
-                    {children || (
-                      <>
-                        <EuiFieldText
-                          name={fieldName}
-                          id={fieldName}
-                          className={styles.field}
-                          maxLength={maxLength || undefined}
-                          placeholder={placeholder}
-                          value={value}
-                          fullWidth={false}
-                          compressed
-                          onChange={handleChangeValue}
-                          isLoading={isLoading}
-                          isInvalid={isInvalid}
-                          data-testid="inline-item-editor"
-                          autoComplete={autoComplete}
-                          inputRef={inputRef}
-                        />
-                        {expandable && (
-                          <p className={styles.keyHiddenText}>{value}</p>
-                        )}
-                      </>
-                    )}
-                  </EuiFlexItem>
-                  <div
-                    className={cx(
-                      'inlineItemEditor__controls',
-                      styles.controls,
-                      styles[`controls${capitalize(controlsPosition)}`],
-                      styles[`controls${capitalize(controlsDesign)}`],
-                      controlsClassName,
-                    )}
-                  >
-                    <EuiButtonIcon
-                      iconSize={iconSize ?? 'l'}
-                      iconType="cross"
-                      color="primary"
-                      aria-label="Cancel editing"
-                      className={cx(styles.btn, styles.declineBtn)}
+                  <ActionsWrapper $size={size}>
+                    <DeclineButton
                       onClick={onDecline}
-                      isDisabled={isLoading}
+                      disabled={isLoading}
                       data-testid="cancel-btn"
                     />
-                    {!approveByValidation && ApplyBtn}
-                    {approveByValidation && (
-                      <EuiPopover
+                  </ActionsWrapper>
+                  {!approveByValidation && (
+                    <ActionsWrapper $size={size}>{ApplyBtn}</ActionsWrapper>
+                  )}
+                  {approveByValidation && (
+                    <ActionsWrapper $size={size}>
+                      <ConfirmationPopover
                         anchorPosition="leftCenter"
                         isOpen={isShowApprovePopover}
                         closePopover={() => setIsShowApprovePopover(false)}
-                        anchorClassName={styles.popoverAnchor}
+                        anchorClassName={cx(
+                          styles.popoverAnchor,
+                          'popoverAnchor',
+                        )}
                         panelClassName={cx(styles.popoverPanel)}
-                        className={styles.popoverWrapper}
                         button={ApplyBtn}
-                      >
-                        <div className={styles.popover} data-testid="approve-popover">
-                          <EuiText size="m">
-                            {!!approveText?.title && (
-                            <h4>
-                              <b>{approveText?.title}</b>
-                            </h4>
-                            )}
-                            <EuiText size="s" color="subdued" className={styles.approveText}>
-                              {approveText?.text}
-                            </EuiText>
-                          </EuiText>
-                          <div className={styles.popoverFooter}>
-                            <EuiButton
-                              fill
-                              color="warning"
-                              aria-label="Save"
-                              className={cx(styles.btn, styles.saveBtn)}
-                              isDisabled={isDisabledApply()}
-                              onClick={handleFormSubmit}
-                              data-testid="save-btn"
-                            >
-                              Save
-                            </EuiButton>
-                          </div>
-                        </div>
-
-                      </EuiPopover>
-                    )}
-                  </div>
-                </EuiForm>
-              </EuiFocusTrap>
-            </div>
-          </EuiOutsideClickDetector>
-        )}
+                        title={approveText?.title}
+                        message={approveText?.text}
+                        confirmButton={
+                          <DestructiveButton
+                            aria-label="Save"
+                            size="small"
+                            className={cx(styles.btn, styles.saveBtn)}
+                            disabled={isDisabledApply()}
+                            onClick={handleFormSubmit}
+                            data-testid="save-btn"
+                          >
+                            Save
+                          </DestructiveButton>
+                        }
+                      />
+                    </ActionsWrapper>
+                  )}
+                </ActionsContainer>
+              </form>
+            </FocusTrap>
+          </IIEContainer>
+        </OutsideClickDetector>
+      )}
     </>
   )
 }

@@ -1,32 +1,30 @@
-import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react'
-import cx from 'classnames'
+import React, { FormEvent, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { toNumber } from 'lodash'
 import {
-  EuiButton,
-  EuiFieldText,
-  EuiFormRow,
-  EuiTextColor,
-  EuiForm,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPanel,
-} from '@elastic/eui'
-import {
-  addHashKey, addKeyStateSelector,
-} from 'uiSrc/slices/browser/keys'
-import {
-  IHashFieldState,
-  INITIAL_HASH_FIELD_STATE
-} from 'uiSrc/pages/browser/components/key-details-add-items/add-hash-fields/AddHashFields'
-import AddItemsActions from 'uiSrc/pages/browser/components/add-items-actions/AddItemsActions'
+  isVersionHigherOrEquals,
+  Maybe,
+  stringToBuffer,
+  validateTTLNumberForAddKey,
+} from 'uiSrc/utils'
+import { addHashKey, addKeyStateSelector } from 'uiSrc/slices/browser/keys'
+import AddMultipleFields from 'uiSrc/pages/browser/components/add-multiple-fields'
 
-import styles from 'uiSrc/pages/browser/components/key-details-add-items/styles.module.scss'
-import { Maybe, stringToBuffer } from 'uiSrc/utils'
-import { CreateHashWithExpireDto } from 'apiSrc/modules/browser/dto/hash.dto'
+import { CommandsVersions } from 'uiSrc/constants/commandsVersions'
+import { connectedInstanceOverviewSelector } from 'uiSrc/slices/instances/instances'
+import { FeatureFlags } from 'uiSrc/constants'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import {
-  AddHashFormConfig as config
-} from '../constants/fields-config'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
+  CreateHashWithExpireDto,
+  HashFieldDto,
+} from 'apiSrc/modules/browser/hash/dto'
+
+import { IHashFieldState, INITIAL_HASH_FIELD_STATE } from './interfaces'
+import { AddHashFormConfig as config } from '../constants/fields-config'
 
 export interface Props {
   keyName: string
@@ -37,10 +35,20 @@ export interface Props {
 const AddKeyHash = (props: Props) => {
   const { keyName = '', keyTTL, onCancel } = props
   const { loading } = useSelector(addKeyStateSelector)
-  const [fields, setFields] = useState<IHashFieldState[]>([{ ...INITIAL_HASH_FIELD_STATE }])
+  const { version } = useSelector(connectedInstanceOverviewSelector)
+  const { [FeatureFlags.hashFieldExpiration]: hashFieldExpirationFeature } =
+    useSelector(appFeatureFlagsFeaturesSelector)
+
+  const [fields, setFields] = useState<IHashFieldState[]>([
+    { ...INITIAL_HASH_FIELD_STATE },
+  ])
   const [isFormValid, setIsFormValid] = useState<boolean>(false)
   const lastAddedFieldName = useRef<HTMLInputElement>(null)
   const prevCountFields = useRef<number>(0)
+
+  const isTTLAvailable =
+    hashFieldExpirationFeature?.flag &&
+    isVersionHigherOrEquals(version, CommandsVersions.HASH_TTL.since)
 
   const dispatch = useDispatch()
 
@@ -49,7 +57,10 @@ const AddKeyHash = (props: Props) => {
   }, [keyName])
 
   useEffect(() => {
-    if (prevCountFields.current !== 0 && prevCountFields.current < fields.length) {
+    if (
+      prevCountFields.current !== 0 &&
+      prevCountFields.current < fields.length
+    ) {
       lastAddedFieldName.current?.focus()
     }
     prevCountFields.current = fields.length
@@ -61,8 +72,8 @@ const AddKeyHash = (props: Props) => {
       ...fields,
       {
         ...INITIAL_HASH_FIELD_STATE,
-        id: lastField.id + 1
-      }
+        id: lastField.id + 1,
+      },
     ]
     setFields(newState)
   }
@@ -73,25 +84,34 @@ const AddKeyHash = (props: Props) => {
   }
 
   const clearFieldsValues = (id: number) => {
-    const newState = fields.map((item) => (item.id === id
-      ? {
-        ...item,
-        fieldName: '',
-        fieldValue: ''
-      } : item))
+    const newState = fields.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            fieldName: '',
+            fieldValue: '',
+            fieldTTL: undefined,
+          }
+        : item,
+    )
     setFields(newState)
   }
 
-  const handleFieldChange = (
-    formField: string,
-    id: number,
-    value: any
-  ) => {
+  const onClickRemove = ({ id }: IHashFieldState) => {
+    if (fields.length === 1) {
+      clearFieldsValues(id)
+      return
+    }
+
+    removeField(id)
+  }
+
+  const handleFieldChange = (formField: string, id: number, value: any) => {
     const newState = fields.map((item) => {
       if (item.id === id) {
         return {
           ...item,
-          [formField]: value
+          [formField]: value,
         }
       }
       return item
@@ -109,10 +129,18 @@ const AddKeyHash = (props: Props) => {
   const submitData = (): void => {
     const data: CreateHashWithExpireDto = {
       keyName: stringToBuffer(keyName),
-      fields: fields.map((item) => ({
-        field: stringToBuffer(item.fieldName),
-        value: stringToBuffer(item.fieldValue),
-      }))
+      fields: fields.map((item) => {
+        const defaultFields: HashFieldDto = {
+          field: stringToBuffer(item.fieldName),
+          value: stringToBuffer(item.fieldValue),
+        }
+
+        if (isTTLAvailable && item.fieldTTL) {
+          defaultFields.expire = toNumber(item.fieldTTL)
+        }
+
+        return defaultFields
+      }),
     }
     if (keyTTL !== undefined) {
       data.expire = keyTTL
@@ -121,121 +149,84 @@ const AddKeyHash = (props: Props) => {
   }
 
   const isClearDisabled = (item: IHashFieldState): boolean =>
-    fields.length === 1 && !(item.fieldName.length || item.fieldValue.length)
+    fields.length === 1 &&
+    !(item.fieldName.length || item.fieldValue.length || item.fieldTTL?.length)
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
-      {
-        fields.map((item, index) => (
-          <EuiFlexItem
-            key={item.id}
-            className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
-            grow
-            style={{ marginBottom: '8px', marginTop: '16px' }}
-          >
-            <EuiFlexGroup gutterSize="m">
-              <EuiFlexItem grow>
-                <EuiFlexGroup gutterSize="none" alignItems="center">
-                  <EuiFlexItem grow>
-                    <EuiFormRow fullWidth>
-                      <EuiFieldText
-                        fullWidth
-                        name={`fieldName-${item.id}`}
-                        id={`fieldName-${item.id}`}
-                        placeholder={config.fieldName.placeholder}
-                        value={item.fieldName}
-                        disabled={loading}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          handleFieldChange(
-                            'fieldName',
-                            item.id,
-                            e.target.value
-                          )}
-                        inputRef={index === fields.length - 1 ? lastAddedFieldName : null}
-                        data-testid="field-name"
-                      />
-                    </EuiFormRow>
-                  </EuiFlexItem>
-                  <EuiFlexItem grow>
-                    <EuiFormRow fullWidth>
-                      <EuiFieldText
-                        fullWidth
-                        name={`fieldValue-${item.id}`}
-                        id={`fieldValue-${item.id}`}
-                        placeholder={config.fieldValue.placeholder}
-                        value={item.fieldValue}
-                        disabled={loading}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          handleFieldChange(
-                            'fieldValue',
-                            item.id,
-                            e.target.value
-                          )}
-                        data-testid="field-value"
-                      />
-                    </EuiFormRow>
-                  </EuiFlexItem>
-                </EuiFlexGroup>
-              </EuiFlexItem>
-              <AddItemsActions
-                id={item.id}
-                index={index}
-                length={fields.length}
-                addItem={addField}
-                removeItem={removeField}
-                clearItemValues={clearFieldsValues}
-                clearIsDisabled={isClearDisabled(item)}
-                loading={loading}
-                anchorClassName={styles.refreshKeyTooltip}
-              />
-            </EuiFlexGroup>
-          </EuiFlexItem>
-        ))
-      }
+    <form onSubmit={onFormSubmit}>
+      <AddMultipleFields
+        items={fields}
+        isClearDisabled={isClearDisabled}
+        onClickRemove={onClickRemove}
+        onClickAdd={addField}
+      >
+        {(item, index) => (
+          <Row align="center" gap="m">
+            <FlexItem grow={2}>
+              <FormField>
+                <TextInput
+                  name={`fieldName-${item.id}`}
+                  id={`fieldName-${item.id}`}
+                  placeholder={config.fieldName.placeholder}
+                  value={item.fieldName}
+                  disabled={loading}
+                  onChange={(value) =>
+                    handleFieldChange('fieldName', item.id, value)
+                  }
+                  ref={index === fields.length - 1 ? lastAddedFieldName : null}
+                  data-testid="field-name"
+                />
+              </FormField>
+            </FlexItem>
+            <FlexItem grow={2}>
+              <FormField>
+                <TextInput
+                  name={`fieldValue-${item.id}`}
+                  id={`fieldValue-${item.id}`}
+                  placeholder={config.fieldValue.placeholder}
+                  value={item.fieldValue}
+                  disabled={loading}
+                  onChange={(value) =>
+                    handleFieldChange('fieldValue', item.id, value)
+                  }
+                  data-testid="field-value"
+                />
+              </FormField>
+            </FlexItem>
+            {isTTLAvailable && (
+              <FlexItem grow={1}>
+                <FormField>
+                  <TextInput
+                    name={`fieldTTL-${item.id}`}
+                    id={`fieldTTL-${item.id}`}
+                    placeholder="Enter TTL"
+                    value={item.fieldTTL || ''}
+                    disabled={loading}
+                    onChange={(value) =>
+                      handleFieldChange(
+                        'fieldTTL',
+                        item.id,
+                        validateTTLNumberForAddKey(value),
+                      )
+                    }
+                    data-testid="hash-ttl"
+                  />
+                </FormField>
+              </FlexItem>
+            )}
+          </Row>
+        )}
+      </AddMultipleFields>
 
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          color="transparent"
-          className="flexItemNoFullWidth"
-          hasShadow={false}
-          borderRadius="none"
-          style={{ border: 'none' }}
-        >
-          <EuiFlexGroup justifyContent="flexEnd">
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  color="secondary"
-                  onClick={() => onCancel(true)}
-                  className="btn-cancel btn-back"
-                >
-                  <EuiTextColor>Cancel</EuiTextColor>
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  fill
-                  size="m"
-                  color="secondary"
-                  className="btn-add"
-                  isLoading={loading}
-                  onClick={submitData}
-                  disabled={!isFormValid || loading}
-                  data-testid="add-key-hash-btn"
-                >
-                  Add Key
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-hash-btn"
+      />
+    </form>
   )
 }
 

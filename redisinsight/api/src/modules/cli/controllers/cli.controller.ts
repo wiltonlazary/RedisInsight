@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  Param,
   Patch,
   Post,
   UsePipes,
@@ -12,8 +11,6 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   CreateCliClientResponse,
   DeleteClientResponse,
-  SendClusterCommandResponse,
-  SendClusterCommandDto,
   SendCommandDto,
   SendCommandResponse,
 } from 'src/modules/cli/dto/cli.dto';
@@ -63,7 +60,7 @@ export class CliController {
   })
   async sendCommand(
     @CliClientMetadata() clientMetadata: ClientMetadata,
-      @Body() dto: SendCommandDto,
+    @Body() dto: SendCommandDto,
   ): Promise<SendCommandResponse> {
     return this.service.sendCommand(clientMetadata, dto);
   }
@@ -77,16 +74,16 @@ export class CliController {
       {
         status: 200,
         description: 'Redis CLI command response',
-        type: SendClusterCommandResponse,
+        type: SendCommandResponse,
         isArray: true,
       },
     ],
   })
   async sendClusterCommand(
     @CliClientMetadata() clientMetadata: ClientMetadata,
-      @Body() dto: SendClusterCommandDto,
-  ): Promise<SendClusterCommandResponse[]> {
-    return this.service.sendClusterCommand(clientMetadata, dto);
+    @Body() dto: SendCommandDto,
+  ): Promise<SendCommandResponse> {
+    return this.service.sendCommand(clientMetadata, dto);
   }
 
   @Delete('/:uuid')

@@ -1,48 +1,4 @@
-@import "../../../../../node_modules/@elastic/eui/src/global_styling/index";
-@import "../../../../../node_modules/@elastic/eui/src/global_styling/mixins/helpers";
-
-.euiFormRow {
-  .euiSuperSelectControl:not(.euiSuperSelectControl--compressed),
-  .euiSelect:not(.euiSelect--compressed),
-  .euiFormControlLayout:not(.euiFormControlLayout--compressed),
-  .euiFieldText:not(.euiFieldText--compressed),
-  .euiFieldNumber:not(.euiFieldNumber--compressed) {
-    height: 100%;
-  }
-  .euiFormLegend,
-  .euiFormRow__label,
-  .euiRadio__label,
-  .euiCheckbox__label {
-    font-size: 13px;
-    line-height: 18px;
-    font-weight: 400;
-    letter-spacing: -0.13px;
-
-    &:not(.euiFormLabel-isFocused, .euiFormLabel-isInvalid) {
-      color: var(--euiTextSubduedColor);
-    }
-  }
-
-  .euiSuperSelectControl {
-    display: flex;
-    align-items: center;
-    font-size: 13px;
-    line-height: 41px;
-  }
-
-  .euiFormRow__label {
-    padding-bottom: 2px;
-  }
-
-  .euiFieldText:disabled {
-    background-color: initial;
-    color: #b5b6c0;
-  }
-
-  .euiButtonIcon {
-    align-self: center;
-  }
-}
+@use "../mixins/eui";
 
 .euiButton,
 .euiCollapsibleNav,
@@ -57,7 +13,7 @@
 .formFooterBar {
   position: absolute;
   bottom: 0;
-  background: var(--browserTableRowEven);
+  // background: var(--browserTableRowEven);
   border-style: solid;
   border-width: 0;
   border-color: var(--euiColorLightShade);
@@ -67,8 +23,13 @@
   z-index: 2;
 
   max-height: 100%;
-  @include euiScrollBar;
+  @include eui.scrollBar;
   overflow-y: auto;
+
+  &.contentActive {
+    border-color: var(--euiColorPrimary) !important;
+    border-bottom-width: 1px !important;
+  }
 }
 
 .euiRadio .euiRadio__circle,
@@ -76,27 +37,22 @@
   border-width: 2px !important;
 }
 
-body {
-  .euiFieldText,
-  .euiFieldNumber,
-  .euiFieldPassword,
-  .euiFieldSearch,
-  .euiSelect,
-  .euiSuperSelectControl,
-  .euiComboBox .euiComboBox__inputWrap,
-  .euiTextArea {
-    background-color: var(--euiColorEmptyShade) !important;
-    max-width: 100% !important;
-    border: 1px solid var(--controlsBorderColor) !important;
-    box-shadow: none !important;
-    font-size: 14px;
-    line-height: 24px;
-    letter-spacing: -0.14px;
-  }
+.euiFieldText,
+.euiFieldNumber,
+.euiSelect,
+.euiSuperSelectControl,
+.euiComboBox .euiComboBox__inputWrap {
+  background-color: var(--euiColorEmptyShade) !important;
+  max-width: 100% !important;
+  border: 1px solid var(--controlsBorderColor) !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  line-height: 24px;
+  letter-spacing: -0.14px;
+}
 
-  .euiFormHelpText {
-    padding-top: 2px;
-  }
+.euiFormHelpText {
+  padding-top: 2px;
 }
 
 .euiFormControlLayout--group {
@@ -113,7 +69,9 @@ body {
 .euiCheckbox .euiCheckbox__input + .euiCheckbox__square,
 .euiRadio .euiRadio__input + .euiRadio__circle {
   border-color: var(--iconsDefaultColor) !important;
+  background-color: var(--euiColorEmptyShade) !important;
   &:hover {
+    background-color: var(--euiColorEmptyShade) !important;
     border-color: var(--iconsDefaultHoverColor) !important;
   }
 }
@@ -148,6 +106,18 @@ body {
   background-color: var(--euiColorPrimary) !important;
 }
 
+.theme_DARK {
+  .euiCheckbox .euiCheckbox__input:checked + .euiCheckbox__square {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M.375 2.625L3.375 5.625M3.375 5.625L8.625.375' fill='none' fill-rule='evenodd' stroke='rgb%2832, 32, 32%29' stroke-linecap='round' stroke-width='1.5' transform='translate(.5 1)'/%3E%3C/svg%3E") !important;
+  }
+}
+
+.theme_LIGHT {
+  .euiCheckbox .euiCheckbox__input:checked + .euiCheckbox__square {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M.375 2.625L3.375 5.625M3.375 5.625L8.625.375' fill='none' fill-rule='evenodd' stroke='rgb%28255, 255, 255%29' stroke-linecap='round' stroke-width='1.5' transform='translate(.5 1)'/%3E%3C/svg%3E") !important;
+  }
+}
+
 .inlineFieldsNoSpace {
   .euiFlexGroup {
     .euiFlexItem:not(:first-child) {
@@ -158,16 +128,7 @@ body {
       }
     }
   }
-
-  .euiFormRow .euiSuperSelectControl:not(.euiSuperSelectControl--compressed),
-  .euiFormRow .euiSelect:not(.euiSelect--compressed),
-  .euiFormRow .euiFormControlLayout:not(.euiFormControlLayout--compressed),
-  .euiFormRow .euiFieldText:not(.euiFieldText--compressed),
-  .euiFormRow .euiFieldNumber:not(.euiFieldNumber--compressed) {
-    height: 43px;
-  }
 }
-
 
 .euiComboBox .euiComboBox__inputWrap {
   padding-top: 5px !important;
@@ -186,4 +147,16 @@ body {
   .euiComboBoxPlaceholder {
     color: var(--inputPlaceholderColor) !important;
   }
+}
+
+.euiSuperSelectControl:focus,
+.euiFieldNumber:focus,
+.euiFieldText:focus {
+  background-image: linear-gradient(
+    to top,
+    var(--euiColorPrimary),
+    var(--euiColorPrimary) 2px,
+    transparent 2px,
+    transparent 100%
+  ) !important;
 }

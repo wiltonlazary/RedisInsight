@@ -1,12 +1,3 @@
-export const mockInstancesAnalyticsService = () => ({
-  sendInstanceListReceivedEvent: jest.fn(),
-  sendInstanceAddedEvent: jest.fn(),
-  sendInstanceAddFailedEvent: jest.fn(),
-  sendInstanceEditedEvent: jest.fn(),
-  sendInstanceDeletedEvent: jest.fn(),
-  sendConnectionFailedEvent: jest.fn(),
-});
-
 export const mockCliAnalyticsService = () => ({
   sendClientCreatedEvent: jest.fn(),
   sendClientCreationFailedEvent: jest.fn(),
@@ -16,12 +7,14 @@ export const mockCliAnalyticsService = () => ({
   sendCommandErrorEvent: jest.fn(),
   sendClusterCommandExecutedEvent: jest.fn(),
   sendConnectionErrorEvent: jest.fn(),
+  sendIndexInfoEvent: jest.fn(),
 });
 
 export const mockWorkbenchAnalyticsService = () => ({
   sendCommandExecutedEvents: jest.fn(),
   sendCommandExecutedEvent: jest.fn(),
   sendCommandDeletedEvent: jest.fn(),
+  sendIndexInfoEvent: jest.fn(),
 });
 
 export const mockSettingsAnalyticsService = () => ({

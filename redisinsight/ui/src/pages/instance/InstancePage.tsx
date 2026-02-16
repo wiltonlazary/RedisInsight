@@ -1,160 +1,138 @@
-import { EuiResizableContainer } from '@elastic/eui'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useParams } from 'react-router-dom'
-import cx from 'classnames'
+import { useLocation, useParams } from 'react-router-dom'
 
-import { setInitialAnalyticsSettings } from 'uiSrc/slices/analytics/settings'
 import {
-  fetchConnectedInstanceAction, fetchConnectedInstanceInfoAction,
+  fetchConnectedInstanceAction,
+  fetchConnectedInstanceInfoAction,
   fetchInstancesAction,
   getDatabaseConfigInfoAction,
-  instancesSelector,
+  instancesSelector as dbInstancesSelector,
 } from 'uiSrc/slices/instances/instances'
 import {
+  fetchInstancesAction as fetchRdiInstancesAction,
+  instancesSelector as rdiInstancesSelector,
+} from 'uiSrc/slices/rdi/instances'
+import { fetchRecommendationsAction } from 'uiSrc/slices/recommendations/recommendations'
+import {
   appContextSelector,
+  resetDatabaseContext,
   setAppContextConnectedInstanceId,
-  setAppContextInitialState,
   setDbConfig,
 } from 'uiSrc/slices/app/context'
-import { resetPatternKeysData } from 'uiSrc/slices/browser/keys'
-import { BrowserStorageItem } from 'uiSrc/constants'
+import { BrowserStorageItem, FeatureFlags } from 'uiSrc/constants'
 import { localStorageService } from 'uiSrc/services'
-import { resetOutput } from 'uiSrc/slices/cli/cli-output'
-import { cliSettingsSelector } from 'uiSrc/slices/cli/cli-settings'
-import BottomGroupComponents from 'uiSrc/components/bottom-group-components/BottomGroupComponents'
-import { monitorSelector, setMonitorInitialState } from 'uiSrc/slices/cli/monitor'
-import { setInitialPubSubState } from 'uiSrc/slices/pubsub/pubsub'
-import { setBulkActionsInitialState } from 'uiSrc/slices/browser/bulkActions'
-import { setClusterDetailsInitialState } from 'uiSrc/slices/analytics/clusterDetails'
-import { setDatabaseAnalysisInitialState } from 'uiSrc/slices/analytics/dbAnalysis'
-import { resetRedisearchKeysData, setRedisearchInitialState } from 'uiSrc/slices/browser/redisearch'
+import { InstancePageTemplate } from 'uiSrc/templates'
+import { getPageName } from 'uiSrc/utils/routing'
+import { loadPluginsAction } from 'uiSrc/slices/app/plugins'
+import { appConnectivityError } from 'uiSrc/slices/app/connectivity'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
+import { getConfig } from 'uiSrc/config'
 import InstancePageRouter from './InstancePageRouter'
+import InstanceConnectionLost from './instanceConnectionLost'
 
-import styles from './styles.module.scss'
+const riConfig = getConfig()
+
+const { shouldGetRecommendations, defaultTimeoutToGetRecommendations } =
+  riConfig.database
 
 export interface Props {
-  routes: any[];
-}
-
-export const firstPanelId = 'main-component'
-export const secondPanelId = 'cli'
-
-export interface ResizablePanelSize {
-  [firstPanelId]: number
-  [secondPanelId]: number
-}
-
-export const getDefaultSizes = () => {
-  const storedSizes = localStorageService.get(BrowserStorageItem.cliResizableContainer)
-
-  return (
-    storedSizes || {
-      [firstPanelId]: 60,
-      [secondPanelId]: 40,
-    }
-  )
+  routes: any[]
 }
 
 const InstancePage = ({ routes = [] }: Props) => {
-  const [sizes, setSizes] = useState<ResizablePanelSize>(getDefaultSizes())
+  const [isShouldChildrenRerender, setIsShouldChildrenRerender] =
+    useState(false)
 
   const dispatch = useDispatch()
-  const { instanceId: connectionInstanceId } = useParams<{ instanceId: string }>()
-  const { isShowCli, isShowHelper } = useSelector(cliSettingsSelector)
-  const { data: modulesData } = useSelector(instancesSelector)
-  const { isShowMonitor } = useSelector(monitorSelector)
-  const { contextInstanceId } = useSelector(appContextSelector)
+  const { pathname } = useLocation()
 
-  const isShowBottomGroup = isShowCli || isShowHelper || isShowMonitor
+  const { data: rdiInstances } = useSelector(rdiInstancesSelector)
+  const { data: dbInstances } = useSelector(dbInstancesSelector)
+
+  const { instanceId: connectionInstanceId } = useParams<{
+    instanceId: string
+  }>()
+  const { contextInstanceId } = useSelector(appContextSelector)
+  const connectivityError = useSelector(appConnectivityError)
+  const { [FeatureFlags.envDependent]: envDependent } = useSelector(
+    appFeatureFlagsFeaturesSelector,
+  )
+
+  const lastPageRef = useRef<string>()
 
   useEffect(() => {
-    dispatch(fetchConnectedInstanceAction(connectionInstanceId, () => {
-      !modulesData.length && dispatch(fetchInstancesAction())
-    }))
+    if (!dbInstances?.length) {
+      dispatch(fetchInstancesAction())
+    }
+    if (!rdiInstances?.length && envDependent?.flag) {
+      dispatch(fetchRdiInstancesAction())
+    }
+  }, [])
+
+  useEffect(() => {
+    dispatch(loadPluginsAction())
+  }, [])
+
+  useEffect(() => {
+    dispatch(fetchConnectedInstanceAction(connectionInstanceId))
     dispatch(getDatabaseConfigInfoAction(connectionInstanceId))
     dispatch(fetchConnectedInstanceInfoAction(connectionInstanceId))
+    dispatch(fetchRecommendationsAction(connectionInstanceId))
+    let intervalId: ReturnType<typeof setInterval>
+
+    if (shouldGetRecommendations) {
+      intervalId = setInterval(() => {
+        dispatch(fetchRecommendationsAction(connectionInstanceId))
+      }, defaultTimeoutToGetRecommendations)
+    }
 
     if (contextInstanceId && contextInstanceId !== connectionInstanceId) {
-      resetContext()
+      // rerender children only if the same page from scratch to clear all component states
+      if (lastPageRef.current === getPageName(connectionInstanceId, pathname)) {
+        setIsShouldChildrenRerender(true)
+      }
+
+      dispatch(resetDatabaseContext())
     }
 
     dispatch(setAppContextConnectedInstanceId(connectionInstanceId))
-    dispatch(setDbConfig(localStorageService.get(BrowserStorageItem.dbConfig + connectionInstanceId)))
-  }, [])
+    dispatch(
+      setDbConfig(
+        localStorageService.get(
+          BrowserStorageItem.dbConfig + connectionInstanceId,
+        ),
+      ),
+    )
 
-  useEffect(() => () => {
-    setSizes((prevSizes: ResizablePanelSize) => {
-      localStorageService.set(BrowserStorageItem.cliResizableContainer, {
-        [firstPanelId]: prevSizes[firstPanelId],
-        // partially fix elastic resizable issue with zooming
-        [secondPanelId]: 100 - prevSizes[firstPanelId],
-      })
-      return prevSizes
-    })
-  }, [])
+    return () => {
+      intervalId && clearInterval(intervalId)
+    }
+  }, [connectionInstanceId])
 
-  const resetContext = () => {
-    dispatch(setMonitorInitialState())
-    dispatch(setInitialPubSubState())
-    dispatch(setBulkActionsInitialState())
-    dispatch(setAppContextInitialState())
-    dispatch(resetPatternKeysData())
-    dispatch(resetRedisearchKeysData())
-    dispatch(setClusterDetailsInitialState())
-    dispatch(setDatabaseAnalysisInitialState())
-    dispatch(setInitialAnalyticsSettings())
-    dispatch(setRedisearchInitialState())
-    setTimeout(() => {
-      dispatch(resetOutput())
-    }, 0)
+  useEffect(() => {
+    lastPageRef.current = getPageName(connectionInstanceId, pathname)
+  }, [pathname])
+
+  useEffect(() => {
+    if (isShouldChildrenRerender) {
+      dispatch(resetDatabaseContext())
+      setIsShouldChildrenRerender(false)
+    }
+  }, [isShouldChildrenRerender])
+
+  if (isShouldChildrenRerender) {
+    return null
   }
 
-  const onPanelWidthChange = useCallback((newSizes: any) => {
-    setSizes((prevSizes: any) => ({
-      ...prevSizes,
-      ...newSizes,
-    }))
-  }, [])
-
   return (
-    <EuiResizableContainer
-      direction="vertical"
-      style={{ height: '100%' }}
-      onPanelWidthChange={onPanelWidthChange}
-      className={cx({ 'show-cli': isShowBottomGroup })}
-    >
-      {(EuiResizablePanel, EuiResizableButton) => (
-        <>
-          <EuiResizablePanel
-            id={firstPanelId}
-            scrollable={false}
-            minSize="55px"
-            paddingSize="none"
-            size={isShowBottomGroup ? sizes[firstPanelId] : 100}
-            wrapperProps={{ className: cx(styles.panelTop, { [styles.mainComponent]: !isShowBottomGroup }) }}
-            data-testid={firstPanelId}
-          >
-            <InstancePageRouter routes={routes} />
-          </EuiResizablePanel>
-
-          <EuiResizableButton className={styles.resizableButton} data-test-subj="resize-btn-browser-cli" />
-
-          <EuiResizablePanel
-            id={secondPanelId}
-            scrollable={false}
-            size={isShowBottomGroup ? sizes[secondPanelId] : 0}
-            style={{ zIndex: 9 }}
-            minSize="140px"
-            wrapperProps={{ className: cx(styles.panelBottom) }}
-            data-testid={secondPanelId}
-            paddingSize="none"
-          >
-            <BottomGroupComponents />
-          </EuiResizablePanel>
-        </>
+    <InstancePageTemplate>
+      {!envDependent?.flag && connectivityError ? (
+        <InstanceConnectionLost />
+      ) : (
+        <InstancePageRouter routes={routes} />
       )}
-    </EuiResizableContainer>
+    </InstancePageTemplate>
   )
 }
 

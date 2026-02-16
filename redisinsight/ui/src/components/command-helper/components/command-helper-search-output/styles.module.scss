@@ -13,12 +13,6 @@
   text-overflow: ellipsis;
 }
 
-.title {
-  &:global(.euiLink) {
-    color: var(--euiTextSubduedColorHover) !important;
-  }
-}
-
 .summary, .summary div {
   color: var(--inputPlaceholderColor) !important;
 }

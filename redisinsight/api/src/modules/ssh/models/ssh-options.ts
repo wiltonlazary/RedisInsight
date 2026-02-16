@@ -1,12 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { Default } from 'src/common/decorators';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SshOptions {
   @Expose()
@@ -20,7 +14,6 @@ export class SshOptions {
   @Expose()
   @IsNotEmpty()
   @IsString({ always: true })
-  @Default(null)
   host: string;
 
   @ApiProperty({
@@ -31,7 +24,6 @@ export class SshOptions {
   @Expose()
   @IsNotEmpty()
   @IsInt({ always: true })
-  @Default(null)
   port: number;
 
   @ApiPropertyOptional({
@@ -42,7 +34,6 @@ export class SshOptions {
   @IsString({ always: true })
   @IsNotEmpty()
   @IsOptional()
-  @Default(null)
   username?: string;
 
   @ApiPropertyOptional({
@@ -53,7 +44,6 @@ export class SshOptions {
   @IsString({ always: true })
   @IsNotEmpty()
   @IsOptional()
-  @Default(null)
   password?: string;
 
   @ApiPropertyOptional({
@@ -64,7 +54,6 @@ export class SshOptions {
   @IsString({ always: true })
   @IsNotEmpty()
   @IsOptional()
-  @Default(null)
   privateKey?: string;
 
   @ApiPropertyOptional({
@@ -75,6 +64,5 @@ export class SshOptions {
   @IsString({ always: true })
   @IsNotEmpty()
   @IsOptional()
-  @Default(null)
   passphrase?: string;
 }

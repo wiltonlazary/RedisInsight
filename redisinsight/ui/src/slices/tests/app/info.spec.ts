@@ -6,20 +6,19 @@ import {
   mockedStore,
 } from 'uiSrc/utils/test-utils'
 
-import { apiService } from 'uiSrc/services'
 import { mswServer } from 'uiSrc/mocks/server'
 import { errorHandlers } from 'uiSrc/mocks/res/responseComposition'
 import { DEFAULT_ERROR_MESSAGE } from 'uiSrc/utils'
 import { APP_INFO_DATA_MOCK } from 'uiSrc/mocks/handlers/app/infoHandlers'
 import reducer, {
   initialState,
-  setAnalyticsIdentified,
   setElectronInfo,
   setReleaseNotesViewed,
   getServerInfo,
   getServerInfoSuccess,
   getServerInfoFailure,
-  appInfoSelector, fetchServerInfo,
+  appInfoSelector,
+  fetchServerInfo,
 } from '../../app/info'
 
 jest.mock('uiSrc/services')
@@ -45,43 +44,19 @@ describe('slices', () => {
     })
   })
 
-  describe('setAnalyticsIdentified', () => {
-    it('should properly set analytics identified', () => {
-      // Arrange
-      const identified = true
-      const state = {
-        ...initialState,
-        analytics: {
-          ...initialState.analytics,
-          identified
-        }
-      }
-
-      // Act
-      const nextState = reducer(initialState, setAnalyticsIdentified(identified))
-
-      // Assert
-      const rootState = Object.assign(initialStateDefault, {
-        app: { info: nextState },
-      })
-
-      expect(appInfoSelector(rootState)).toEqual(state)
-    })
-  })
-
   describe('setElectronInfo', () => {
     it('should properly set electron info', () => {
       // Arrange
       const data = {
         isUpdateAvailable: true,
-        updateDownloadedVersion: '1.2.0'
+        updateDownloadedVersion: '1.2.0',
       }
       const state = {
         ...initialState,
         electron: {
           ...initialState.electron,
-          ...data
-        }
+          ...data,
+        },
       }
 
       // Act
@@ -104,12 +79,15 @@ describe('slices', () => {
         ...initialState,
         electron: {
           ...initialState.electron,
-          isReleaseNotesViewed
-        }
+          isReleaseNotesViewed,
+        },
       }
 
       // Act
-      const nextState = reducer(initialState, setReleaseNotesViewed(isReleaseNotesViewed))
+      const nextState = reducer(
+        initialState,
+        setReleaseNotesViewed(isReleaseNotesViewed),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -126,7 +104,7 @@ describe('slices', () => {
       const loading = true
       const state = {
         ...initialState,
-        loading
+        loading,
       }
 
       // Act
@@ -146,11 +124,14 @@ describe('slices', () => {
       const state = {
         ...initialState,
         loading: false,
-        server: APP_INFO_DATA_MOCK
+        server: APP_INFO_DATA_MOCK,
       }
 
       // Act
-      const nextState = reducer(initialState, getServerInfoSuccess(APP_INFO_DATA_MOCK))
+      const nextState = reducer(
+        initialState,
+        getServerInfoSuccess(APP_INFO_DATA_MOCK),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -168,7 +149,7 @@ describe('slices', () => {
       const state = {
         ...initialState,
         loading: false,
-        error
+        error,
       }
 
       // Act

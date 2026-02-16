@@ -1,22 +1,36 @@
 import { Socket } from 'socket.io';
-import { Injectable } from '@nestjs/common';
+import { Response } from 'express';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { BulkActionsProvider } from 'src/modules/bulk-actions/providers/bulk-actions.provider';
 import { CreateBulkActionDto } from 'src/modules/bulk-actions/dto/create-bulk-action.dto';
 import { BulkActionIdDto } from 'src/modules/bulk-actions/dto/bulk-action-id.dto';
-import { BulkActionsAnalyticsService } from 'src/modules/bulk-actions/bulk-actions-analytics.service';
+import { BulkActionsAnalytics } from 'src/modules/bulk-actions/bulk-actions.analytics';
+import { SessionMetadata } from 'src/common/models';
 
 @Injectable()
 export class BulkActionsService {
   constructor(
     private readonly bulkActionsProvider: BulkActionsProvider,
-    private readonly analyticsService: BulkActionsAnalyticsService,
+    private readonly analytics: BulkActionsAnalytics,
   ) {}
 
-  async create(dto: CreateBulkActionDto, socket: Socket) {
-    const bulkAction = await this.bulkActionsProvider.create(dto, socket);
+  async create(
+    sessionMetadata: SessionMetadata,
+    dto: CreateBulkActionDto,
+    socket: Socket,
+  ) {
+    const bulkAction = await this.bulkActionsProvider.create(
+      sessionMetadata,
+      dto,
+      socket,
+    );
     const overview = bulkAction.getOverview();
 
-    this.analyticsService.sendActionStarted(overview);
+    this.analytics.sendActionStarted(sessionMetadata, overview);
 
     return overview;
   }
@@ -28,14 +42,44 @@ export class BulkActionsService {
 
   async abort(dto: BulkActionIdDto) {
     const bulkAction = await this.bulkActionsProvider.abort(dto.id);
-    const overview = bulkAction.getOverview();
 
-    this.analyticsService.sendActionStopped(overview);
-
-    return overview;
+    return bulkAction.getOverview();
   }
 
   disconnect(socketId: string) {
     this.bulkActionsProvider.abortUsersBulkActions(socketId);
+  }
+
+  /**
+   * Stream bulk action report as downloadable file
+   * @param id Bulk action id
+   * @param res Express response object
+   */
+  async streamReport(id: string, res: Response): Promise<void> {
+    const bulkAction = this.bulkActionsProvider.get(id);
+
+    if (!bulkAction) {
+      throw new NotFoundException('Bulk action not found');
+    }
+
+    if (!bulkAction.isReportEnabled()) {
+      throw new BadRequestException(
+        'Report generation was not enabled for this bulk action',
+      );
+    }
+
+    // Set headers for file download
+    const timestamp = new Date(Number(id)).toISOString().replace(/[:.]/g, '-');
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="bulk-delete-report-${timestamp}.txt"`,
+    );
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    // Attach the response stream to the bulk action
+    // This will trigger the bulk action to start processing
+    bulkAction.setStreamingResponse(res);
   }
 }

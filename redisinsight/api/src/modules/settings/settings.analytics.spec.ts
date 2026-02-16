@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppAnalyticsEvents, TelemetryEvents } from 'src/constants';
 import { SettingsAnalytics } from 'src/modules/settings/settings.analytics';
 import { GetAppSettingsResponse } from 'src/modules/settings/dto/settings.dto';
+import { mockSessionMetadata } from 'src/__mocks__';
 
 describe('SettingsAnalytics', () => {
   let service: SettingsAnalytics;
@@ -11,50 +12,92 @@ describe('SettingsAnalytics', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EventEmitter2,
-        SettingsAnalytics,
-      ],
+      providers: [EventEmitter2, SettingsAnalytics],
     }).compile();
 
-    service = await module.get<SettingsAnalytics>(SettingsAnalytics);
-    eventEmitter = await module.get<EventEmitter2>(EventEmitter2);
+    service = module.get<SettingsAnalytics>(SettingsAnalytics);
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
     eventEmitter.emit = jest.fn();
-    sendEventMethod = jest.spyOn<SettingsAnalytics, any>(
-      service,
-      'sendEvent',
-    );
+    sendEventMethod = jest.spyOn<SettingsAnalytics, any>(service, 'sendEvent');
   });
 
   describe('sendAnalyticsAgreementChange', () => {
     it('should emit ANALYTICS_PERMISSION with state enabled on first app launch', async () => {
-      await service.sendAnalyticsAgreementChange(
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
         new Map([['analytics', true]]),
         undefined,
       );
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(AppAnalyticsEvents.Track, {
-        event: TelemetryEvents.AnalyticsPermission,
-        eventData: { state: 'enabled' },
-        nonTracking: true,
-      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AppAnalyticsEvents.Track,
+        mockSessionMetadata,
+        {
+          event: TelemetryEvents.AnalyticsPermission,
+          eventData: { state: 'enabled' },
+          nonTracking: true,
+        },
+      );
+    });
+    it('should emit ANALYTICS_PERMISSION with state enabled and reason undefined', async () => {
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
+        new Map([['analytics', true]]),
+        undefined,
+        undefined,
+      );
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AppAnalyticsEvents.Track,
+        mockSessionMetadata,
+        {
+          event: TelemetryEvents.AnalyticsPermission,
+          eventData: { reason: undefined, state: 'enabled' },
+          nonTracking: true,
+        },
+      );
+    });
+    it('should emit ANALYTICS_PERMISSION with state enabled and reason "sso"', async () => {
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
+        new Map([['analytics', true]]),
+        undefined,
+        'sso',
+      );
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AppAnalyticsEvents.Track,
+        mockSessionMetadata,
+        {
+          event: TelemetryEvents.AnalyticsPermission,
+          eventData: { reason: 'sso', state: 'enabled' },
+          nonTracking: true,
+        },
+      );
     });
     it('should emit ANALYTICS_PERMISSION with state disabled on first app launch', async () => {
-      await service.sendAnalyticsAgreementChange(
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
         new Map([['analytics', false]]),
         undefined,
       );
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(AppAnalyticsEvents.Track, {
-        event: TelemetryEvents.AnalyticsPermission,
-        eventData: { state: 'disabled' },
-        nonTracking: true,
-      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AppAnalyticsEvents.Track,
+        mockSessionMetadata,
+        {
+          event: TelemetryEvents.AnalyticsPermission,
+          eventData: { state: 'disabled' },
+          nonTracking: true,
+        },
+      );
     });
     it('should not emit ANALYTICS_PERMISSION if agreement did not changed', async () => {
-      await service.sendAnalyticsAgreementChange(
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
         new Map([['analytics', false]]),
         new Map([['analytics', false]]),
+        'none',
       );
 
       expect(eventEmitter.emit).not.toHaveBeenCalledWith(
@@ -67,33 +110,44 @@ describe('SettingsAnalytics', () => {
       );
     });
     it('should emit [ANALYTICS_PERMISSION] if agreement changed', async () => {
-      await service.sendAnalyticsAgreementChange(
+      service.sendAnalyticsAgreementChange(
+        mockSessionMetadata,
         new Map([['analytics', false]]),
         new Map([['analytics', true]]),
+        'none',
       );
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(AppAnalyticsEvents.Track, {
-        event: TelemetryEvents.AnalyticsPermission,
-        eventData: { state: 'disabled' },
-        nonTracking: true,
-      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AppAnalyticsEvents.Track,
+        mockSessionMetadata,
+        {
+          event: TelemetryEvents.AnalyticsPermission,
+          eventData: { state: 'disabled', reason: 'none' },
+          nonTracking: true,
+        },
+      );
     });
   });
 
   describe('sendSettingsUpdatedEvent', () => {
     const defaultSettings: GetAppSettingsResponse = {
+      acceptTermsAndConditionsOverwritten: false,
       agreements: null,
       scanThreshold: 10000,
       batchSize: 5,
+      dateFormat: null,
+      timezone: null,
       theme: null,
     };
     it('should emit [SETTINGS_KEYS_TO_SCAN_CHANGED] event', async () => {
-      await service.sendSettingsUpdatedEvent(
+      service.sendSettingsUpdatedEvent(
+        mockSessionMetadata,
         { ...defaultSettings, scanThreshold: 100000 },
         { ...defaultSettings, scanThreshold: 10000 },
       );
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SettingsScanThresholdChanged,
         {
           currentValue: 100000,
@@ -104,7 +158,8 @@ describe('SettingsAnalytics', () => {
       );
     });
     it('should not emit [SETTINGS_KEYS_TO_SCAN_CHANGED] for the same value', async () => {
-      await service.sendSettingsUpdatedEvent(
+      service.sendSettingsUpdatedEvent(
+        mockSessionMetadata,
         { ...defaultSettings, scanThreshold: 10000 },
         { ...defaultSettings, scanThreshold: 10000 },
       );
@@ -112,7 +167,8 @@ describe('SettingsAnalytics', () => {
       expect(sendEventMethod).not.toHaveBeenCalled();
     });
     it('should not emit [SETTINGS_WORKBENCH_PIPELINE_CHANGED] for the same value', async () => {
-      await service.sendSettingsUpdatedEvent(
+      service.sendSettingsUpdatedEvent(
+        mockSessionMetadata,
         { ...defaultSettings, batchSize: 5 },
         { ...defaultSettings, batchSize: 5 },
       );
@@ -120,12 +176,14 @@ describe('SettingsAnalytics', () => {
       expect(sendEventMethod).not.toHaveBeenCalled();
     });
     it('should emit [SETTINGS_WORKBENCH_PIPELINE_CHANGED] event', async () => {
-      await service.sendSettingsUpdatedEvent(
+      service.sendSettingsUpdatedEvent(
+        mockSessionMetadata,
         { ...defaultSettings, batchSize: 5 },
         { ...defaultSettings, batchSize: 10 },
       );
 
       expect(sendEventMethod).toHaveBeenCalledWith(
+        mockSessionMetadata,
         TelemetryEvents.SettingsWorkbenchPipelineChanged,
         {
           newValue: true,
@@ -136,7 +194,8 @@ describe('SettingsAnalytics', () => {
       );
     });
     it('should not emit event on error', async () => {
-      await service.sendSettingsUpdatedEvent(
+      service.sendSettingsUpdatedEvent(
+        mockSessionMetadata,
         { ...defaultSettings, scanThreshold: 10000 },
         undefined,
       );

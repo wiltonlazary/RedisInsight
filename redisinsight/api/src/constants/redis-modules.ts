@@ -8,6 +8,12 @@ export enum AdditionalRedisModuleName {
   RedisTimeSeries = 'timeseries',
 }
 
+export enum AdditionalSearchModuleName {
+  SearchLight = 'searchlight',
+  FT = 'ft',
+  FTL = 'ftl',
+}
+
 export const SUPPORTED_REDIS_MODULES = Object.freeze({
   ai: AdditionalRedisModuleName.RedisAI,
   graph: AdditionalRedisModuleName.RedisGraph,
@@ -18,7 +24,7 @@ export const SUPPORTED_REDIS_MODULES = Object.freeze({
   timeseries: AdditionalRedisModuleName.RedisTimeSeries,
 });
 
-export const RE_CLOUD_MODULES_NAMES = Object.freeze({
+export const REDIS_CLOUD_MODULES_NAMES = Object.freeze({
   RedisAI: AdditionalRedisModuleName.RedisAI,
   RedisGraph: AdditionalRedisModuleName.RedisGraph,
   RedisGears: AdditionalRedisModuleName.RedisGears,
@@ -28,7 +34,7 @@ export const RE_CLOUD_MODULES_NAMES = Object.freeze({
   RedisTimeSeries: AdditionalRedisModuleName.RedisTimeSeries,
 });
 
-export const RE_CLUSTER_MODULES_NAMES = Object.freeze({
+export const REDIS_SOFTWARE_MODULES_NAMES = Object.freeze({
   ai: AdditionalRedisModuleName.RedisAI,
   graph: AdditionalRedisModuleName.RedisGraph,
   gears: AdditionalRedisModuleName.RedisGears,
@@ -42,8 +48,18 @@ export const REDIS_MODULES_COMMANDS = new Map([
   [AdditionalRedisModuleName.RedisAI, ['ai.info']],
   [AdditionalRedisModuleName.RedisGraph, ['graph.delete']],
   [AdditionalRedisModuleName.RedisGears, ['rg.pyexecute']],
-  [AdditionalRedisModuleName.RedisBloom, ['bf.info', 'cf.info', 'cms.info', 'topk.info']],
+  [
+    AdditionalRedisModuleName.RedisBloom,
+    ['bf.info', 'cf.info', 'cms.info', 'topk.info'],
+  ],
   [AdditionalRedisModuleName.RedisJSON, ['json.get']],
   [AdditionalRedisModuleName.RediSearch, ['ft.info']],
   [AdditionalRedisModuleName.RedisTimeSeries, ['ts.mrange', 'ts.info']],
 ]);
+
+export const REDISEARCH_MODULES: string[] = [
+  AdditionalRedisModuleName.RediSearch,
+  AdditionalSearchModuleName.SearchLight,
+  AdditionalSearchModuleName.FT,
+  AdditionalSearchModuleName.FTL,
+];

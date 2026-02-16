@@ -1,4 +1,4 @@
-import { describe, it, deps, validateApiCall, before, getMainCheckFn } from '../deps';
+import { describe, deps, before, getMainCheckFn } from '../deps';
 const { localDb, request, server, constants } = deps;
 
 const endpoint = (id = constants.TEST_INSTANCE_ID) =>
@@ -17,10 +17,11 @@ describe(`GET /databases/:id/connect`, () => {
     {
       endpoint: () => endpoint(constants.TEST_INSTANCE_ID_2),
       name: 'Should not connect to a database due to misconfiguration',
-      statusCode: 503,
+      statusCode: 424,
       responseBody: {
-        statusCode: 503,
-        error: 'Service Unavailable'
+        statusCode: 424,
+        error: 'RedisConnectionUnavailableException',
+        errorCode: 10904,
       },
     },
     {

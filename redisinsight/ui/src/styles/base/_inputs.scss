@@ -1,26 +1,15 @@
 .euiFormControlLayout--group {
   .euiFieldText,
   .euiFieldNumber,
-  .euiFieldPassword,
   .euiSelect,
-  .euiSuperSelectControl,
-  .euiTextArea {
+  .euiSuperSelectControl {
     box-shadow: none !important;
     border: 0 !important;
   }
 }
-.euiFieldSearch.euiFieldSearch--inGroup {
-  box-shadow: none !important;
-  border: 0 !important;
-}
 
 .euiTableCellContent__text {
   pointer-events: none !important;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--inputPlaceholderColor) !important;
 }
 
 input[type='password'] ~ .euiFormControlLayoutIcons,
@@ -31,23 +20,42 @@ input[name='sshPassphrase'] ~ .euiFormControlLayoutIcons {
   display: none;
 }
 
-.euiFieldPassword.euiFieldPassword--compressed {
-  padding: 8px !important;
-}
 
-.inputAppendIcon.inputAppendIcon {
-  height: auto;
+.euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap {
+  background-image: none !important;
+  border-bottom: solid 2px var(--euiColorPrimary) !important;
 }
+.euiComboBox .euiComboBox__inputWrap {
+  .euiComboBoxPill {
+    background-color: var(--buttonDarkenBgColor) !important;
+  }
+  .euiBadge__iconButton {
+    margin-top: 1px;
+    margin-left: 8px;
+    margin-right: 3px;
+    border-radius: 50%;
+    background-color: var(--euiColorPrimary);
+    color: var(--rdiSecondaryBgColor);
+    width: 13px;
+    height: 13px;
 
-.euiFormControlLayout > .euiFormControlLayout__append,
-.inputAppendIcon > svg {
-  width: 41px !important;
-  color: var(--iconsDefaultColor) !important;
-  background-color: var(--browserTableRowEven) !important;
-}
+    &:hover {
+      transform: translateY(-1px);
+    }
+    &:active {
+      transform: translateY(1px);
+    }
 
-.euiFormControlLayout--compressed .inputAppendIcon > svg,
-.euiFormControlLayout--compressed > .euiFormControlLayout__append {
-  width: 34px !important;
-  height: 29px !important;
+    svg {
+      width: 10px;
+      height: 10px;
+
+      &:focus {
+        background: inherit;
+      }
+    }
+  }
+  .euiComboBox__input > input {
+    color: var(--inputTextColor) !important;
+  }
 }

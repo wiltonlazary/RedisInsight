@@ -13,7 +13,7 @@ export class ClusterMonitorController {
 
   @ApiEndpoint({
     statusCode: 200,
-    description: 'Get list of available plugins',
+    description: 'Get cluster details',
     responses: [
       {
         status: 200,
@@ -25,7 +25,8 @@ export class ClusterMonitorController {
   async getClusterDetails(
     @ClientMetadataParam({
       ignoreDbIndex: true,
-    }) clientMetadata: ClientMetadata,
+    })
+    clientMetadata: ClientMetadata,
   ): Promise<ClusterDetails> {
     return this.clusterMonitorService.getClusterDetails(clientMetadata);
   }

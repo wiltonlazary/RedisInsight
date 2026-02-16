@@ -3,10 +3,11 @@ import { createSlice } from '@reduxjs/toolkit'
 import { apiService, sessionStorageService } from 'uiSrc/services'
 import { ApiEndpoints, BrowserStorageItem } from 'uiSrc/constants'
 import { getApiErrorMessage, getUrl, isStatusSuccessful } from 'uiSrc/utils'
-import { outputSelector, concatToOutput, setCliDbIndex } from 'uiSrc/slices/cli/cli-output'
-import { cliTexts, ConnectionSuccessOutputText, InitOutputText } from 'uiSrc/constants/cliOutput'
-import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
-import { CreateCliClientResponse, DeleteClientResponse } from 'apiSrc/modules/cli/dto/cli.dto'
+import { setCliDbIndex } from 'uiSrc/slices/cli/cli-output'
+import {
+  CreateCliClientResponse,
+  DeleteClientResponse,
+} from 'apiSrc/modules/cli/dto/cli.dto'
 
 import { AppDispatch, RootState } from '../store'
 import { StateCliSettings } from '../interfaces/cli'
@@ -108,9 +109,14 @@ const cliSettingsSlice = createSlice({
       state.cliClientUuid = ''
     },
 
-    getUnsupportedCommandsSuccess: (state, { payload }: { payload: string[] }) => {
+    getUnsupportedCommandsSuccess: (
+      state,
+      { payload }: { payload: string[] },
+    ) => {
       state.loading = false
-      state.unsupportedCommands = payload.map((command) => command.toLowerCase())
+      state.unsupportedCommands = payload.map((command) =>
+        command.toLowerCase(),
+      )
     },
 
     getBlockingCommandsSuccess: (state, { payload }: { payload: string[] }) => {
@@ -146,7 +152,7 @@ const cliSettingsSlice = createSlice({
       state.matchedCommand = ''
       state.searchedCommand = ''
       state.isSearching = true
-    }
+    },
   },
 })
 
@@ -173,13 +179,18 @@ export const {
   resetCliHelperSettings,
   getUnsupportedCommandsSuccess,
   getBlockingCommandsSuccess,
-  goBackFromCommand
+  goBackFromCommand,
 } = cliSettingsSlice.actions
 
 // A selector
 export const cliSettingsSelector = (state: RootState) => state.cli.settings
-export const cliUnsupportedCommandsSelector = (state: RootState, exclude: string[] = []): string[] =>
-  state.cli.settings.unsupportedCommands.filter((command: string) => !exclude.includes(command.toLowerCase()))
+export const cliUnsupportedCommandsSelector = (
+  state: RootState,
+  exclude: string[] = [],
+): string[] =>
+  state.cli.settings.unsupportedCommands.filter(
+    (command: string) => !exclude.includes(command.toLowerCase()),
+  )
 
 // The reducer
 export default cliSettingsSlice.reducer
@@ -187,34 +198,32 @@ export default cliSettingsSlice.reducer
 // Asynchronous thunk action
 export function createCliClientAction(
   instanceId: string,
-  onWorkbenchClick: () => void,
   onSuccessAction?: () => void,
-  onFailAction?: (message: string) => void
+  onFailAction?: (message: string) => void,
 ) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     const state = stateInit()
-    const { host, port, db } = connectedInstanceSelector(state)
-    const { data = [] } = outputSelector?.(state) ?? {}
     dispatch(processCliClient())
-    dispatch(concatToOutput(InitOutputText(host, port, db, !data.length, onWorkbenchClick)))
 
     try {
       const { data, status } = await apiService.post<CreateCliClientResponse>(
-        getUrl(instanceId ?? '', ApiEndpoints.CLI)
+        getUrl(instanceId ?? '', ApiEndpoints.CLI),
       )
 
       if (isStatusSuccessful(status)) {
         sessionStorageService.set(BrowserStorageItem.cliClientUuid, data?.uuid)
         dispatch(processCliClientSuccess(data?.uuid))
-        dispatch(concatToOutput(ConnectionSuccessOutputText))
-        dispatch(setCliDbIndex(state.connections?.instances?.connectedInstance?.db || 0))
+        dispatch(
+          setCliDbIndex(
+            state.connections?.instances?.connectedInstance?.db || 0,
+          ),
+        )
 
         onSuccessAction?.()
       }
     } catch (error) {
       const errorMessage = getApiErrorMessage(error)
       dispatch(processCliClientFailure(errorMessage))
-      dispatch(concatToOutput(cliTexts.CLI_ERROR_MESSAGE(errorMessage)))
       onFailAction?.(errorMessage)
     }
   }
@@ -224,7 +233,7 @@ export function createCliClientAction(
 export function updateCliClientAction(
   uuid: string,
   onSuccessAction?: () => void,
-  onFailAction?: (message: string) => void
+  onFailAction?: (message: string) => void,
 ) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     dispatch(processCliClient())
@@ -232,12 +241,20 @@ export function updateCliClientAction(
     try {
       const state = stateInit()
       const { data, status } = await apiService.patch<CreateCliClientResponse>(
-        getUrl(state.connections.instances.connectedInstance?.id ?? '', ApiEndpoints.CLI, uuid)
+        getUrl(
+          state.connections.instances.connectedInstance?.id ?? '',
+          ApiEndpoints.CLI,
+          uuid,
+        ),
       )
 
       if (isStatusSuccessful(status)) {
         dispatch(processCliClientSuccess(data?.uuid))
-        dispatch(setCliDbIndex(state.connections?.instances?.connectedInstance?.db || 0))
+        dispatch(
+          setCliDbIndex(
+            state.connections?.instances?.connectedInstance?.db || 0,
+          ),
+        )
         onSuccessAction?.()
       }
     } catch (error) {
@@ -253,14 +270,14 @@ export function deleteCliClientAction(
   instanceId: string,
   uuid: string,
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(processCliClient())
 
     try {
       const { status } = await apiService.delete<DeleteClientResponse>(
-        getUrl(instanceId, ApiEndpoints.CLI, uuid)
+        getUrl(instanceId, ApiEndpoints.CLI, uuid),
       )
 
       if (isStatusSuccessful(status)) {
@@ -276,29 +293,37 @@ export function deleteCliClientAction(
 }
 
 // Asynchronous thunk action
-export function resetCliSettingsAction(
-  onSuccessAction?: () => void,
-) {
+export function resetCliSettingsAction(onSuccessAction?: () => void) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     const state = stateInit()
     const { contextInstanceId } = state.app.context
-    const cliClientUuid = sessionStorageService.get(BrowserStorageItem.cliClientUuid) ?? ''
+    const cliClientUuid =
+      sessionStorageService.get(BrowserStorageItem.cliClientUuid) ?? ''
 
     dispatch(resetCliSettings())
-    cliClientUuid && dispatch(deleteCliClientAction(contextInstanceId, cliClientUuid, onSuccessAction))
+    cliClientUuid &&
+      dispatch(
+        deleteCliClientAction(
+          contextInstanceId,
+          cliClientUuid,
+          onSuccessAction,
+        ),
+      )
   }
 }
 
 // Asynchronous thunk action
 export function fetchBlockingCliCommandsAction(
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(processCliClient())
 
     try {
-      const { data, status } = await apiService.get<string[]>(ApiEndpoints.CLI_BLOCKING_COMMANDS)
+      const { data, status } = await apiService.get<string[]>(
+        ApiEndpoints.CLI_BLOCKING_COMMANDS,
+      )
 
       if (isStatusSuccessful(status)) {
         dispatch(getBlockingCommandsSuccess(data))
@@ -315,14 +340,14 @@ export function fetchBlockingCliCommandsAction(
 // Asynchronous thunk action
 export function fetchUnsupportedCliCommandsAction(
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(processCliClient())
 
     try {
       const { data, status } = await apiService.get<string[]>(
-        ApiEndpoints.CLI_UNSUPPORTED_COMMANDS
+        ApiEndpoints.CLI_UNSUPPORTED_COMMANDS,
       )
 
       if (isStatusSuccessful(status)) {

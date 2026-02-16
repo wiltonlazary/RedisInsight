@@ -1,9 +1,10 @@
-import { Selector, t } from 'testcafe';
 import * as fs from 'fs';
+import { Selector, t } from 'testcafe';
 import { MyRedisDatabasePage } from '../pageObjects';
-import { getDatabaseIdByName } from '../helpers/api/api-database';
+import { DatabaseAPIRequests } from '../helpers/api/api-database';
 
 const myRedisDatabasePage = new MyRedisDatabasePage();
+const databaseAPIRequests = new DatabaseAPIRequests();
 
 export class DatabasesActions {
     /**
@@ -23,10 +24,11 @@ export class DatabasesActions {
      */
     async importDatabase(fileParameters: ImportDatabaseParameters): Promise<void> {
         await t
+            .click(myRedisDatabasePage.AddRedisDatabaseDialog.addDatabaseButton)
             .click(myRedisDatabasePage.importDatabasesBtn)
             .setFilesToUpload(myRedisDatabasePage.importDatabaseInput, [fileParameters.path])
-            .click(myRedisDatabasePage.submitImportBtn)
-            .expect(myRedisDatabasePage.importDialogTitle.textContent).eql('Import Results', `Databases from ${fileParameters.type} not imported`);
+            .click(myRedisDatabasePage.submitChangesButton)
+            .expect(myRedisDatabasePage.successResultsAccordion.exists).ok(`Databases from ${fileParameters.type} not imported`);
     }
 
     /**
@@ -43,7 +45,7 @@ export class DatabasesActions {
      */
     async selectDatabasesByNames(databases: string[]): Promise<void> {
         for (const db of databases) {
-            const databaseId = await getDatabaseIdByName(db);
+            const databaseId = await databaseAPIRequests.getDatabaseIdByName(db);
             const databaseCheckbox = Selector(`[data-test-subj=checkboxSelectRow-${databaseId}]`);
             await t.click(databaseCheckbox);
         }
@@ -67,6 +69,25 @@ export class DatabasesActions {
             }
         }
         return matchedFiles;
+    }
+
+    /**
+     * Get files count by name starts from directory
+     * @param dir The path directory of file
+     * @param fileStarts The file name should start from
+     */
+    async getFileCount(dir: string, fileStarts: string): Promise<number> {
+        if (fs.existsSync(dir)) {
+            const matchedFiles: string[] = [];
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+                if (file.startsWith(fileStarts)) {
+                    matchedFiles.push(file);
+                }
+            }
+            return matchedFiles.length;
+        }
+        return 0;
     }
 }
 

@@ -1,26 +1,38 @@
 import React from 'react'
-import { EuiButton, EuiButtonEmpty, EuiPopover, EuiSpacer, EuiText, EuiTitle } from '@elastic/eui'
 import { useDispatch, useSelector } from 'react-redux'
-import { appFeatureOnboardingSelector, setOnboardNextStep, skipOnboarding } from 'uiSrc/slices/app/features'
+import {
+  appFeatureOnboardingSelector,
+  setOnboardNextStep,
+  skipOnboarding,
+} from 'uiSrc/slices/app/features'
 
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { OnboardingStepName, OnboardingSteps } from 'uiSrc/constants/onboarding'
+import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { EmptyButton, PrimaryButton } from 'uiSrc/components/base/forms/buttons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { RiPopover } from 'uiSrc/components/base'
+import { Row } from 'uiSrc/components/base/layout/flex'
 import styles from './styles.module.scss'
 
 const OnboardingStartPopover = () => {
-  const { id: connectedInstanceId = '' } = useSelector(connectedInstanceSelector)
+  const { id: connectedInstanceId = '' } = useSelector(
+    connectedInstanceSelector,
+  )
   const { isActive, currentStep } = useSelector(appFeatureOnboardingSelector)
   const dispatch = useDispatch()
 
-  const sendTelemetry = (action: string) => sendEventTelemetry({
-    event: TelemetryEvent.ONBOARDING_TOUR_CLICKED,
-    eventData: {
-      databaseId: connectedInstanceId,
-      step: OnboardingStepName.Start,
-      action
-    }
-  })
+  const sendTelemetry = (action: string) =>
+    sendEventTelemetry({
+      event: TelemetryEvent.ONBOARDING_TOUR_CLICKED,
+      eventData: {
+        databaseId: connectedInstanceId,
+        step: OnboardingStepName.Start,
+        action,
+      },
+    })
 
   const handleSkip = () => {
     dispatch(skipOnboarding())
@@ -33,44 +45,42 @@ const OnboardingStartPopover = () => {
   }
 
   return (
-    <EuiPopover
+    <RiPopover
       button={<></>}
       isOpen={isActive && currentStep === OnboardingSteps.Start}
       ownFocus={false}
       closePopover={() => {}}
       panelClassName={styles.onboardingStartPopover}
-      anchorPosition="upCenter"
+      anchorPosition="downRight"
       data-testid="onboarding-start-popover"
     >
-      <EuiTitle size="xs">
-        <h5>Take a quick tour of RedisInsight?</h5>
-      </EuiTitle>
-      <EuiSpacer size="s" />
-      <EuiText data-testid="onboarding-start-content">
-        Hi! RedisInsight has many tools that can help you to optimize the development process.
+      <Title size="S">Take a quick tour of Redis Insight?</Title>
+      <Spacer size="s" />
+      <Text data-testid="onboarding-start-content">
+        Hi! Redis Insight has many tools that can help you to optimize the
+        development process.
         <br />
         Would you like us to show them to you?
-      </EuiText>
-      <div className={styles.onboardingActions}>
-        <EuiButtonEmpty
+      </Text>
+      <Spacer />
+      <Row justify="between">
+        <EmptyButton
           onClick={handleSkip}
-          className={styles.skipTourBtn}
-          size="xs"
+          size="small"
           data-testid="skip-tour-btn"
         >
           Skip tour
-        </EuiButtonEmpty>
-        <EuiButton
+        </EmptyButton>
+        <PrimaryButton
           onClick={handleStart}
           color="secondary"
           size="s"
-          fill
           data-testid="start-tour-btn"
         >
           Show me around
-        </EuiButton>
-      </div>
-    </EuiPopover>
+        </PrimaryButton>
+      </Row>
+    </RiPopover>
   )
 }
 

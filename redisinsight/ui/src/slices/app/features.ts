@@ -1,25 +1,78 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { remove } from 'lodash'
-import { BrowserStorageItem } from 'uiSrc/constants'
+import { ApiEndpoints, BrowserStorageItem, FeatureFlags } from 'uiSrc/constants'
 import { BUILD_FEATURES } from 'uiSrc/constants/featuresHighlighting'
-import { localStorageService } from 'uiSrc/services'
+import { apiService, localStorageService } from 'uiSrc/services'
 import { StateAppFeatures } from 'uiSrc/slices/interfaces'
 import { AppDispatch, RootState } from 'uiSrc/slices/store'
-import { getPagesForFeatures } from 'uiSrc/utils/highlighting'
+import { getPagesForFeatures } from 'uiSrc/utils/features'
 import { OnboardingSteps } from 'uiSrc/constants/onboarding'
-import { Maybe } from 'uiSrc/utils'
+import { isStatusSuccessful, Maybe } from 'uiSrc/utils'
+import { getConfig } from 'uiSrc/config'
+
+const riConfig = getConfig()
 
 export const initialState: StateAppFeatures = {
   highlighting: {
     version: '',
     features: [],
-    pages: {}
+    pages: {},
   },
   onboarding: {
     currentStep: 0,
     totalSteps: 0,
     isActive: false,
-  }
+  },
+  featureFlags: {
+    loading: false,
+    features: {
+      [FeatureFlags.insightsRecommendations]: {
+        flag: false,
+      },
+      [FeatureFlags.cloudSso]: {
+        flag: false,
+      },
+      [FeatureFlags.cloudSsoRecommendedSettings]: {
+        flag: false,
+      },
+      [FeatureFlags.documentationChat]: {
+        flag: false,
+      },
+      [FeatureFlags.databaseChat]: {
+        flag: false,
+      },
+      [FeatureFlags.hashFieldExpiration]: {
+        flag: false,
+      },
+      [FeatureFlags.rdi]: {
+        flag: false,
+      },
+      [FeatureFlags.enhancedCloudUI]: {
+        flag: false,
+      },
+      [FeatureFlags.databaseManagement]: {
+        flag: true,
+      },
+      [FeatureFlags.envDependent]: {
+        flag: riConfig.features.envDependent.defaultFlag,
+      },
+      [FeatureFlags.cloudAds]: {
+        flag: riConfig.features.cloudAds.defaultFlag,
+      },
+      [FeatureFlags.vectorSearch]: {
+        flag: false,
+      },
+      [FeatureFlags.devVectorSearch]: {
+        flag: false,
+      },
+      [FeatureFlags.databasesListV2]: {
+        flag: false,
+      },
+      [FeatureFlags.azureEntraId]: {
+        flag: false,
+      },
+    },
+  },
 }
 
 const appFeaturesSlice = createSlice({
@@ -27,12 +80,18 @@ const appFeaturesSlice = createSlice({
   initialState,
   reducers: {
     setFeaturesInitialState: () => initialState,
-    setFeaturesToHighlight: (state, { payload }: { payload: { version: string, features: string[] } }) => {
+    setFeaturesToHighlight: (
+      state,
+      { payload }: { payload: { version: string; features: string[] } },
+    ) => {
       state.highlighting.features = payload.features
       state.highlighting.version = payload.version
       state.highlighting.pages = getPagesForFeatures(payload.features)
     },
-    removeFeatureFromHighlighting: (state, { payload }: { payload: string }) => {
+    removeFeatureFromHighlighting: (
+      state,
+      { payload }: { payload: string },
+    ) => {
       remove(state.highlighting.features, (f) => f === payload)
 
       const pageName = BUILD_FEATURES[payload].page
@@ -41,10 +100,16 @@ const appFeaturesSlice = createSlice({
       }
 
       const { version, features } = state.highlighting
-      localStorageService.set(BrowserStorageItem.featuresHighlighting, { version, features })
+      localStorageService.set(BrowserStorageItem.featuresHighlighting, {
+        version,
+        features,
+      })
     },
     setOnboarding: (state, { payload }) => {
-      if (payload.currentStep > payload.totalSteps) {
+      const enabledByEnv =
+        state.featureFlags.features[FeatureFlags.envDependent]?.flag ?? true
+      if (payload.currentStep > payload.totalSteps || !enabledByEnv) {
+        state.onboarding.isActive = false
         localStorageService.set(BrowserStorageItem.onboardingStep, null)
         return
       }
@@ -52,7 +117,10 @@ const appFeaturesSlice = createSlice({
       state.onboarding.currentStep = payload.currentStep ?? 0
       state.onboarding.totalSteps = payload.totalSteps
       state.onboarding.isActive = true
-      localStorageService.set(BrowserStorageItem.onboardingStep, payload.currentStep ?? 0)
+      localStorageService.set(
+        BrowserStorageItem.onboardingStep,
+        payload.currentStep ?? 0,
+      )
     },
     skipOnboarding: (state) => {
       state.onboarding.isActive = false
@@ -67,7 +135,10 @@ const appFeaturesSlice = createSlice({
 
       localStorageService.set(BrowserStorageItem.onboardingStep, step)
     },
-    setOnboardNextStep: (state, { payload = 0 }: PayloadAction<Maybe<number>>) => {
+    setOnboardNextStep: (
+      state,
+      { payload = 0 }: PayloadAction<Maybe<number>>,
+    ) => {
       const { currentStep, isActive } = state.onboarding
       if (!isActive) return
 
@@ -81,8 +152,31 @@ const appFeaturesSlice = createSlice({
       }
 
       localStorageService.set(BrowserStorageItem.onboardingStep, step)
-    }
-  }
+    },
+    getFeatureFlags: (state) => {
+      state.featureFlags.loading = true
+    },
+    getFeatureFlagsSuccess: (state, { payload }) => {
+      state.featureFlags.loading = false
+
+      // make sure certain features are defined and enabled by default
+      if (!payload.features[FeatureFlags.envDependent]) {
+        payload.features[FeatureFlags.envDependent] = {
+          flag: riConfig.features.envDependent.defaultFlag,
+        }
+      }
+      if (!payload.features[FeatureFlags.cloudAds]) {
+        payload.features[FeatureFlags.cloudAds] = {
+          flag: riConfig.features.cloudAds.defaultFlag,
+        }
+      }
+
+      state.featureFlags.features = payload.features
+    },
+    getFeatureFlagsFailure: (state) => {
+      state.featureFlags.loading = false
+    },
+  },
 })
 
 export const {
@@ -92,24 +186,59 @@ export const {
   skipOnboarding,
   setOnboardPrevStep,
   setOnboardNextStep,
-  setOnboarding
+  setOnboarding,
+  getFeatureFlags,
+  getFeatureFlagsSuccess,
+  getFeatureFlagsFailure,
 } = appFeaturesSlice.actions
 
 export const appFeatureSelector = (state: RootState) => state.app.features
-export const appFeatureHighlightingSelector = (state: RootState) => state.app.features.highlighting
-export const appFeaturePagesHighlightingSelector = (state: RootState) => state.app.features.highlighting.pages
+export const appFeatureHighlightingSelector = (state: RootState) =>
+  state.app.features.highlighting
+export const appFeaturePagesHighlightingSelector = (state: RootState) =>
+  state.app.features.highlighting.pages
 
-export const appFeatureOnboardingSelector = (state: RootState) => state.app.features.onboarding
+export const appFeatureOnboardingSelector = (state: RootState) =>
+  state.app.features.onboarding
+export const appFeatureFlagsSelector = (state: RootState) =>
+  state.app.features.featureFlags
+export const appFeatureFlagsFeaturesSelector = (state: RootState) =>
+  state.app.features.featureFlags.features
 
 export default appFeaturesSlice.reducer
 
-export function incrementOnboardStepAction(step: OnboardingSteps, skipCount = 0, onSuccess?: () => void) {
+export function incrementOnboardStepAction(
+  step: OnboardingSteps,
+  skipCount = 0,
+  onSuccess?: () => void,
+) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     const state = stateInit()
     const { currentStep, isActive } = state.app.features.onboarding
     if (isActive && currentStep === step) {
       dispatch(setOnboardNextStep(skipCount))
       onSuccess?.()
+    }
+  }
+}
+
+export function fetchFeatureFlags(
+  onSuccessAction?: (data: any) => void,
+  onFailAction?: () => void,
+) {
+  return async (dispatch: AppDispatch) => {
+    dispatch(getFeatureFlags())
+
+    try {
+      const { data, status } = await apiService.get(ApiEndpoints.FEATURES)
+
+      if (isStatusSuccessful(status)) {
+        dispatch(getFeatureFlagsSuccess(data))
+        onSuccessAction?.(data)
+      }
+    } catch (error) {
+      dispatch(getFeatureFlagsFailure())
+      onFailAction?.()
     }
   }
 }

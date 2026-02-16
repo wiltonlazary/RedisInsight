@@ -1,33 +1,56 @@
 import React from 'react'
-import { EuiButtonEmpty, EuiText, EuiIcon } from '@elastic/eui'
 
+import { Text } from 'uiSrc/components/base/text'
+import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 export interface Props {
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onFileChange: (string: string) => void
   onClick?: () => void
   accept?: string
+  id?: string
 }
 
-const UploadFile = ({ onFileChange, onClick, accept }: Props) => (
-  <EuiButtonEmpty
-    className={styles.emptyBtn}
-    onClick={() => onClick?.()}
-  >
-    <label htmlFor="upload-input-file" className={styles.uploadBtn}>
-      <EuiIcon className={styles.icon} type="folderOpen" />
-      <EuiText className={styles.label}>Upload</EuiText>
-      <input
-        type="file"
-        id="upload-input-file"
-        data-testid="upload-input-file"
-        accept={accept || '*'}
-        onChange={onFileChange}
-        className={styles.fileDrop}
-        aria-label="Select file"
-      />
-    </label>
-  </EuiButtonEmpty>
-)
+const UploadFile = (props: Props) => {
+  const { onFileChange, onClick, accept, id = 'upload-input-file' } = props
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const fileBlob = e.target.files[0]
+      fileBlob.text().then((text) => {
+        onFileChange(text)
+      })
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <EmptyButton className={styles.emptyBtn}>
+      <label
+        htmlFor={id}
+        className={styles.uploadBtn}
+        data-testid="upload-file-btn"
+      >
+        {/* todo: 'folderOpen', replace with redis-ui once available */}
+        <RiIcon className={styles.icon} type="KnowledgeBaseIcon" />
+        <Text className={styles.label}>Upload</Text>
+        <input
+          type="file"
+          id={id}
+          data-testid={id}
+          accept={accept || '*'}
+          onChange={handleFileChange}
+          onClick={(event) => {
+            event.stopPropagation()
+            onClick?.()
+          }}
+          className={styles.fileDrop}
+          aria-label="Select file"
+        />
+      </label>
+    </EmptyButton>
+  )
+}
 
 export default UploadFile

@@ -1,77 +1,138 @@
-import { EuiPage, EuiPageBody, EuiResizableContainer, EuiResizeObserver } from '@elastic/eui'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
 import {
   clusterSelector,
   resetDataRedisCluster,
   resetInstancesRedisCluster,
 } from 'uiSrc/slices/instances/cluster'
-import { optimizeLSInstances, setTitle } from 'uiSrc/utils'
-import { PageHeader } from 'uiSrc/components'
-import { BrowserStorageItem } from 'uiSrc/constants'
+import { setTitle } from 'uiSrc/utils'
+import { HomePageTemplate } from 'uiSrc/templates'
+import { BrowserStorageItem, FeatureFlags } from 'uiSrc/constants'
 import { resetKeys } from 'uiSrc/slices/browser/keys'
-import { resetCliHelperSettings, resetCliSettingsAction } from 'uiSrc/slices/cli/cli-settings'
+import {
+  resetCliHelperSettings,
+  resetCliSettingsAction,
+} from 'uiSrc/slices/cli/cli-settings'
 import { resetRedisearchKeysData } from 'uiSrc/slices/browser/redisearch'
-import { appContextSelector, setAppContextInitialState } from 'uiSrc/slices/app/context'
+import {
+  appContextSelector,
+  setAppContextInitialState,
+} from 'uiSrc/slices/app/context'
 import { Instance } from 'uiSrc/slices/interfaces'
-import { cloudSelector, resetSubscriptionsRedisCloud } from 'uiSrc/slices/instances/cloud'
-import { editedInstanceSelector, fetchEditedInstanceAction, fetchInstancesAction, instancesSelector, setEditedInstance } from 'uiSrc/slices/instances/instances'
+import {
+  cloudSelector,
+  resetDataRedisCloud,
+  resetSubscriptionsRedisCloud,
+} from 'uiSrc/slices/instances/cloud'
+import {
+  editedInstanceSelector,
+  fetchEditedInstanceAction,
+  fetchInstancesAction,
+  instancesSelector,
+  resetImportInstances,
+  setEditedInstance,
+} from 'uiSrc/slices/instances/instances'
+import { fetchTags } from 'uiSrc/slices/instances/tags'
 import { localStorageService } from 'uiSrc/services'
-import { resetDataSentinel, sentinelSelector } from 'uiSrc/slices/instances/sentinel'
-import { appAnalyticsInfoSelector } from 'uiSrc/slices/app/info'
-import { fetchContentAction as fetchCreateRedisButtonsAction } from 'uiSrc/slices/content/create-redis-buttons'
-import { sendEventTelemetry, sendPageViewTelemetry, TelemetryEvent, TelemetryPageView } from 'uiSrc/telemetry'
-import AddDatabaseContainer from './components/AddDatabases/AddDatabasesContainer'
-import DatabasesList from './components/DatabasesListComponent/DatabasesListWrapper'
-import WelcomeComponent from './components/WelcomeComponent/WelcomeComponent'
-import HomeHeader from './components/HomeHeader'
+import {
+  resetDataSentinel,
+  sentinelSelector,
+} from 'uiSrc/slices/instances/sentinel'
+import {
+  contentSelector,
+  fetchContentAction as fetchCreateRedisButtonsAction,
+} from 'uiSrc/slices/content/create-redis-buttons'
+import {
+  sendEventTelemetry,
+  sendPageViewTelemetry,
+  TelemetryEvent,
+  TelemetryPageView,
+} from 'uiSrc/telemetry'
+import {
+  appRedirectionSelector,
+  setUrlHandlingInitialState,
+} from 'uiSrc/slices/app/url-handling'
+import { UrlHandlingActions } from 'uiSrc/slices/interfaces/urlHandling'
+import { CREATE_CLOUD_DB_ID } from 'uiSrc/pages/home/constants'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
+
+import { Page, PageBody } from 'uiSrc/components/base/layout/page'
+import { Card } from 'uiSrc/components/base/layout'
+import DatabasesList from './components/database-list-component'
+import DatabasesListV2 from './components/databases-list/DatabasesList'
+import DatabaseListHeader from './components/database-list-header'
+import EmptyMessage from './components/empty-message/EmptyMessage'
+import DatabasePanelDialog from './components/database-panel-dialog'
+import { ManageTagsModal } from './components/database-manage-tags-modal/ManageTagsModal'
+import {
+  HomePageDataProviderProvider,
+  useHomePageDataProvider,
+} from './contexts/HomePageDataProvider'
 
 import './styles.scss'
 import styles from './styles.module.scss'
 
+enum OpenDialogName {
+  AddDatabase = 'add',
+  ManageTags = 'manage-tags',
+  EditDatabase = 'edit',
+}
+
 const HomePage = () => {
-  const [width, setWidth] = useState(0)
-  const [addDialogIsOpen, setAddDialogIsOpen] = useState(false)
-  const [editDialogIsOpen, setEditDialogIsOpen] = useState(false)
-  const [dialogIsOpen, setDialogIsOpen] = useState(false)
-  const [welcomeIsShow, setWelcomeIsShow] = useState(
-    !localStorageService.get(BrowserStorageItem.instancesCount)
-  )
-  const [isPageViewSent, setIsPageViewSent] = useState(false)
+  const { openDialog, setOpenDialog } = useHomePageDataProvider()
 
   const dispatch = useDispatch()
 
   const { credentials: clusterCredentials } = useSelector(clusterSelector)
   const { credentials: cloudCredentials } = useSelector(cloudSelector)
   const { instance: sentinelInstance } = useSelector(sentinelSelector)
+  const { action, dbConnection } = useSelector(appRedirectionSelector)
+  const { data: createDbContent } = useSelector(contentSelector)
+  const {
+    [FeatureFlags.databasesListV2]: databasesListV2Feature,
+    [FeatureFlags.enhancedCloudUI]: enhancedCloudUIFeature,
+    [FeatureFlags.cloudAds]: cloudAdsFeature,
+  } = useSelector(appFeatureFlagsFeaturesSelector)
 
   const {
     loading,
+    loadingChanging,
     data: instances,
     changedSuccessfully: isChangedInstance,
     deletedSuccessfully: isDeletedInstance,
   } = useSelector(instancesSelector)
 
-  const {
-    data: editedInstance,
-  } = useSelector(editedInstanceSelector)
-
-  const { identified: analyticsIdentified } = useSelector(appAnalyticsInfoSelector)
+  const { data: editedInstance } = useSelector(editedInstanceSelector)
 
   const { contextInstanceId } = useSelector(appContextSelector)
 
-  !welcomeIsShow && setTitle('My Redis databases')
+  const predefinedInstances =
+    enhancedCloudUIFeature?.flag &&
+    cloudAdsFeature?.flag &&
+    createDbContent?.cloud_list_of_databases
+      ? [
+          {
+            id: CREATE_CLOUD_DB_ID,
+            ...createDbContent.cloud_list_of_databases,
+          } as Instance,
+        ]
+      : []
+  const isInstanceExists =
+    instances.length > 0 || predefinedInstances.length > 0
+  const hideDbList = !isInstanceExists && !loading && !loadingChanging
 
   useEffect(() => {
-    dispatch(fetchInstancesAction())
+    setTitle('Redis databases')
+
+    dispatch(fetchInstancesAction(handleOpenPage))
     dispatch(resetInstancesRedisCluster())
     dispatch(resetSubscriptionsRedisCloud())
     dispatch(fetchCreateRedisButtonsAction())
+    dispatch(fetchTags())
 
-    return (() => {
+    return () => {
       dispatch(setEditedInstance(null))
-    })
+    }
   }, [])
 
   useEffect(() => {
@@ -82,56 +143,47 @@ const HomePage = () => {
 
   useEffect(() => {
     if (isChangedInstance) {
-      setAddDialogIsOpen(!isChangedInstance)
-      setEditDialogIsOpen(!isChangedInstance)
+      setOpenDialog(null)
       dispatch(setEditedInstance(null))
-      // send page view after adding database from welcome page
-      sendPageViewTelemetry({
-        name: TelemetryPageView.DATABASES_LIST_PAGE
-      })
     }
   }, [isChangedInstance])
 
   useEffect(() => {
-    if (!isPageViewSent && !isChangedInstance && instances.length && analyticsIdentified) {
-      setIsPageViewSent(true)
-      sendPageViewTelemetry({
-        name: TelemetryPageView.DATABASES_LIST_PAGE
-      })
-    }
-    if (instances.length && !isPageViewSent) {
-      optimizeLSInstances(instances)
-    }
-  }, [instances, analyticsIdentified, isPageViewSent, isChangedInstance])
-
-  useEffect(() => {
     if (clusterCredentials || cloudCredentials || sentinelInstance) {
-      setAddDialogIsOpen(true)
+      setOpenDialog(OpenDialogName.AddDatabase)
     }
   }, [clusterCredentials, cloudCredentials, sentinelInstance])
 
   useEffect(() => {
-    const isDialogOpen = !!instances.length && (addDialogIsOpen || editDialogIsOpen)
-
-    const instancesCashCount = JSON.parse(
-      localStorageService.get(BrowserStorageItem.instancesCount) ?? '0'
-    )
-
-    const isShowWelcome = !instances.length && !addDialogIsOpen && !editDialogIsOpen && !instancesCashCount
-
-    setDialogIsOpen(isDialogOpen)
-
-    setWelcomeIsShow(isShowWelcome)
-  }, [addDialogIsOpen, editDialogIsOpen, instances, loading])
+    if (action === UrlHandlingActions.Connect) {
+      setOpenDialog(OpenDialogName.AddDatabase)
+    }
+  }, [action, dbConnection])
 
   useEffect(() => {
     if (editedInstance) {
-      const found = instances.find((item: Instance) => item.id === editedInstance.id)
+      const found = instances.find(
+        (item: Instance) => item.id === editedInstance.id,
+      )
       if (found) {
         dispatch(fetchEditedInstanceAction(found))
       }
     }
   }, [instances])
+
+  const handleOpenPage = (instances: Instance[]) => {
+    const instancesWithTagsCount = instances.filter(
+      (instance) => instance.tags && instance.tags.length > 0,
+    ).length
+
+    sendPageViewTelemetry({
+      name: TelemetryPageView.DATABASES_LIST_PAGE,
+      eventData: {
+        instancesCount: instances.length,
+        instancesWithTagsCount,
+      },
+    })
+  }
 
   const onDbEdited = () => {
     if (contextInstanceId && contextInstanceId === editedInstance?.id) {
@@ -145,46 +197,57 @@ const HomePage = () => {
 
   const closeEditDialog = () => {
     dispatch(setEditedInstance(null))
-    setEditDialogIsOpen(false)
+    setOpenDialog(null)
 
     sendEventTelemetry({
       event: TelemetryEvent.CONFIG_DATABASES_DATABASE_EDIT_CANCELLED_CLICKED,
       eventData: {
-        databaseId: editedInstance?.id
-      }
+        databaseId: editedInstance?.id,
+      },
     })
   }
 
   const handleClose = () => {
     dispatch(resetDataRedisCluster())
     dispatch(resetDataSentinel())
+    dispatch(resetImportInstances())
+    dispatch(resetDataRedisCloud())
 
-    setAddDialogIsOpen(false)
+    setOpenDialog(null)
     dispatch(setEditedInstance(null))
-    setEditDialogIsOpen(false)
+
+    if (action === UrlHandlingActions.Connect) {
+      dispatch(setUrlHandlingInitialState())
+    }
 
     sendEventTelemetry({
-      event: TelemetryEvent.CONFIG_DATABASES_ADD_FORM_DISMISSED
+      event: TelemetryEvent.CONFIG_DATABASES_ADD_FORM_DISMISSED,
     })
   }
 
   const handleAddInstance = () => {
-    setAddDialogIsOpen(true)
+    setOpenDialog(OpenDialogName.AddDatabase)
     dispatch(setEditedInstance(null))
-    setEditDialogIsOpen(false)
+  }
+
+  const handleManageInstanceTags = (instance: Instance) => {
+    dispatch(setEditedInstance(instance))
+    setOpenDialog(OpenDialogName.ManageTags)
   }
 
   const handleEditInstance = (editedInstance: Instance) => {
     if (editedInstance) {
       dispatch(fetchEditedInstanceAction(editedInstance))
-      setEditDialogIsOpen(true)
-      setAddDialogIsOpen(false)
+      setOpenDialog(OpenDialogName.EditDatabase)
     }
   }
   const handleDeleteInstances = (instances: Instance[]) => {
-    if (instances.find((instance) => instance.id === editedInstance?.id)) {
+    if (
+      instances.find((instance) => instance.id === editedInstance?.id) &&
+      openDialog === OpenDialogName.EditDatabase
+    ) {
       dispatch(setEditedInstance(null))
-      setEditDialogIsOpen(false)
+      setOpenDialog(null)
     }
 
     instances.forEach((instance) => {
@@ -192,125 +255,70 @@ const HomePage = () => {
     })
   }
 
-  const onResize = ({ width: innerWidth }: { width: number }) => {
-    setWidth(innerWidth)
-  }
-
-  if (welcomeIsShow) {
-    return (
-      <WelcomeComponent onAddInstance={handleAddInstance} />
-    )
-  }
-
   return (
-    <>
-      <PageHeader title="My Redis databases" />
-      <div />
-      <EuiResizeObserver onResize={onResize}>
-        {(resizeRef) => (
-          <EuiPage className={styles.page}>
-            <EuiPageBody component="div">
-              <HomeHeader
-                key="instance-controls"
-                onAddInstance={handleAddInstance}
-                direction="row"
-                welcomePage={!instances.length}
+    <HomePageTemplate>
+      <div className={styles.pageWrapper}>
+        <Page className={styles.page}>
+          <PageBody component="div">
+            <DatabaseListHeader
+              key="instance-controls"
+              onAddInstance={handleAddInstance}
+            />
+            {openDialog && openDialog !== OpenDialogName.ManageTags && (
+              <DatabasePanelDialog
+                editMode={openDialog === OpenDialogName.EditDatabase}
+                urlHandlingAction={action}
+                editedInstance={
+                  openDialog === OpenDialogName.EditDatabase
+                    ? editedInstance
+                    : (sentinelInstance ?? null)
+                }
+                onClose={
+                  openDialog === OpenDialogName.EditDatabase
+                    ? closeEditDialog
+                    : handleClose
+                }
+                onDbEdited={onDbEdited}
               />
-              {dialogIsOpen ? (
-                <div key="homePage" className="homePage">
-                  <EuiResizableContainer style={{ height: '100%' }}>
-                    {(EuiResizablePanel, EuiResizableButton) => (
-                      <>
-                        <EuiResizablePanel
-                          scrollable={false}
-                          initialSize={62}
-                          id="databases"
-                          minSize="50%"
-                          paddingSize="none"
-                        >
-                          <div ref={resizeRef}>
-                            <DatabasesList
-                              width={width}
-                              dialogIsOpen={dialogIsOpen}
-                              editedInstance={editedInstance}
-                              onEditInstance={handleEditInstance}
-                              onDeleteInstances={handleDeleteInstances}
-                            />
-                          </div>
-                        </EuiResizablePanel>
-
-                        <EuiResizableButton style={{ margin: 0 }} />
-
-                        <EuiResizablePanel
-                          scrollable={false}
-                          initialSize={38}
-                          className={cx({
-                            [styles.contentActive]: editDialogIsOpen,
-                          })}
-                          id="form"
-                          paddingSize="none"
-                          style={{ minWidth: '494px' }}
-                        >
-                          {editDialogIsOpen && (
-                            <AddDatabaseContainer
-                              editMode
-                              width={width}
-                              isResizablePanel
-                              editedInstance={editedInstance}
-                              onClose={closeEditDialog}
-                              onDbEdited={onDbEdited}
-                            />
-                          )}
-
-                          {addDialogIsOpen && (
-                            <AddDatabaseContainer
-                              editMode={false}
-                              width={width}
-                              isResizablePanel
-                              editedInstance={sentinelInstance ?? null}
-                              onClose={handleClose}
-                              isFullWidth={!instances.length}
-                            />
-                          )}
-                          <div id="footerDatabaseForm" />
-                        </EuiResizablePanel>
-                      </>
-                    )}
-                  </EuiResizableContainer>
-                </div>
-              ) : (
-                <div key="homePage" className="homePage" ref={resizeRef}>
-                  {!!instances.length || loading ? (
-                    <DatabasesList
-                      width={width}
-                      editedInstance={editedInstance}
-                      dialogIsOpen={dialogIsOpen}
-                      onEditInstance={handleEditInstance}
-                      onDeleteInstances={handleDeleteInstances}
-                    />
-                  ) : (
-                    <>
-                      {addDialogIsOpen && (
-                        <AddDatabaseContainer
-                          editMode={false}
-                          width={width}
-                          isResizablePanel
-                          editedInstance={sentinelInstance ?? null}
-                          onClose={handleClose}
-                          isFullWidth={!instances.length}
-                        />
-                      )}
-                      <div id="footerDatabaseForm" />
-                    </>
-                  )}
-                </div>
+            )}
+            {openDialog === OpenDialogName.ManageTags && editedInstance && (
+              <ManageTagsModal
+                instance={editedInstance}
+                onClose={handleClose}
+              />
+            )}
+            <div key="homePage" className="homePage">
+              {hideDbList && (
+                <Card>
+                  <EmptyMessage onAddInstanceClick={handleAddInstance} />
+                </Card>
               )}
-            </EuiPageBody>
-          </EuiPage>
-        )}
-      </EuiResizeObserver>
-    </>
+              {!hideDbList && !databasesListV2Feature?.flag && (
+                <DatabasesList
+                  loading={loading}
+                  instances={instances}
+                  predefinedInstances={predefinedInstances}
+                  editedInstance={editedInstance}
+                  onEditInstance={handleEditInstance}
+                  onDeleteInstances={handleDeleteInstances}
+                  onManageInstanceTags={handleManageInstanceTags}
+                />
+              )}
+              {!hideDbList && databasesListV2Feature?.flag && (
+                <DatabasesListV2 />
+              )}
+            </div>
+          </PageBody>
+        </Page>
+      </div>
+    </HomePageTemplate>
   )
 }
 
-export default HomePage
+const HomePageWithProvider = () => (
+  <HomePageDataProviderProvider>
+    <HomePage />
+  </HomePageDataProviderProvider>
+)
+
+export default HomePageWithProvider

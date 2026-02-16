@@ -2,43 +2,49 @@ import { Injectable } from '@nestjs/common';
 import { omit } from 'lodash';
 import { ClientMetadata } from 'src/common/models';
 import { WorkbenchCommandsExecutor } from 'src/modules/workbench/providers/workbench-commands.executor';
-import { CommandExecution } from 'src/modules/workbench/models/command-execution';
-import { CreateCommandExecutionDto, ResultsMode } from 'src/modules/workbench/dto/create-command-execution.dto';
+import {
+  CommandExecution,
+  ResultsMode,
+} from 'src/modules/workbench/models/command-execution';
+import { CreateCommandExecutionDto } from 'src/modules/workbench/dto/create-command-execution.dto';
 import { CreateCommandExecutionsDto } from 'src/modules/workbench/dto/create-command-executions.dto';
-import { getBlockingCommands, multilineCommandToOneLine } from 'src/utils/cli-helper';
+import {
+  getBlockingCommands,
+  multilineCommandToOneLine,
+} from 'src/utils/cli-helper';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import { ShortCommandExecution } from 'src/modules/workbench/models/short-command-execution';
 import { CommandExecutionStatus } from 'src/modules/cli/dto/cli.dto';
-import { DatabaseConnectionService } from 'src/modules/database/database-connection.service';
 import { CommandExecutionRepository } from 'src/modules/workbench/repositories/command-execution.repository';
+import { DatabaseClientFactory } from 'src/modules/database/providers/database.client.factory';
+import { RedisClient } from 'src/modules/redis/client';
+import { CommandExecutionFilter } from 'src/modules/workbench/models/command-executions.filter';
+import { WorkbenchAnalytics } from 'src/modules/workbench/workbench.analytics';
 import { getUnsupportedCommands } from './utils/getUnsupportedCommands';
-import { WorkbenchAnalyticsService } from './services/workbench-analytics/workbench-analytics.service';
 
 @Injectable()
 export class WorkbenchService {
   constructor(
-    private readonly databaseConnectionService: DatabaseConnectionService,
+    private readonly databaseClientFactory: DatabaseClientFactory,
     private commandsExecutor: WorkbenchCommandsExecutor,
     private commandExecutionRepository: CommandExecutionRepository,
-    private analyticsService: WorkbenchAnalyticsService,
+    private analyticsService: WorkbenchAnalytics,
   ) {}
 
   /**
    * Send redis command from workbench and save history
    *
-   * @param clientMetadata
+   * @param client
    * @param dto
-   * @param db
    */
   async createCommandExecution(
-    clientMetadata: ClientMetadata,
+    client: RedisClient,
     dto: CreateCommandExecutionDto,
-    db: number = 0,
   ): Promise<Partial<CommandExecution>> {
     const commandExecution: Partial<CommandExecution> = {
       ...omit(dto, 'commands'),
-      db,
-      databaseId: clientMetadata.databaseId,
+      db: await client.getCurrentDbIndex(),
+      databaseId: client.clientMetadata.databaseId,
     };
 
     const command = multilineCommandToOneLine(dto.command);
@@ -46,15 +52,22 @@ export class WorkbenchService {
     if (deprecatedCommand) {
       commandExecution.result = [
         {
-          response: ERROR_MESSAGES.WORKBENCH_COMMAND_NOT_SUPPORTED(deprecatedCommand.toUpperCase()),
+          response: ERROR_MESSAGES.WORKBENCH_COMMAND_NOT_SUPPORTED(
+            deprecatedCommand.toUpperCase(),
+          ),
           status: CommandExecutionStatus.Fail,
         },
       ];
     } else {
       const startCommandExecutionTime = process.hrtime.bigint();
-      commandExecution.result = await this.commandsExecutor.sendCommand(clientMetadata, { ...dto, command });
+      commandExecution.result = await this.commandsExecutor.sendCommand(
+        client,
+        { ...dto, command },
+      );
       const endCommandExecutionTime = process.hrtime.bigint();
-      commandExecution.executionTime = Math.round((Number(endCommandExecutionTime - startCommandExecutionTime) / 1000));
+      commandExecution.executionTime = Math.round(
+        Number(endCommandExecutionTime - startCommandExecutionTime) / 1000,
+      );
     }
 
     return commandExecution;
@@ -63,47 +76,53 @@ export class WorkbenchService {
   /**
    * Send redis command from workbench and save history
    *
-   * @param clientMetadata
+   * @param client
    * @param dto
    * @param commands
-   * @param db
    * @param onlyErrorResponse
    */
   async createCommandsExecution(
-    clientMetadata: ClientMetadata,
+    client: RedisClient,
     dto: Partial<CreateCommandExecutionDto>,
     commands: string[],
-    db: number = 0,
     onlyErrorResponse: boolean = false,
   ): Promise<Partial<CommandExecution>> {
     const commandExecution: Partial<CommandExecution> = {
       ...dto,
-      db,
-      databaseId: clientMetadata.databaseId,
+      db: await client.getCurrentDbIndex(),
+      databaseId: client.clientMetadata.databaseId,
     };
-    let executionTimeInNanoseconds = BigInt(0);
 
     const startCommandExecutionTime = process.hrtime.bigint();
 
-    const executionResults = await Promise.all(commands.map(async (singleCommand) => {
-      const command = multilineCommandToOneLine(singleCommand);
-      const deprecatedCommand = this.findCommandInBlackList(command);
-      if (deprecatedCommand) {
-        return ({
+    const executionResults = await Promise.all(
+      commands.map(async (singleCommand) => {
+        const command = multilineCommandToOneLine(singleCommand);
+        const deprecatedCommand = this.findCommandInBlackList(command);
+        if (deprecatedCommand) {
+          return {
+            command,
+            response: ERROR_MESSAGES.WORKBENCH_COMMAND_NOT_SUPPORTED(
+              deprecatedCommand.toUpperCase(),
+            ),
+            status: CommandExecutionStatus.Fail,
+          };
+        }
+        const result = await this.commandsExecutor.sendCommand(client, {
+          ...dto,
           command,
-          response: ERROR_MESSAGES.WORKBENCH_COMMAND_NOT_SUPPORTED(deprecatedCommand.toUpperCase()),
-          status: CommandExecutionStatus.Fail,
         });
-      }
-      const result = await this.commandsExecutor.sendCommand(clientMetadata, { ...dto, command });
-      const endCommandExecutionTime = process.hrtime.bigint();
+        return { ...result[0], command };
+      }),
+    );
 
-      executionTimeInNanoseconds += (endCommandExecutionTime - startCommandExecutionTime);
-      return ({ ...result[0], command });
-    }));
+    const executionTimeInNanoseconds =
+      process.hrtime.bigint() - startCommandExecutionTime;
 
     if (Number(executionTimeInNanoseconds) !== 0) {
-      commandExecution.executionTime = Math.round(Number(executionTimeInNanoseconds) / 1000);
+      commandExecution.executionTime = Math.round(
+        Number(executionTimeInNanoseconds) / 1000,
+      );
     }
 
     const successCommands = executionResults.filter(
@@ -120,10 +139,12 @@ export class WorkbenchService {
     };
 
     commandExecution.command = commands.join('\r\n');
-    commandExecution.result = [{
-      status: CommandExecutionStatus.Success,
-      response: onlyErrorResponse ? failedCommands : executionResults,
-    }];
+    commandExecution.result = [
+      {
+        status: CommandExecutionStatus.Success,
+        response: onlyErrorResponse ? failedCommands : executionResults,
+      },
+    ];
 
     return commandExecution;
   }
@@ -140,54 +161,112 @@ export class WorkbenchService {
   ): Promise<CommandExecution[]> {
     // todo: handle concurrent client creation on RedisModule side
     // temporary workaround. Just create client before any command execution precess
-    const client = await this.databaseConnectionService.getOrCreateClient(clientMetadata);
+    const client: RedisClient =
+      await this.databaseClientFactory.getOrCreateClient(clientMetadata);
 
-    if (dto.resultsMode === ResultsMode.GroupMode || dto.resultsMode === ResultsMode.Silent) {
+    if (
+      dto.resultsMode === ResultsMode.GroupMode ||
+      dto.resultsMode === ResultsMode.Silent
+    ) {
       return this.commandExecutionRepository.createMany(
-        [await this.createCommandsExecution(clientMetadata, dto, dto.commands, client?.options?.db, dto.resultsMode === ResultsMode.Silent)],
+        clientMetadata.sessionMetadata,
+        [
+          await this.createCommandsExecution(
+            client,
+            dto,
+            dto.commands,
+            dto.resultsMode === ResultsMode.Silent,
+          ),
+        ],
       );
     }
     // todo: rework to support pipeline
     // prepare and execute commands
     const commandExecutions = await Promise.all(
       dto.commands.map(
-        async (command) => await this.createCommandExecution(clientMetadata, { ...dto, command }, client?.options?.db),
+        async (command) =>
+          await this.createCommandExecution(client, { ...dto, command }),
       ),
     );
 
     // save history
     // todo: rework
-    return this.commandExecutionRepository.createMany(commandExecutions);
+    return this.commandExecutionRepository.createMany(
+      clientMetadata.sessionMetadata,
+      commandExecutions,
+    );
   }
 
   /**
    * Get list command execution history per instance (last 30 items)
    *
-   * @param databaseId
+   * @param clientMetadata
+   * @param filter
    */
-  async listCommandExecutions(databaseId: string): Promise<ShortCommandExecution[]> {
-    return this.commandExecutionRepository.getList(databaseId);
+  async listCommandExecutions(
+    clientMetadata: ClientMetadata,
+    filter: CommandExecutionFilter,
+  ): Promise<ShortCommandExecution[]> {
+    return this.commandExecutionRepository.getList(
+      clientMetadata.sessionMetadata,
+      clientMetadata.databaseId,
+      filter,
+    );
   }
 
   /**
    * Get command execution details
    *
-   * @param databaseId
+   * @param clientMetadata
    * @param id
    */
-  async getCommandExecution(databaseId: string, id: string): Promise<CommandExecution> {
-    return this.commandExecutionRepository.getOne(databaseId, id);
+  async getCommandExecution(
+    clientMetadata: ClientMetadata,
+    id: string,
+  ): Promise<CommandExecution> {
+    return this.commandExecutionRepository.getOne(
+      clientMetadata.sessionMetadata,
+      clientMetadata.databaseId,
+      id,
+    );
   }
 
   /**
    * Delete command execution by id and databaseId
    *
-   * @param databaseId
+   * @param clientMetadata
    * @param id
    */
-  async deleteCommandExecution(databaseId: string, id: string): Promise<void> {
-    await this.commandExecutionRepository.delete(databaseId, id);
-    this.analyticsService.sendCommandDeletedEvent(databaseId);
+  async deleteCommandExecution(
+    clientMetadata: ClientMetadata,
+    id: string,
+  ): Promise<void> {
+    await this.commandExecutionRepository.delete(
+      clientMetadata.sessionMetadata,
+      clientMetadata.databaseId,
+      id,
+    );
+    this.analyticsService.sendCommandDeletedEvent(
+      clientMetadata.sessionMetadata,
+      clientMetadata.databaseId,
+    );
+  }
+
+  /**
+   * Delete command executions by databaseId
+   *
+   * @param clientMetadata
+   * @param filter
+   */
+  async deleteCommandExecutions(
+    clientMetadata: ClientMetadata,
+    filter: CommandExecutionFilter,
+  ): Promise<void> {
+    await this.commandExecutionRepository.deleteAll(
+      clientMetadata.sessionMetadata,
+      clientMetadata.databaseId,
+      filter,
+    );
   }
 
   /**

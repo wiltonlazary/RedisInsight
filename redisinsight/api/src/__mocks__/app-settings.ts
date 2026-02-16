@@ -11,6 +11,8 @@ export const mockSettings = Object.assign(new Settings(), {
     theme: 'DARK',
     scanThreshold: 500,
     batchSize: 10,
+    dateFormat: null,
+    timezone: null,
   },
 });
 
@@ -44,20 +46,26 @@ export const mockAppSettings = Object.assign(new GetAppSettingsResponse(), {
   },
 });
 
-export const mockAppSettingsWithoutPermissions = Object.assign(new GetAppSettingsResponse(), {
-  ...mockSettings.data,
-  agreements: {
-    version: mockAgreements.version,
-    eula: false,
-    analytics: false,
-    encryption: false,
-    notifications: false,
+export const mockAppSettingsWithoutPermissions = Object.assign(
+  new GetAppSettingsResponse(),
+  {
+    ...mockSettings.data,
+    agreements: {
+      version: mockAgreements.version,
+      eula: false,
+      analytics: false,
+      encryption: false,
+      notifications: false,
+    },
   },
-});
+);
 
-export const mockAppSettingsInitial = Object.assign(new GetAppSettingsResponse(), {
-  agreements: null,
-});
+export const mockAppSettingsInitial = Object.assign(
+  new GetAppSettingsResponse(),
+  {
+    agreements: null,
+  },
+);
 
 export const mockAgreementsRepository = jest.fn(() => ({
   getOrCreate: jest.fn(),

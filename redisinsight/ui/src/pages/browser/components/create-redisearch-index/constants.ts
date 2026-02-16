@@ -46,5 +46,5 @@ export const FIELD_TYPE_OPTIONS = [
   {
     text: 'VECTOR',
     value: FieldTypes.VECTOR,
-  }
+  },
 ]

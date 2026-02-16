@@ -1,8 +1,22 @@
 import { t, Selector } from 'testcafe';
-import { getDatabaseIdByName } from '../helpers/api/api-database';
-import { BasePage } from './base-page';
+import { DatabaseAPIRequests } from '../helpers/api/api-database';
+import { InsightsPanel } from './components/insights-panel';
+import { BaseOverviewPage } from './base-overview-page';
+import { NavigationPanel } from './components/navigation-panel';
+import { NavigationHeader } from './components/navigation/navigation-header';
+import { AuthorizationDialog } from './dialogs/authorization-dialog';
+import { AddRedisDatabaseDialog } from './dialogs';
 
-export class MyRedisDatabasePage extends BasePage {
+const databaseAPIRequests = new DatabaseAPIRequests();
+
+export class MyRedisDatabasePage extends BaseOverviewPage {
+
+    NavigationPanel = new NavigationPanel();
+    AddRedisDatabaseDialog = new AddRedisDatabaseDialog();
+    InsightsPanel = new InsightsPanel();
+    NavigationHeader = new NavigationHeader();
+    AuthorizationDialog = new AuthorizationDialog();
+
     //-------------------------------------------------------------------------------------------
     //DECLARATION OF SELECTORS
     //*Declare all elements/components of the relevant page.
@@ -15,72 +29,77 @@ export class MyRedisDatabasePage extends BasePage {
     //BUTTONS
     deleteDatabaseButton = Selector('[data-testid^=delete-instance-]');
     confirmDeleteButton = Selector('[data-testid^=delete-instance-]').withExactText('Remove');
-    toastCloseButton = Selector('[data-test-subj=toastCloseButton]');
     deleteButtonInPopover = Selector('#deletePopover button');
     confirmDeleteAllDbButton = Selector('[data-testid=delete-selected-dbs]');
     editDatabaseButton = Selector('[data-testid^=edit-instance]');
-    editAliasButton = Selector('[data-testid=edit-alias-btn]');
-    applyButton = Selector('[data-testid=apply-btn]');
+    popoverHeader = Selector('#formModalHeader');
     submitChangesButton = Selector('[data-testid=btn-submit]');
     promoButton = Selector('[data-testid=promo-btn]');
-    sortByDatabaseAlias = Selector('span').withAttribute('title', 'Database Alias');
-    sortByHostAndPort = Selector('span').withAttribute('title', 'Host:Port');
-    sortByConnectionType = Selector('span').withAttribute('title', 'Connection Type');
-    sortByLastConnection = Selector('span').withAttribute('title', 'Last connection');
-    importDatabasesBtn = Selector('[data-testid=import-dbs-btn]');
-    submitImportBtn = Selector('[data-testid=submit-btn]');
-    closeDialogBtn = Selector('[aria-label="Closes this modal window"]');
-    okDialogBtn = Selector('[data-testid=ok-btn]');
+    sortByDatabaseAlias = Selector('table th').withText('Database Alias');
+    sortByHostAndPort = Selector('table th').withText('Host:Port');
+    sortByConnectionType = Selector('table th').withText('Connection Type');
+    importDatabasesBtn = Selector('[data-testid=option-btn-import]');
+    retryImportBtn = Selector('[data-testid=btn-retry]');
     removeImportedFileBtn = Selector('[aria-label="Clear selected files"]');
     exportBtn = Selector('[data-testid=export-btn]');
     exportSelectedDbsBtn = Selector('[data-testid=export-selected-dbs]');
+    userProfileBtn = Selector('[data-testid=user-profile-btn]');
+    closeImportBtn = Selector('[data-testid=btn-close]');
     //CHECKBOXES
     selectAllCheckbox = Selector('[data-test-subj=checkboxSelectAll]');
-    exportPasswordsCheckbox = Selector('[data-testid=export-passwords]~div', {timeout: 500});
+    exportPasswordsCheckbox = Selector('[data-testid=export-passwords]~div', { timeout: 500 });
+    starFreeDbCheckbox = Selector('[data-test-subj=checkboxSelectRow-create-free-cloud-db]');
     //ICONS
     moduleColumn = Selector('[data-test-subj=tableHeaderCell_modules_3]');
-    moduleSearchIcon = Selector('[data-testid^=RediSearch]');
-    moduleGraphIcon = Selector('[data-testid^=RedisGraph]');
-    moduleJSONIcon = Selector('[data-testid^=RedisJSON]');
-    moduleTimeseriesIcon = Selector('[data-testid^=RedisTimeSeries]');
-    moduleBloomIcon = Selector('[data-testid^=RedisBloom]');
-    moduleAIIcon = Selector('[data-testid^=RedisAI]');
-    moduleGearsIcon = Selector('[data-testid^=RedisGears]');
+    moduleSearchIcon = Selector("[data-testid^='Redis Query Engine']");
+    moduleGraphIcon = Selector('[data-testid^=Graph]');
+    moduleJSONIcon = Selector('[data-testid^=JSON]');
+    moduleTimeseriesIcon = Selector("[data-testid^='Time Series']");
+    moduleBloomIcon = Selector('[data-testid^=Probabilistic]');
+    moduleAIIcon = Selector('[data-testid^=AI]');
+    moduleGearsIcon = Selector('[data-testid^=Gears]');
     redisStackIcon = Selector('[data-testid=redis-stack-icon]');
     tooltipRedisStackLogo = Selector('[data-testid=tooltip-redis-stack-icon]');
+    iconNotUsedDatabase = Selector('[data-testid^=database-status-tryDatabase-]');
+    iconDeletedDatabase = Selector('[data-testid^=database-status-checkIfDeleted-]');
     //TEXT INPUTS (also referred to as 'Text fields')
-    aliasInput = Selector('[data-testid=alias-input]');
     searchInput = Selector('[data-testid=search-database-list]');
-    importDatabaseInput = Selector('[data-testid=import-databases-input-file]');
+    importDatabaseInput = Selector('[data-testid=import-file-modal-filepicker]');
     //TEXT ELEMENTS
-    moduleTooltip = Selector('.euiToolTipPopover');
+    moduleTooltip = Selector('[data-radix-popper-content-wrapper]');
     moduleQuantifier = Selector('[data-testid=_module]');
     dbNameList = Selector('[data-testid^=instance-name]', { timeout: 3000 });
     tableRowContent = Selector('[data-test-subj=database-alias-column]');
-    databaseInfoMessage = Selector('[data-test-subj=euiToastHeader]');
     hostPort = Selector('[data-testid=host-port]');
-    noResultsFoundMessage = Selector('div').withExactText('No results found');
-    noResultsFoundText = Selector('div').withExactText('No databases matched your search. Try reducing the criteria.');
     failedImportMessage = Selector('[data-testid=result-failed]');
-    successImportMessage = Selector('[data-testid=result-success]');
-    importDialogTitle = Selector('[data-testid=import-dbs-dialog-title]');
     importResult = Selector('[data-testid^=table-result-]');
+    userProfileAccountInfo = Selector('[data-testid^=profile-account-]');
+    portCloudDb = Selector('[class*=column_host]');
     // DIALOG
-    importDbDialog = Selector('[data-testid=import-dbs-dialog]');
     successResultsAccordion = Selector('[data-testid^=success-results-]');
     partialResultsAccordion = Selector('[data-testid^=partial-results-]');
     failedResultsAccordion = Selector('[data-testid^=failed-results-]');
+    notificationUnusedDbMessage = Selector('[class^=_warningTooltipContent]');
+    // CONTAINERS
+    databaseContainer = Selector('.databaseContainer');
+    connectionTypeTitle  = Selector('[data-test-subj=tableHeaderCell_connectionType_2]');
+    addDatabaseImport = Selector('[data-testid=add-db_import]');
+
+    async navigateToDatabase(dbName: string): Promise<void> {
+        await t.click(this.NavigationPanel.myRedisDBButton);
+        await this.clickOnDBByName(dbName);
+    }
 
     /**
      * Click on the database by name
      * @param dbName The name of the database to be opened
      */
     async clickOnDBByName(dbName: string): Promise<void> {
-        if (await this.toastCloseButton.exists) {
-            await t.click(this.toastCloseButton);
+        if (await this.Toast.toastCloseButton.exists) {
+            await t.click(this.Toast.toastCloseButton);
         }
         const db = this.dbNameList.withExactText(dbName.trim());
-        await t.expect(db.exists).ok(`"${dbName}" database doesn't exist`, {timeout: 10000});
+        await t.expect(db.exists).ok(`"${dbName}" database doesn't exist`, { timeout: 10000 });
         await t.click(db);
     }
 
@@ -100,8 +119,8 @@ export class MyRedisDatabasePage extends BasePage {
                 .click(this.deleteDatabaseButton)
                 .click(this.confirmDeleteButton);
         }
-        if (await this.toastCloseButton.exists) {
-            await t.click(this.toastCloseButton);
+        if (await this.Toast.toastCloseButton.exists) {
+            await t.click(this.Toast.toastCloseButton);
         }
     }
 
@@ -112,11 +131,10 @@ export class MyRedisDatabasePage extends BasePage {
     async deleteDatabaseByName(dbName: string): Promise<void> {
         const dbNames = this.tableRowContent;
         const count = await dbNames.count;
-
         for (let i = 0; i < count; i++) {
             if ((await dbNames.nth(i).innerText || '').includes(dbName)) {
                 await t
-                    .click(this.deleteDatabaseButton.nth(i))
+                    .click(this.deleteRowButton.nth(i-1))
                     .click(this.confirmDeleteButton);
                 break;
             }
@@ -162,9 +180,10 @@ export class MyRedisDatabasePage extends BasePage {
      * Get all databases from List of DBs page
      */
     async getAllDatabases(): Promise<string[]> {
-        const databases: string[] = [];
-        const n = await this.dbNameList.count;
 
+        const databases: string[] = [];
+        await t.expect(this.dbNameList.exists).ok()
+        const n = await this.dbNameList.count;
         for(let k = 0; k < n; k++) {
             const name = await this.dbNameList.nth(k).textContent;
             databases.push(name);
@@ -188,10 +207,10 @@ export class MyRedisDatabasePage extends BasePage {
      * @param databaseName The name of the database
     */
     async verifyDatabaseStatusIsVisible(databaseName: string): Promise<void> {
-        const databaseId = await getDatabaseIdByName(databaseName);
-        const databaseEditBtn = Selector(`[data-testid=database-status-new-${databaseId}]`);
+        const databaseId = await databaseAPIRequests.getDatabaseIdByName(databaseName);
+        const databaseNewPoint = Selector(`[data-testid=database-status-new-${databaseId}]`);
 
-        await t.expect(databaseEditBtn.exists).ok(`Database status is not visible for ${databaseName}`);
+        await t.expect(databaseNewPoint.exists).ok(`Database status is not visible for ${databaseName}`);
     }
 
     /**
@@ -199,7 +218,7 @@ export class MyRedisDatabasePage extends BasePage {
     * @param databaseName The name of the database
     */
     async verifyDatabaseStatusIsNotVisible(databaseName: string): Promise<void> {
-        const databaseId = await getDatabaseIdByName(databaseName);
+        const databaseId = await databaseAPIRequests.getDatabaseIdByName(databaseName);
         const databaseEditBtn = Selector(`[data-testid=database-status-new-${databaseId}]`);
 
         await t.expect(databaseEditBtn.exists).notOk(`Database status is still visible for ${databaseName}`);

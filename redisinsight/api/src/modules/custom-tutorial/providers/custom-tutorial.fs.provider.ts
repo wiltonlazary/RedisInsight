@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { MemoryStoredFile } from 'nestjs-form-data';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +16,12 @@ import ERROR_MESSAGES from 'src/constants/error-messages';
 
 const PATH_CONFIG = config.get('dir_path');
 
-const TMP_FOLDER = `${PATH_CONFIG.tmpDir}/RedisInsight-v2/custom-tutorials`;
+const TMP_FOLDER = `${PATH_CONFIG.tmpDir}/RedisInsight/custom-tutorials`;
+
+const UPLOAD_FROM_REMOTE_ORIGINS_WHITELIST = [
+  'https://github.com',
+  'https://raw.githubusercontent.com',
+];
 
 @Injectable()
 export class CustomTutorialFsProvider {
@@ -27,7 +37,12 @@ export class CustomTutorialFsProvider {
    * @param keepOriginalPermission
    * @private
    */
-  private async extractAll(zip: AdmZip, targetPath, overwrite = true, keepOriginalPermission = false) {
+  private async extractAll(
+    zip: AdmZip,
+    targetPath,
+    overwrite = true,
+    keepOriginalPermission = false,
+  ) {
     zip.getEntries().forEach((entry) => {
       if (!entry.entryName.includes('__MACOSX')) {
         zip.extractEntryTo(
@@ -63,7 +78,9 @@ export class CustomTutorialFsProvider {
    * Unzip archive from multipart/form-data file input
    * @param file
    */
-  public async unzipFromMemoryStoredFile(file: MemoryStoredFile): Promise<string> {
+  public async unzipFromMemoryStoredFile(
+    file: MemoryStoredFile,
+  ): Promise<string> {
     return this.unzipToTmpFolder(new AdmZip(file.buffer));
   }
 
@@ -73,14 +90,29 @@ export class CustomTutorialFsProvider {
    */
   public async unzipFromExternalLink(link: string): Promise<string> {
     try {
+      const url = new URL(link);
+
+      if (!UPLOAD_FROM_REMOTE_ORIGINS_WHITELIST.includes(url.origin)) {
+        return Promise.reject(
+          new BadRequestException(
+            ERROR_MESSAGES.CUSTOM_TUTORIAL_UNSUPPORTED_ORIGIN,
+          ),
+        );
+      }
+
+      // false positive. we have whitelist checks above.
       const { data } = await axios.get(link, {
+        // lgtm[js/request-forgery]
         responseType: 'arraybuffer',
       });
 
       return this.unzipToTmpFolder(new AdmZip(data));
     } catch (e) {
-      this.logger.error('Unable to fetch zip file from external source', e);
-      throw wrapHttpError(e, ERROR_MESSAGES.CUSTOM_TUTORIAL_UNABLE_TO_FETCH_FROM_EXTERNAL);
+      this.logger.error('Unable to fetch zip file from external source');
+      throw wrapHttpError(
+        e,
+        ERROR_MESSAGES.CUSTOM_TUTORIAL_UNABLE_TO_FETCH_FROM_EXTERNAL,
+      );
     }
   }
 
@@ -93,7 +125,7 @@ export class CustomTutorialFsProvider {
    */
   public async moveFolder(tmpPath: string, dest: string, force = false) {
     try {
-      if (force && await fs.pathExists(dest)) {
+      if (force && (await fs.pathExists(dest))) {
         await fs.remove(dest);
       }
 
@@ -137,7 +169,10 @@ export class CustomTutorialFsProvider {
     const entries = await fs.readdir(path);
     const firstEntryPath = join(path, entries[0] || '');
 
-    if (entries?.length === 1 && (await fs.lstat(firstEntryPath)).isDirectory()) {
+    if (
+      entries?.length === 1 &&
+      (await fs.lstat(firstEntryPath)).isDirectory()
+    ) {
       const newPath = await CustomTutorialFsProvider.prepareTmpFolder();
 
       await fs.copy(firstEntryPath, newPath);

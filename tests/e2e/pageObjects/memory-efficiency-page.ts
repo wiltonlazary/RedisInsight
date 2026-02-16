@@ -1,4 +1,5 @@
 import { Selector } from 'testcafe';
+import { RecommendationIds } from '../helpers/constants';
 import { InstancePage } from './instance-page';
 
 export class MemoryEfficiencyPage extends InstancePage {
@@ -9,21 +10,22 @@ export class MemoryEfficiencyPage extends InstancePage {
     //*The following categories are ordered alphabetically (Alerts, Buttons, Checkboxes, etc.).
     //-------------------------------------------------------------------------------------------
     // CSS Selectors
-    cssCodeChangesLabel = '[data-testid=code_changes]';
-    cssConfigurationChangesLabel = '[data-testid=configuration_changes]';
     cssReadMoreLink = '[data-testid=read-more-link]';
-    cssToTutorialsBtn = '[data-testid=RTS-to-tutorial-btn]';
+    cssKeyName = '[data-testid=recommendation-key-name]';
     // BUTTONS
+    databaseAnalysisTab = Selector('[data-testid=analytics-tabs] [role=tab] p').withText('Database Analysis').parent('[role=tab]');
     newReportBtn = Selector('[data-testid=start-database-analysis-btn]');
-    expandArrowBtn = Selector('[data-testid^=expand-arrow-]');
     sortByKeyPattern = Selector('[data-testid=tableHeaderSortButton]');
     showNoExpiryToggle = Selector('[data-testid=show-no-expiry-switch]');
-    reportItem = Selector('[data-test-subj^=items-report-]');
+    reportItem = Selector('[role=listbox] [data-test-subj^=items-report-]').parent('[role=option]');
     selectedReport = Selector('[data-testid=select-report]');
     sortByLength = Selector('[data-testid=btn-change-table-keys]');
-    recommendationsTab = Selector('[data-testid=Recommendations-tab]');
-    luaScriptButton = Selector('[data-test-subj=luaScript-button]');
-    useSmallKeysButton = Selector('[data-test-subj=useSmallerKeys-button]');
+    recommendationsTab = Selector('[data-testid=database-analysis-tabs] [role=tab] p').withText(/^Tips/).parent('[role=tab]');
+
+    veryUsefulVoteBtn = Selector('[data-testid=very-useful-vote-btn]').nth(0);
+    usefulVoteBtn = Selector('[data-testid=useful-vote-btn]').nth(0);
+    notUsefulVoteBtn = Selector('[data-testid=not-useful-vote-btn]').nth(0);
+    recommendationsFeedbackBtn = Selector('[data-testid=recommendation-feedback-btn]');
     // ICONS
     reportTooltipIcon = Selector('[data-testid=db-new-reports-icon]');
     // TEXT ELEMENTS
@@ -42,12 +44,13 @@ export class MemoryEfficiencyPage extends InstancePage {
     topKeysLengthCell = Selector('[data-testid^=length-value]');
     // TABLE
     namespaceTable = Selector('[data-testid=nsp-table-memory]');
-    nameSpaceTableRows = this.namespaceTable.find('[data-testid^=row-]');
+    nameSpaceTableRows = this.namespaceTable.find('tbody tr');
+    nspTableExpandArrowBtn = this.nameSpaceTableRows.find('td:nth-child(5) button');
     expandedRow = Selector('[data-testid^=expanded-]');
     expandedItem = this.expandedRow.find('button');
-    tableKeyPatternHeader = Selector('[data-test-subj*=tableHeaderCell_nsp]');
-    tableMemoryHeader = Selector('[data-test-subj*=tableHeaderCell_memory]');
-    tableKeysHeader = Selector('[data-test-subj*=tableHeaderCell_keys]');
+    tableKeyPatternHeader = this.namespaceTable.find('th:nth-child(1)');
+    tableMemoryHeader = this.namespaceTable.find('th:nth-child(3)');
+    tableKeysHeader = this.namespaceTable.find('th:nth-child(4)');
     // GRAPH ELEMENTS
     donutTotalKeys = Selector('[data-testid=donut-title-keys]');
     firstPoint = Selector('[data-testid*=bar-3600]');
@@ -57,28 +60,39 @@ export class MemoryEfficiencyPage extends InstancePage {
     // LINKS
     treeViewLink = Selector('[data-testid=tree-view-page-link]');
     readMoreLink = Selector('[data-testid=read-more-link]');
+    workbenchLink = Selector('[data-test-subj=workbench-page-btn]');
     // CONTAINERS
-    luaScriptAccordion = Selector('[data-testid=luaScript-accordion]');
-    luaScriptTextContainer = Selector('#luaScript');
-    useSmallKeysAccordion = Selector('[data-testid=useSmallerKeys-accordion]');
-    bigHashesAccordion = Selector('[data-testid=bigHashes-accordion]');
-    combineStringsAccordion = Selector('[data-testid=combineSmallStringsToHashes-accordion]');
-    increaseSetAccordion = Selector('[data-testid=increaseSetMaxIntsetEntries-accordion]');
-    avoidLogicalDbAccordion = Selector('[data-testid=avoidLogicalDatabases-accordion]');
-    convertHashToZipAccordion = Selector('[data-testid=convertHashtableToZiplist-accordion]');
-    compressHashAccordion = Selector('[data-testid=compressHashFieldNames-accordion]');
-    veryUsefulVoteBtn = Selector('[data-testid=very-useful-vote-btn]').nth(0);
-    usefulVoteBtn = Selector('[data-testid=useful-vote-btn]').nth(0);
-    notUsefulVoteBtn = Selector('[data-testid=not-useful-vote-btn]').nth(0);
-    recommendationsFeedbackBtn = Selector('[data-testid=recommendation-feedback-btn]');
-    toTutorialsBtn = Selector('[data-testid=RTS-to-tutorial-btn]');
-    rtsAccordeon = Selector('[data-testid=RTS-accordion]');
+    analysisPage = Selector('[data-testid=database-analysis-page]');
 
     /**
-     * Find recommendation selector by name
-     * @param name A recommendation name
+     * Get recommendation selector by name
+     * @param recommendationName Name of the recommendation
      */
-    async getRecommendationByName(name: string): Promise<Selector> {
-        return Selector('div').withExactText(name).parent('[data-testid=RTS-accordion]').parent();
+    getRecommendationByName(recommendationName: RecommendationIds): Selector {
+        return Selector(`[data-testid=${recommendationName}-recommendation]`);
+    }
+
+    /**
+     * Get recommendation label by recommendation name
+     * @param recommendationName Name of the recommendation
+     * @param label Label of changes
+     */
+    getRecommendationLabelByName(recommendationName: RecommendationIds, label: string): Selector {
+        return this.getRecommendationByName(recommendationName).find(`[data-testid=${label}_changes]`);
+    }
+
+    /**
+     * Get recommendation expand/collapse button by recommendation name
+     * @param recommendationName Name of the recommendation
+     */
+    getRecommendationButtonByName(recommendationName: RecommendationIds): Selector {
+        return Selector(`[data-testid=ri-accordion-header-${recommendationName}]`);
+    }
+    /**
+     * Get recommendation Tutorial button by recommendation name
+     * @param recommendationName Name of the recommendation
+     */
+    getToTutorialBtnByRecomName(recommendationName: RecommendationIds): Selector {
+        return Selector(`[data-testid=${recommendationName}-to-tutorial-btn]`);
     }
 }

@@ -1,4 +1,4 @@
-FROM node:16.15.1-alpine as test
+FROM node:20.14-alpine as test
 
 RUN apk update && apk add bash libsecret dbus-x11 gnome-keyring
 RUN dbus-uuidgen > /var/lib/dbus/machine-id
@@ -6,6 +6,7 @@ RUN dbus-uuidgen > /var/lib/dbus/machine-id
 WORKDIR /usr/src/app
 
 COPY package.json yarn.lock ./
+COPY stubs ./stubs
 RUN yarn install
 COPY . .
 

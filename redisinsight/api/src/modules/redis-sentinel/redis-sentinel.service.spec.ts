@@ -1,30 +1,38 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
-import ERROR_MESSAGES from 'src/constants/error-messages';
-import { RedisService } from 'src/modules/redis/redis.service';
 import {
+  mockRedisSentinelUtilModule,
+  mockRedisSentinelUtil,
+} from 'src/__mocks__/redis-utils';
+
+jest.doMock(
+  'src/modules/redis/utils/sentinel.util',
+  mockRedisSentinelUtilModule,
+);
+
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  mockConstantsProvider,
   mockDatabaseFactory,
-  mockDatabaseInfoProvider,
   mockDatabaseService,
-  mockIORedisClient, mockRedisConnectionFactory,
+  mockIORedisClient,
+  mockRedisClientFactory,
   mockRedisSentinelAnalytics,
-  mockRedisSentinelMasterResponse, mockRedisService, mockSentinelDatabaseWithTlsAuth,
+  mockRedisSentinelMasterResponse,
+  mockSentinelDatabaseWithTlsAuth,
   mockSentinelMasterDto,
+  mockSessionMetadata,
   MockType,
 } from 'src/__mocks__';
 import { RedisSentinelService } from 'src/modules/redis-sentinel/redis-sentinel.service';
 import { RedisSentinelAnalytics } from 'src/modules/redis-sentinel/redis-sentinel.analytics';
 import { DatabaseService } from 'src/modules/database/database.service';
-import { DatabaseInfoProvider } from 'src/modules/database/providers/database-info.provider';
 import { DatabaseFactory } from 'src/modules/database/providers/database.factory';
-import { RedisConnectionFactory } from 'src/modules/redis/redis-connection.factory';
+import { RedisClientFactory } from 'src/modules/redis/redis.client.factory';
+import { ConstantsProvider } from 'src/modules/constants/providers/constants.provider';
+import { RedisConnectionIncorrectCertificateException } from 'src/modules/redis/exceptions/connection';
 
 describe('RedisSentinelService', () => {
   let service: RedisSentinelService;
-  let redisService: MockType<RedisService>;
-  let redisConnectionFactory: MockType<RedisConnectionFactory>;
-  let databaseService: MockType<DatabaseService>;
-  let databaseInfoProvider: MockType<DatabaseInfoProvider>;
+  let redisClientFactory: MockType<RedisClientFactory>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -35,12 +43,8 @@ describe('RedisSentinelService', () => {
           useFactory: mockRedisSentinelAnalytics,
         },
         {
-          provide: RedisService,
-          useFactory: mockRedisService,
-        },
-        {
-          provide: RedisConnectionFactory,
-          useFactory: mockRedisConnectionFactory,
+          provide: RedisClientFactory,
+          useFactory: mockRedisClientFactory,
         },
         {
           provide: DatabaseService,
@@ -51,39 +55,48 @@ describe('RedisSentinelService', () => {
           useFactory: mockDatabaseFactory,
         },
         {
-          provide: DatabaseInfoProvider,
-          useFactory: mockDatabaseInfoProvider,
+          provide: ConstantsProvider,
+          useFactory: mockConstantsProvider,
         },
       ],
     }).compile();
 
     service = module.get(RedisSentinelService);
-    redisService = module.get(RedisService);
-    redisConnectionFactory = module.get(RedisConnectionFactory);
-    databaseService = module.get(DatabaseService);
-    databaseInfoProvider = module.get(DatabaseInfoProvider);
+    redisClientFactory = module.get(RedisClientFactory);
   });
 
   describe('getSentinelMasters', () => {
     it('connect and get sentinel masters', async () => {
-      redisConnectionFactory.createStandaloneConnection.mockResolvedValue(mockIORedisClient);
+      redisClientFactory
+        .getConnectionStrategy()
+        .createStandaloneClient.mockResolvedValue(mockIORedisClient);
       mockIORedisClient.call.mockResolvedValue(mockRedisSentinelMasterResponse);
-      databaseInfoProvider.determineSentinelMasterGroups.mockResolvedValue([mockSentinelMasterDto]);
+      mockRedisSentinelUtil.discoverSentinelMasterGroups.mockResolvedValue([
+        mockSentinelMasterDto,
+      ]);
 
-      const result = await service.getSentinelMasters(mockSentinelDatabaseWithTlsAuth);
+      const result = await service.getSentinelMasters(
+        mockSessionMetadata,
+        mockSentinelDatabaseWithTlsAuth,
+      );
 
       expect(result).toEqual([mockSentinelMasterDto]);
       expect(mockIORedisClient.disconnect).toHaveBeenCalled();
     });
 
     it('failed connection to the redis database', async () => {
-      redisConnectionFactory.createStandaloneConnection.mockRejectedValue(
-        new Error(ERROR_MESSAGES.NO_CONNECTION_TO_REDIS_DB),
-      );
+      redisClientFactory
+        .getConnectionStrategy()
+        .createStandaloneClient.mockRejectedValue(
+          new RedisConnectionIncorrectCertificateException(),
+        );
 
       await expect(
-        service.getSentinelMasters(mockSentinelDatabaseWithTlsAuth),
-      ).rejects.toThrow(BadRequestException);
+        service.getSentinelMasters(
+          mockSessionMetadata,
+          mockSentinelDatabaseWithTlsAuth,
+        ),
+      ).rejects.toThrow(RedisConnectionIncorrectCertificateException);
     });
   });
 });

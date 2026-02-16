@@ -10,11 +10,14 @@ import {
 import successMessages from 'uiSrc/components/notifications/success-messages'
 import { bufferToString, stringToBuffer } from 'uiSrc/utils'
 import { deleteRedisearchKeyFromList } from 'uiSrc/slices/browser/redisearch'
+import { MOCK_TIMESTAMP } from 'uiSrc/mocks/data/dateNow'
 import {
   defaultSelectedKeyAction,
   refreshKeyInfo,
   deleteSelectedKeySuccess,
   updateSelectedKeyRefreshTime,
+  refreshKeyInfoSuccess,
+  loadKeyInfoSuccess,
 } from '../../browser/keys'
 import reducer, {
   deleteHashFields,
@@ -41,7 +44,10 @@ import reducer, {
   updateHashFieldsAction,
   refreshHashFieldsAction,
 } from '../../browser/hash'
-import { addErrorNotification, addMessageNotification } from '../../app/notifications'
+import {
+  addErrorNotification,
+  addMessageNotification,
+} from '../../app/notifications'
 
 jest.mock('uiSrc/services', () => ({
   ...jest.requireActual('uiSrc/services'),
@@ -58,7 +64,7 @@ beforeEach(() => {
 
 describe('hash slice', () => {
   beforeAll(() => {
-    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => 1629128049027)
+    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => MOCK_TIMESTAMP)
   })
 
   afterAll(() => {
@@ -90,9 +96,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadHashFields(['*', undefined]))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -123,9 +130,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadHashFieldsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
 
@@ -153,9 +161,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadHashFieldsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -174,9 +183,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadHashFieldsFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -194,9 +204,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadMoreHashFields())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -225,9 +236,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadMoreHashFieldsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
 
@@ -253,9 +265,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadMoreHashFieldsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -274,9 +287,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, loadMoreHashFieldsFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -293,9 +307,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, removeHashFields())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -316,9 +331,10 @@ describe('hash slice', () => {
       const nextState = reducer(initailStateRemove, removeHashFieldsSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(initailStateRemove)
     })
   })
@@ -337,9 +353,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, removeHashFieldsFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -366,7 +383,9 @@ describe('hash slice', () => {
         data: {
           ...initialStateRemove.data,
           total: initialStateRemove.data.total - 1,
-          fields: [{ field: stringToBuffer('hash field2'), value: 'hash value' }],
+          fields: [
+            { field: stringToBuffer('hash field2'), value: 'hash value' },
+          ],
         },
       }
 
@@ -374,9 +393,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialStateRemove, removeFieldsFromList(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -397,9 +417,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, updateValue())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -420,9 +441,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, updateValueSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -444,9 +466,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, updateValueFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -467,9 +490,10 @@ describe('hash slice', () => {
       const nextState = reducer(initialState, resetUpdateValue())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { hash: nextState },
-      })
+      }
       expect(hashSelector(rootState)).toEqual(state)
     })
   })
@@ -504,8 +528,8 @@ describe('hash slice', () => {
 
     describe('fetchMoreHashFields', () => {
       it(
-        'call fetchMoreHashFields, loadMoreHashFieldsSuccess,'
-          + ' when fetch is successed',
+        'call fetchMoreHashFields, loadMoreHashFieldsSuccess,' +
+          ' when fetch is successed',
         async () => {
           // Arrange
           const data = {
@@ -520,7 +544,7 @@ describe('hash slice', () => {
 
           // Act
           await store.dispatch<any>(
-            fetchMoreHashFields(data.keyName, 0, 20, '*')
+            fetchMoreHashFields(data.keyName, 0, 20, '*'),
           )
 
           // Assert
@@ -530,7 +554,7 @@ describe('hash slice', () => {
           ]
 
           expect(mockedStore.getActions()).toEqual(expectedActions)
-        }
+        },
       )
     })
 
@@ -562,25 +586,31 @@ describe('hash slice', () => {
 
     describe('deleteHashFields', () => {
       it(
-        'call removeHashFields, removeHashFieldsSuccess,'
-          + ' and removeFieldsFromList when fetch is successed',
+        'call removeHashFields, removeHashFieldsSuccess,' +
+          ' and removeFieldsFromList when fetch is successed',
         async () => {
           // Arrange
 
           const key = stringToBuffer('key')
-          const fields = ['hash field', 'hash field 2'].map((field) => stringToBuffer(field))
+          const fields = ['hash field', 'hash field 2'].map((field) =>
+            stringToBuffer(field),
+          )
           const responsePayload = { status: 200, data: { affected: 2 } }
-          const nextState = Object.assign(initialStateDefault, {
+          const nextState = {
+            ...initialStateDefault,
             browser: {
+              keys: {
+                ...initialStateDefault.browser.keys,
+              },
               hash: {
                 ...initialState,
                 data: {
                   ...initialState.data,
-                  total: 10
-                }
-              }
+                  total: 10,
+                },
+              },
             },
-          })
+          }
 
           const mockedStore = mockStore(nextState)
 
@@ -600,55 +630,55 @@ describe('hash slice', () => {
               successMessages.REMOVED_KEY_VALUE(
                 key,
                 fields.map((field) => bufferToString(field)).join(''),
-                'Field'
-              )
-            )
+                'Field',
+              ),
+            ),
+            refreshKeyInfoSuccess({ affected: 2 }),
+            updateSelectedKeyRefreshTime(MOCK_TIMESTAMP),
           ]
 
           expect(mockedStore.getActions()).toEqual(expectedActions)
-        }
+        },
       )
 
-      it(
-        'succeed to delete all fields from hast',
-        async () => {
-          // Arrange
+      it('succeed to delete all fields from hast', async () => {
+        // Arrange
 
-          const key = 'key'
-          const fields = ['hash field', 'hash field 2']
-          const responsePayload = { status: 200, data: { affected: 2 } }
-          const nextState = Object.assign(initialStateDefault, {
-            browser: {
-              hash: {
-                ...initialState,
-                data: {
-                  ...initialState.data,
-                  total: 2
-                }
-              }
+        const key = 'key'
+        const fields = ['hash field', 'hash field 2']
+        const responsePayload = { status: 200, data: { affected: 2 } }
+        const nextState = {
+          ...initialStateDefault,
+          browser: {
+            hash: {
+              ...initialState,
+              data: {
+                ...initialState.data,
+                total: 2,
+              },
             },
-          })
-
-          const mockedStore = mockStore(nextState)
-
-          apiService.delete = jest.fn().mockResolvedValue(responsePayload)
-
-          // Act
-          await mockedStore.dispatch<any>(deleteHashFields(key, fields))
-
-          // Assert
-          const expectedActions = [
-            removeHashFields(),
-            removeHashFieldsSuccess(),
-            removeFieldsFromList(fields),
-            deleteSelectedKeySuccess(),
-            deleteRedisearchKeyFromList(key),
-            addMessageNotification(successMessages.DELETED_KEY(key))
-          ]
-
-          expect(mockedStore.getActions()).toEqual(expectedActions)
+          },
         }
-      )
+
+        const mockedStore = mockStore(nextState)
+
+        apiService.delete = jest.fn().mockResolvedValue(responsePayload)
+
+        // Act
+        await mockedStore.dispatch<any>(deleteHashFields(key, fields))
+
+        // Assert
+        const expectedActions = [
+          removeHashFields(),
+          removeHashFieldsSuccess(),
+          removeFieldsFromList(fields),
+          deleteSelectedKeySuccess(),
+          deleteRedisearchKeyFromList(key),
+          addMessageNotification(successMessages.DELETED_KEY(key)),
+        ]
+
+        expect(mockedStore.getActions()).toEqual(expectedActions)
+      })
     })
 
     describe('addHashFields', () => {
@@ -663,13 +693,17 @@ describe('hash slice', () => {
         apiService.put = jest.fn().mockResolvedValue(responsePayload)
 
         // Act
-        await store.dispatch<any>(addHashFieldsAction({ keyName, fields }))
+        await mockedStore.dispatch<any>(
+          addHashFieldsAction({ keyName, fields }),
+        )
 
         // Assert
         const expectedActions = [
           updateValue(),
           updateValueSuccess(),
           defaultSelectedKeyAction(),
+          loadKeyInfoSuccess({ affected: 2 }),
+          updateSelectedKeyRefreshTime(MOCK_TIMESTAMP),
         ]
 
         expect(mockedStore.getActions()).toEqual(expectedActions)
@@ -719,6 +753,8 @@ describe('hash slice', () => {
           updateValueSuccess(),
           updateFieldsInList(fields),
           refreshKeyInfo(),
+          refreshKeyInfoSuccess({ affected: 2 }),
+          updateSelectedKeyRefreshTime(MOCK_TIMESTAMP),
         ]
 
         expect(mockedStore.getActions()).toEqual(expectedActions)
@@ -735,7 +771,9 @@ describe('hash slice', () => {
         apiService.put = jest.fn().mockRejectedValue(responsePayload)
 
         // Act
-        await store.dispatch<any>(updateHashFieldsAction({ keyName, fields }))
+        await mockedStore.dispatch<any>(
+          updateHashFieldsAction({ keyName, fields }),
+        )
 
         // Assert
         const expectedActions = [

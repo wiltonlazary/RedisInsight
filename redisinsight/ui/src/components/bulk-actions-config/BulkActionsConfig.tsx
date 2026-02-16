@@ -1,52 +1,62 @@
 import { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 
 import {
-  setLoading,
+  bulkActionsDeleteSelector,
   bulkActionsSelector,
-  disconnectBulkAction,
+  disconnectBulkDeleteAction,
   setBulkActionConnected,
-  setOverview,
-  setBulkActionsInitialState,
+  setBulkDeleteLoading,
+  setDeleteOverview,
+  setDeleteOverviewStatus,
 } from 'uiSrc/slices/browser/bulkActions'
-import { getBaseApiUrl, Nullable } from 'uiSrc/utils'
+import { deleteKeysByPattern } from 'uiSrc/slices/browser/keys'
+import { getSocketApiUrl, Nullable, triggerDownloadFromUrl } from 'uiSrc/utils'
 import { sessionStorageService } from 'uiSrc/services'
-import { keysSelector } from 'uiSrc/slices/browser/keys'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { isProcessingBulkAction } from 'uiSrc/pages/browser/components/bulk-actions/utils'
-import { BrowserStorageItem, BulkActionsServerEvent, BulkActionsStatus, BulkActionsType, SocketEvent } from 'uiSrc/constants'
+import {
+  BrowserStorageItem,
+  BulkActionsServerEvent,
+  BulkActionsStatus,
+  BulkActionsType,
+  SocketEvent,
+} from 'uiSrc/constants'
 import { addErrorNotification } from 'uiSrc/slices/app/notifications'
+import { appCsrfSelector } from 'uiSrc/slices/app/csrf'
+import { useIoConnection } from 'uiSrc/services/hooks/useIoConnection'
+import { getBaseUrl } from 'uiSrc/services/apiService'
 
-interface IProps {
-  retryDelay?: number;
-}
-
-const BulkActionsConfig = ({ retryDelay = 5000 } : IProps) => {
+const BulkActionsConfig = () => {
   const { id: instanceId = '', db } = useSelector(connectedInstanceSelector)
-  const { isActionTriggered, isConnected } = useSelector(bulkActionsSelector)
-  const { filter, search } = useSelector(keysSelector)
+  const { isConnected } = useSelector(bulkActionsSelector)
+  const {
+    isActionTriggered: isDeleteTriggered,
+    generateReport,
+    filter,
+    search,
+  } = useSelector(bulkActionsDeleteSelector)
+  const { token } = useSelector(appCsrfSelector)
   const socketRef = useRef<Nullable<Socket>>(null)
+  const connectIo = useIoConnection(getSocketApiUrl('bulk-actions'), {
+    token,
+    query: { instanceId },
+  })
 
   const dispatch = useDispatch()
 
   useEffect(() => {
-    if (!isActionTriggered || !instanceId || socketRef.current?.connected) {
+    if (!isDeleteTriggered || !instanceId || socketRef.current?.connected) {
       return
     }
 
     let retryTimer: NodeJS.Timer
-
-    socketRef.current = io(`${getBaseApiUrl()}/bulk-actions`, {
-      forceNew: true,
-      query: { instanceId },
-      rejectUnauthorized: false,
-    })
+    socketRef.current = connectIo()
 
     socketRef.current.on(SocketEvent.Connect, () => {
       clearTimeout(retryTimer)
       dispatch(setBulkActionConnected(true))
-
       emitBulkDelete(`${Date.now()}`)
     })
 
@@ -55,31 +65,60 @@ const BulkActionsConfig = ({ retryDelay = 5000 } : IProps) => {
 
     // Catch disconnect
     socketRef.current?.on(SocketEvent.Disconnect, () => {
-      if (retryDelay) {
-        retryTimer = setTimeout(handleDisconnect, retryDelay)
-      } else {
-        handleDisconnect()
-      }
+      dispatch(setDeleteOverviewStatus(BulkActionsStatus.Disconnected))
+      handleDisconnect()
     })
-  }, [instanceId, isActionTriggered])
+  }, [instanceId, isDeleteTriggered])
 
   useEffect(() => {
     if (!socketRef.current?.connected) {
       return
     }
-    const id = sessionStorageService.get(BrowserStorageItem.bulkActionId) ?? ''
+    const id =
+      sessionStorageService.get(BrowserStorageItem.bulkActionDeleteId) ?? ''
+    if (!id) return
 
-    if (!isActionTriggered) {
+    if (!isDeleteTriggered) {
       abortBulkDelete(id)
       return
     }
 
     emitBulkDelete(id)
-  }, [isActionTriggered])
+  }, [isDeleteTriggered])
 
   const emitBulkDelete = (id: string) => {
-    dispatch(setLoading(true))
-    sessionStorageService.set(BrowserStorageItem.bulkActionId, id)
+    dispatch(setBulkDeleteLoading(true))
+    sessionStorageService.set(BrowserStorageItem.bulkActionDeleteId, id)
+
+    // Register overview listener BEFORE emitting Create to avoid missing early events
+    // Server may start sending Overview events immediately after receiving Create
+    socketRef.current?.off(BulkActionsServerEvent.Overview)
+    socketRef.current?.on(BulkActionsServerEvent.Overview, (payload: any) => {
+      dispatch(setBulkDeleteLoading(isProcessingBulkAction(payload.status)))
+      dispatch(setDeleteOverview(payload))
+
+      if (payload.status === BulkActionsStatus.Failed) {
+        dispatch(disconnectBulkDeleteAction())
+      }
+
+      // Remove deleted keys from local state when bulk delete completes
+      // Use payload.filter values (what server actually used) to avoid race conditions
+      // if user changed search/filter while delete was running
+      if (payload.status === BulkActionsStatus.Completed) {
+        const deletedCount = payload.summary?.succeed || 0
+        const pattern = payload.filter?.match
+        // Only do local filtering for specific patterns, not for '*' (all keys)
+        if (pattern && pattern !== '*') {
+          dispatch(
+            deleteKeysByPattern({
+              pattern,
+              deletedCount,
+              filterType: payload.filter?.type || null,
+            }),
+          )
+        }
+      }
+    })
 
     socketRef.current?.emit(
       BulkActionsServerEvent.Create,
@@ -87,64 +126,43 @@ const BulkActionsConfig = ({ retryDelay = 5000 } : IProps) => {
         id,
         databaseId: instanceId,
         db: db || 0,
-        type: BulkActionsType.Delete,
+        type: BulkActionsType.Unlink,
         filter: {
           type: filter,
           match: search || '*',
-        }
+        },
+        generateReport,
       },
       onBulkDeleting,
     )
   }
 
-  const getBulkAction = (id: string) => {
-    dispatch(setLoading(true))
-    socketRef.current?.emit(
-      BulkActionsServerEvent.Get,
-      { id: `${id}` },
-      fetchBulkAction
-    )
-  }
-
   const abortBulkDelete = (id: string) => {
-    dispatch(setLoading(true))
+    dispatch(setBulkDeleteLoading(true))
     socketRef.current?.emit(
       BulkActionsServerEvent.Abort,
       { id: `${id}` },
-      onBulkDeleteAborted
+      onBulkDeleteAborted,
     )
-  }
-
-  const fetchBulkAction = (data: any) => {
-    if (data.status === BulkActionsServerEvent.Error) {
-      sessionStorageService.set(BrowserStorageItem.bulkActionId, '')
-      dispatch(setBulkActionsInitialState())
-    }
   }
 
   const onBulkDeleting = (data: any) => {
     if (data.status === BulkActionsServerEvent.Error) {
-      dispatch(disconnectBulkAction())
+      dispatch(disconnectBulkDeleteAction())
       dispatch(addErrorNotification({ response: { data: data.error } }))
     }
 
-    socketRef.current?.on(BulkActionsServerEvent.Overview, (payload: any) => {
-      dispatch(setLoading(isProcessingBulkAction(payload.status)))
-      dispatch(setOverview(payload))
-
-      if (payload.status === BulkActionsStatus.Failed) {
-        dispatch(disconnectBulkAction())
-      }
-    })
+    // Trigger download if report URL is provided
+    if ('downloadUrl' in data && data.downloadUrl) {
+      triggerDownloadFromUrl(`${getBaseUrl()}${data.downloadUrl}`)
+    }
   }
 
   const onBulkDeleteAborted = (data: any) => {
-    dispatch(setLoading(false))
-    sessionStorageService.set(BrowserStorageItem.bulkActionId, '')
-
-    if (data.status === 'aborted') {
-      dispatch(setOverview(data))
-    }
+    dispatch(setBulkDeleteLoading(false))
+    sessionStorageService.set(BrowserStorageItem.bulkActionDeleteId, '')
+    dispatch(setDeleteOverview(data))
+    handleDisconnect()
   }
 
   useEffect(() => {
@@ -154,7 +172,7 @@ const BulkActionsConfig = ({ retryDelay = 5000 } : IProps) => {
   }, [isConnected])
 
   const handleDisconnect = () => {
-    dispatch(disconnectBulkAction())
+    dispatch(disconnectBulkDeleteAction())
     socketRef.current?.removeAllListeners()
     socketRef.current?.disconnect()
   }

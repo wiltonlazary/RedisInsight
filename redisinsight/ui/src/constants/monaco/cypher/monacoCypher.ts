@@ -1,25 +1,20 @@
-import * as monacoEditor from 'monaco-editor'
+import { monaco as monacoEditor } from 'react-monaco-editor'
 import cypherFunctions from './functions'
 
-interface CypherFunction {
-  name: string
-  signature: string
-  description: string
-}
-
-export const cypherLanguageConfiguration: monacoEditor.languages.LanguageConfiguration = {
-  brackets: [
-    ['(', ')'],
-    ['{', '}'],
-    ['[', ']'],
-    ["'", "'"],
-    ['"', '"']
-  ],
-  comments: {
-    blockComment: ['/*', '*/'],
-    lineComment: '//'
+export const cypherLanguageConfiguration: monacoEditor.languages.LanguageConfiguration =
+  {
+    brackets: [
+      ['(', ')'],
+      ['{', '}'],
+      ['[', ']'],
+      ["'", "'"],
+      ['"', '"'],
+    ],
+    comments: {
+      blockComment: ['/*', '*/'],
+      lineComment: '//',
+    },
   }
-}
 
 export const KEYWORDS = [
   'ACCESS',
@@ -165,7 +160,8 @@ export const KEYWORDS = [
   'YIELD',
 ]
 
-export const FUNCTIONS: CypherFunction[] = cypherFunctions
+export const FUNCTIONS: monacoEditor.languages.CompletionItem[] =
+  cypherFunctions
 
 export const STRINGS: string[] = ['stringliteral', 'urlhex']
 
@@ -180,7 +176,7 @@ export const NUMBERS: string[] = [
   'octdigit',
   'zerodigit',
   'exponentdecimalreal',
-  'regulardecimalreal'
+  'regulardecimalreal',
 ]
 
 export const OPERATORS: string[] = [
@@ -238,5 +234,5 @@ export const OPERATORS: string[] = [
   "'\u2212'",
   "'\uFE58'",
   "'\uFE63'",
-  "'\uFF0D'"
+  "'\uFF0D'",
 ]

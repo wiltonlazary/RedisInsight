@@ -5,16 +5,18 @@ const isClusterCursorValidTests = [
   { input: '172.17.0.1:7001@22||172.17.0.1:7002@33', expected: true },
   { input: '172.17.0.1:7001@-1||172.17.0.1:7002@-1', expected: true },
   {
-    input: '172.17.0.1:7001@10'
-      + '||172.17.0.1:7002@10'
-      + '||172.17.0.1:7003@10'
-      + '||172.17.0.1:7004@10'
-      + '||172.17.0.1:7005@10'
-      + '||172.17.0.1:7006@10',
+    input:
+      '172.17.0.1:7001@10' +
+      '||172.17.0.1:7002@10' +
+      '||172.17.0.1:7003@10' +
+      '||172.17.0.1:7004@10' +
+      '||172.17.0.1:7005@10' +
+      '||172.17.0.1:7006@10',
     expected: true,
   },
   { input: '172.17.0.1:7001@-1', expected: true },
   { input: 'domain.com:7001@-1', expected: true },
+  { input: 'domain-with-hyphens.com:7001@-1', expected: true },
   { input: '172.17.0.1:7001@1228822', expected: true },
   { input: '172.17.0.1:7001@', expected: false },
   { input: '172.17.0.1:7001@text', expected: false },
@@ -32,7 +34,12 @@ describe('isClusterCursorValid', () => {
 });
 
 const defaultNodeScanResult = {
-  total: 0, scanned: 0, host: '172.17.0.1', port: 0, cursor: 0, keys: [],
+  total: 0,
+  scanned: 0,
+  host: '172.17.0.1',
+  port: 0,
+  cursor: 0,
+  keys: [],
 };
 const parsingError = new Error(ERROR_MESSAGES.INCORRECT_CLUSTER_CURSOR_FORMAT);
 const parseClusterCursorTests = [
@@ -44,12 +51,13 @@ const parseClusterCursorTests = [
     ],
   },
   {
-    input: '172.17.0.1:7001@-1'
-      + '||172.17.0.1:7002@10'
-      + '||172.17.0.1:7003@-1'
-      + '||172.17.0.1:7004@10'
-      + '||172.17.0.1:7005@-1'
-      + '||172.17.0.1:7006@10',
+    input:
+      '172.17.0.1:7001@-1' +
+      '||172.17.0.1:7002@10' +
+      '||172.17.0.1:7003@-1' +
+      '||172.17.0.1:7004@10' +
+      '||172.17.0.1:7005@-1' +
+      '||172.17.0.1:7006@10',
     expected: [
       { ...defaultNodeScanResult, port: 7002, cursor: 10 },
       { ...defaultNodeScanResult, port: 7004, cursor: 10 },

@@ -1,25 +1,21 @@
 /* eslint-disable react/prop-types */
-import React, { ReactElement, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import cx from 'classnames'
 import { toUpper, flatten, isArray, isEmpty, map, uniq } from 'lodash'
-import {
-  EuiBasicTableColumn,
-  EuiIcon,
-  EuiInMemoryTable,
-  EuiLoadingContent,
-  EuiText,
-  EuiTextColor,
-} from '@elastic/eui'
+import { Table, ColumnDefinition } from 'uiSrc/components/base/layout/table'
 
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { ColorText, Text } from '../../../../../components/base/text'
+import { LoadingContent, Spacer } from '../../../../../components/base/layout'
 import GroupBadge from '../GroupBadge'
 import { InfoAttributesBoolean } from '../../constants'
+import { FlexGroup } from 'uiSrc/components/base/layout/flex'
 
 export interface Props {
-  query: string;
-  result: any;
+  query: string
+  result: any
 }
 
-const loadingMessage = 'loading...'
 const noResultsMessage = 'No results found.'
 const noOptionsMessage = 'No options found'
 
@@ -27,7 +23,6 @@ const TableInfoResult = React.memo((props: Props) => {
   const { result: resultProp, query } = props
 
   const [result, setResult] = useState(resultProp)
-
   const [items, setItems] = useState([])
 
   useEffect(() => {
@@ -41,90 +36,97 @@ const TableInfoResult = React.memo((props: Props) => {
     setItems(items)
   }, [resultProp, query])
 
-  const isBooleanColumn = (title = '') => InfoAttributesBoolean.indexOf(title) !== -1
+  const isBooleanColumn = (title = '') =>
+    InfoAttributesBoolean.indexOf(title) !== -1
 
-  const uniqColumns = uniq(flatten(map(items, (item) => Object.keys(item)))) ?? []
+  const uniqColumns =
+    uniq(flatten(map(items, (item) => Object.keys(item)))) ?? []
 
-  const columns: EuiBasicTableColumn<any>[] = uniqColumns.map((title: string = ' ') => ({
-    field: title,
-    name: toUpper(title),
-    truncateText: true,
-    align: isBooleanColumn(title) ? 'center' : 'left',
-    'data-testid': `query-column-${title}`,
-    // sortable: (value) => (value[title] ? value[title].toLowerCase() : Infinity),
-    render: function Cell(initValue?: string): ReactElement | null {
-      if (isBooleanColumn(title)) {
-        return (
-          <div className="icon">
-            <EuiIcon type={initValue ? 'check' : 'cross'} color={initValue ? 'primary' : 'danger'} />
-          </div>
-        )
-      }
-
-      return <EuiText>{initValue}</EuiText>
-    },
-  }))
+  const columns: ColumnDefinition<any>[] = uniqColumns.map(
+    (title: string = ' ') => ({
+      header: toUpper(title),
+      id: title,
+      accessorKey: title,
+      enableSorting: false,
+      cell: ({ row: { original } }) => {
+        const initValue = original[title]
+        if (isBooleanColumn(title)) {
+          return (
+            <div className="icon" data-testid={`query-column-${title}`}>
+              <RiIcon
+                type={initValue ? 'CheckThinIcon' : 'CancelSlimIcon'}
+                color={initValue ? 'primary500' : 'danger600'}
+              />
+            </div>
+          )
+        }
+        return <Text>{initValue}</Text>
+      },
+    }),
+  )
 
   const Header = () => (
     <div>
       {result ? (
         <>
-          <EuiText className="row" size="s" color="subdued">
+          <Text className="row" size="s">
             Indexing
-            <GroupBadge type={result?.index_definition?.key_type?.toLowerCase()} className="badge" />
-            documents prefixed by
-            {' '}
-            {result?.index_definition?.prefixes?.map((prefix: any) => `"${prefix}"`).join(',')}
-          </EuiText>
-          <EuiText className="row" size="s" color="subdued">
-            Options:
-            {' '}
-            {result?.index_options?.length
-              ? <EuiTextColor style={{ color: 'var(--euiColorFullShade)' }}>{result?.index_options?.join(', ')}</EuiTextColor>
-              : <span className="italic">{noOptionsMessage}</span> }
-
-          </EuiText>
+            <GroupBadge
+              type={result?.index_definition?.key_type?.toLowerCase()}
+              className="badge"
+            />
+            documents prefixed by{' '}
+            {result?.index_definition?.prefixes
+              ?.map((prefix: any) => `"${prefix}"`)
+              .join(',')}
+          </Text>
+          <Text className="row" size="s">
+            Options:{' '}
+            {result?.index_options?.length ? (
+              <ColorText style={{ color: 'var(--euiColorFullShade)' }}>
+                {result?.index_options?.join(', ')}
+              </ColorText>
+            ) : (
+              <span className="italic">{noOptionsMessage}</span>
+            )}
+          </Text>
         </>
       ) : (
-        <EuiLoadingContent lines={2} />
+        <LoadingContent lines={2} />
       )}
     </div>
   )
   const Footer = () => (
     <div>
       {result ? (
-        <EuiText className="row" size="s" color="subdued">
+        <Text className="row" size="s">
           {`Number of docs: ${result?.num_docs || '0'} (max ${result?.max_doc_id || '0'}) | `}
           {`Number of records: ${result?.num_records || '0'} | `}
           {`Number of terms: ${result?.num_terms || '0'}`}
-        </EuiText>
+        </Text>
       ) : (
-        <EuiLoadingContent lines={1} />
+        <LoadingContent lines={1} />
       )}
     </div>
   )
 
-  const isDataArr = !React.isValidElement(result) && !(isArray(result) && isEmpty(result))
+  const isDataArr =
+    !React.isValidElement(result) && !(isArray(result) && isEmpty(result))
   const isDataEl = React.isValidElement(result)
 
   return (
     <div className="container">
       {isDataArr && (
-        <div className="content">
+        <FlexGroup
+          direction="column"
+          gap="m"
+          className="content"
+          data-testid={`query-table-result-${query}`}
+        >
           {Header()}
-          <EuiInMemoryTable
-            items={items ?? []}
-            loading={!result}
-            message={loadingMessage}
-            columns={columns}
-            className={cx('inMemoryTableDefault', 'tableInfo', {
-              tableWithPagination: result?.length > 10,
-            })}
-            responsive={false}
-            data-testid={`query-table-result-${query}`}
-          />
+          <Table columns={columns} data={items ?? []} />
           {Footer()}
-        </div>
+        </FlexGroup>
       )}
       {isDataEl && <div className={cx('resultEl')}>{result}</div>}
       {!isDataArr && !isDataEl && (

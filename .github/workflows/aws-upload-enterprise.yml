@@ -1,0 +1,107 @@
+name: AWS Upload Enterprise
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment for build
+        required: false
+        default: 'development'
+        type: string
+
+env:
+  AWS_BUCKET_NAME_PROD: ${{ vars.AWS_BUCKET_NAME_ENTERPRISE }}
+  AWS_BUCKET_NAME_TEST: ${{ vars.AWS_BUCKET_NAME_ENTERPRISE_TEST }}
+  AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+  AWS_DISTRIBUTION_ID: ${{ secrets.AWS_DISTRIBUTION_ID }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  s3:
+    name: Upload to s3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current date
+        id: date
+        uses: ./.github/actions/get-current-date
+
+      - name: Download builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-builds'
+          path: release
+          merge-multiple: true
+
+      - run: ls -R ./release
+
+      - name: Renaming builds
+        run: |
+          APP_VERSION=$(jq -r '.version' redisinsight/package.json)
+          VERSION="${APP_VERSION//./-}"
+          TARGET_DIR=./release
+          PREFIX="Redis-Insight"
+          NEW_PREFIX="Redis-Insight-Enterprise-$VERSION"
+
+          echo "Renaming artifacts. New prefix: $NEW_PREFIX"
+
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            SED_INPLACE="sed -i.bak"
+          else
+            SED_INPLACE="sed -i"
+          fi
+
+          # Step 1: Rename files in target dir
+          for FILE in "$TARGET_DIR"/"$PREFIX"*; do
+            if [ -f "$FILE" ]; then
+              BASENAME="$(basename "$FILE")"
+              SUFFIX="${BASENAME#"$PREFIX"-}"
+              NEW_NAME="${NEW_PREFIX}-${SUFFIX}"
+              mv "$FILE" "$TARGET_DIR/$NEW_NAME"
+              echo "Renamed: $BASENAME -> $NEW_NAME"
+            fi
+          done
+
+          # Step 2: Replace old filenames in all .yml files
+          for YML_FILE in "$TARGET_DIR"/*.yml; do
+            echo "Scanning: $YML_FILE"
+
+            grep -oE 'Redis-Insight[^[:space:]]+' "$YML_FILE" | sort -u | while read -r OLD_NAME; do
+              if [[ "$OLD_NAME" == "$PREFIX"-* ]]; then
+                SUFFIX="${OLD_NAME#"$PREFIX"-}"
+                NEW_NAME="${NEW_PREFIX}-${SUFFIX}"
+
+                # Escape for sed
+                ESCAPED_OLD=$(printf '%s\n' "$OLD_NAME" | sed -e 's/[\/&]/\\&/g')
+                ESCAPED_NEW=$(printf '%s\n' "$NEW_NAME" | sed -e 's/[\/&]/\\&/g')
+
+                if $SED_INPLACE "s/$ESCAPED_OLD/$ESCAPED_NEW/g" "$YML_FILE"; then
+                  echo "  ✔ Updated: $OLD_NAME -> $NEW_NAME"
+                else
+                  echo "  ✘ ERROR updating: $OLD_NAME -> $NEW_NAME"
+                fi
+              fi
+            done
+          done
+
+      - name: Upload builds to s3 bucket dev sub folder
+        if: ${{ inputs.environment != 'production' }}
+        run: |
+          SUB_PATH="dev-builds/${{ steps.date.outputs.date }}/${{ github.run_id }}"
+          echo "SUB_PATH=${SUB_PATH}" >> $GITHUB_ENV
+
+          aws s3 cp release/ s3://${AWS_BUCKET_NAME_TEST}/public/${SUB_PATH} --recursive
+
+      - name: Upload builds to s3 bucket pre-release sub folder
+        if: ${{ inputs.environment == 'production' }}
+        run: |
+          APP_VERSION=$(jq -r '.version' redisinsight/package.json)
+
+          aws s3 cp release/ s3://${AWS_BUCKET_NAME_PROD}/releases/${APP_VERSION} --recursive
+          aws s3 cp release/ s3://${AWS_BUCKET_NAME_PROD}/latest --recursive
+
+      - name: Generate job summary
+        run: |
+          node ./.github/generate-build-summary.js

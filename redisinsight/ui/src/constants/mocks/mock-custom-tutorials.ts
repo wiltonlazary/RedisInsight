@@ -1,4 +1,7 @@
-import { EnablementAreaComponent, IEnablementAreaItem } from 'uiSrc/slices/interfaces'
+import {
+  EnablementAreaComponent,
+  IEnablementAreaItem,
+} from 'uiSrc/slices/interfaces'
 
 export const MOCK_CUSTOM_TUTORIALS_ITEMS: IEnablementAreaItem[] = [
   {
@@ -6,6 +9,9 @@ export const MOCK_CUSTOM_TUTORIALS_ITEMS: IEnablementAreaItem[] = [
     label: 'MY TUTORIALS',
     type: EnablementAreaComponent.Group,
     _actions: ['create'],
+    args: {
+      initialIsOpen: true,
+    },
     children: [
       {
         id: '12mfp-rem',
@@ -30,10 +36,10 @@ export const MOCK_CUSTOM_TUTORIALS_ITEMS: IEnablementAreaItem[] = [
               path: 'quick-guides/working-with-json.html',
             },
           },
-        ]
-      }
-    ]
-  }
+        ],
+      },
+    ],
+  },
 ]
 
 export const MOCK_CUSTOM_TUTORIALS = {
@@ -41,5 +47,5 @@ export const MOCK_CUSTOM_TUTORIALS = {
   label: 'MY TUTORIALS',
   type: EnablementAreaComponent.Group,
   _actions: ['create'],
-  children: MOCK_CUSTOM_TUTORIALS_ITEMS
+  children: MOCK_CUSTOM_TUTORIALS_ITEMS,
 }

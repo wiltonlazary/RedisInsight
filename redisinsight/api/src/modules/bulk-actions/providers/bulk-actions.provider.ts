@@ -1,13 +1,21 @@
 import {
-  BadRequestException, Injectable, Logger, NotFoundException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { BulkAction } from 'src/modules/bulk-actions/models/bulk-action';
 import { CreateBulkActionDto } from 'src/modules/bulk-actions/dto/create-bulk-action.dto';
 import { Socket } from 'socket.io';
-import { BulkActionStatus, BulkActionType } from 'src/modules/bulk-actions/constants';
+import {
+  BulkActionStatus,
+  BulkActionType,
+} from 'src/modules/bulk-actions/constants';
 import { DeleteBulkActionSimpleRunner } from 'src/modules/bulk-actions/models/runners/simple/delete.bulk-action.simple.runner';
-import { DatabaseConnectionService } from 'src/modules/database/database-connection.service';
-import { ClientContext } from 'src/common/models';
+import { UnlinkBulkActionSimpleRunner } from 'src/modules/bulk-actions/models/runners/simple/unlink.bulk-action.simple.runner';
+import { BulkActionsAnalytics } from 'src/modules/bulk-actions/bulk-actions.analytics';
+import { ClientContext, SessionMetadata } from 'src/common/models';
+import { DatabaseClientFactory } from 'src/modules/database/providers/database.client.factory';
 
 @Injectable()
 export class BulkActionsProvider {
@@ -16,7 +24,8 @@ export class BulkActionsProvider {
   private logger: Logger = new Logger('BulkActionsProvider');
 
   constructor(
-    private readonly databaseConnectionService: DatabaseConnectionService,
+    private readonly databaseClientFactory: DatabaseClientFactory,
+    private readonly analytics: BulkActionsAnalytics,
   ) {}
 
   /**
@@ -24,24 +33,40 @@ export class BulkActionsProvider {
    * @param dto
    * @param socket
    */
-  async create(dto: CreateBulkActionDto, socket: Socket): Promise<BulkAction> {
+  async create(
+    sessionMetadata: SessionMetadata,
+    dto: CreateBulkActionDto,
+    socket: Socket,
+  ): Promise<BulkAction> {
     if (this.bulkActions.get(dto.id)) {
       throw new Error('You already have bulk action with such id');
     }
 
-    const bulkAction = new BulkAction(dto.id, dto.databaseId, dto.type, dto.filter, socket);
+    const bulkAction = new BulkAction(
+      dto.id,
+      dto.databaseId,
+      dto.type,
+      dto.filter,
+      socket,
+      this.analytics,
+      dto.generateReport,
+    );
 
     this.bulkActions.set(dto.id, bulkAction);
 
     // todo: add multi user support
-    const client = await this.databaseConnectionService.getOrCreateClient({
-      session: undefined,
+    // todo: use own client and close it after
+    const client = await this.databaseClientFactory.getOrCreateClient({
+      sessionMetadata,
       databaseId: dto.databaseId,
       context: ClientContext.Common,
       db: dto.db,
     });
 
-    await bulkAction.prepare(client, BulkActionsProvider.getSimpleRunnerClass(dto));
+    await bulkAction.prepare(
+      client,
+      BulkActionsProvider.getSimpleRunnerClass(dto),
+    );
 
     bulkAction.start().catch();
 
@@ -57,8 +82,12 @@ export class BulkActionsProvider {
     switch (dto.type) {
       case BulkActionType.Delete:
         return DeleteBulkActionSimpleRunner;
+      case BulkActionType.Unlink:
+        return UnlinkBulkActionSimpleRunner;
       default:
-        throw new BadRequestException(`Unsupported type: ${dto.type} for Bulk Actions`);
+        throw new BadRequestException(
+          `Unsupported type: ${dto.type} for Bulk Actions`,
+        );
     }
   }
 

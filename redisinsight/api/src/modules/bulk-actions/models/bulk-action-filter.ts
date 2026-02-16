@@ -1,12 +1,14 @@
-import { RedisDataType } from 'src/modules/browser/dto';
-import {
-  IsEnum, IsInt, IsOptional, IsString,
-} from 'class-validator';
+import { RedisDataType } from 'src/modules/browser/keys/dto';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { IBulkActionFilterOverview } from 'src/modules/bulk-actions/interfaces/bulk-action-filter-overview.interface';
 
 export class BulkActionFilter {
   @IsOptional()
-  @IsEnum(RedisDataType)
+  @IsEnum(RedisDataType, {
+    message: `type must be a valid enum value. Valid values: ${Object.values(
+      RedisDataType,
+    )}.`,
+  })
   type?: RedisDataType = null;
 
   @IsOptional()

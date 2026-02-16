@@ -5,15 +5,17 @@ import testcafe from 'testcafe';
         .then(t => {
             return t
                 .createRunner()
-                .src((process.env.TEST_FILES || 'tests/**/*.e2e.ts').split('\n'))
+                .compilerOptions({
+                    'typescript': {
+                        configPath: 'tsconfig.testcafe.json',
+                        experimentalDecorators: true
+                    } })
+                .src((process.env.TEST_FILES || 'tests/electron/**/*.e2e.ts').split('\n'))
                 .browsers(['electron'])
-                .filter((_testName, _fixtureName, _fixturePath, testMeta): boolean => {
-                    return testMeta.env !== 'web' && testMeta.rte === 'standalone';
-                })
                 .screenshots({
                     path: 'report/screenshots/',
                     takeOnFails: true,
-                    pathPattern: '${USERAGENT}/${DATE}_${TIME}/${FIXTURE}_${TEST_INDEX}.png',
+                    pathPattern: '${USERAGENT}/${DATE}_${TIME}/${FIXTURE}_${TEST}_${FILE_INDEX}.png'
                 })
                 .reporter([
                     'spec',
@@ -24,12 +26,20 @@ import testcafe from 'testcafe';
                     {
                         name: 'json',
                         output: './results/e2e.results.json'
+                    },
+                    {
+                        name: 'html',
+                        output: './report/index.html'
                     }
                 ])
                 .run({
                     skipJsErrors: true,
                     browserInitTimeout: 60000,
-                    speed: 1
+                    selectorTimeout: 5000,
+                    assertionTimeout: 5000,
+                    speed: 1,
+                    quarantineMode: { successThreshold: 1, attemptLimit: 3 },
+                    disableMultipleWindows: true
                 });
         })
         .then((failedCount) => {

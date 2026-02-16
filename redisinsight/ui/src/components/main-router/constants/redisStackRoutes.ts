@@ -1,14 +1,12 @@
 import { PageNames, Pages, IRoute } from 'uiSrc/constants'
-import {
-  BrowserPage, InstancePage,
-} from 'uiSrc/pages'
+import { BrowserPage, InstancePage } from 'uiSrc/pages'
 import WorkbenchPage from 'uiSrc/pages/workbench'
-import SlowLogPage from 'uiSrc/pages/slowLog'
-import PubSubPage from 'uiSrc/pages/pubSub'
-import EditConnection from 'uiSrc/pages/redisStack/components/edit-connection'
-import ClusterDetailsPage from 'uiSrc/pages/clusterDetails'
+import SlowLogPage from 'uiSrc/pages/slow-log'
+import PubSubPage from 'uiSrc/pages/pub-sub'
+import EditConnection from 'uiSrc/pages/redis-stack/components/edit-connection'
+import ClusterDetailsPage from 'uiSrc/pages/cluster-details'
 import AnalyticsPage from 'uiSrc/pages/analytics'
-import DatabaseAnalysisPage from 'uiSrc/pages/databaseAnalysis'
+import DatabaseAnalysisPage from 'uiSrc/pages/database-analysis'
 import COMMON_ROUTES from './commonRoutes'
 
 const ANALYTICS_ROUTES: IRoute[] = [

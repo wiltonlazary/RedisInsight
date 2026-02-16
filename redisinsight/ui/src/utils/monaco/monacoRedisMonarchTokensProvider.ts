@@ -1,36 +1,37 @@
-import * as monacoEditor from 'monaco-editor'
+import { monaco as monacoEditor } from 'react-monaco-editor'
+import { remove } from 'lodash'
+import { ModuleCommandPrefix } from 'uiSrc/pages/workbench/constants'
+import { IRedisCommand } from 'uiSrc/constants'
+import { sanitizeToken } from 'uiSrc/utils'
 
 const STRING_DOUBLE = 'string.double'
 
-export const getRedisMonarchTokensProvider = (commands: string[]): monacoEditor.languages.IMonarchLanguage => (
-  {
+export const getRedisMonarchTokensProvider = (
+  commands: IRedisCommand[],
+): monacoEditor.languages.IMonarchLanguage => {
+  const commandRedisCommands = [...commands]
+  const searchCommands = remove(commandRedisCommands, ({ token }) =>
+    token?.startsWith(ModuleCommandPrefix.RediSearch),
+  )
+  const COMMON_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${commandRedisCommands.map(({ token }) => sanitizeToken(token)).join('|')})\\b`
+  const SEARCH_COMMANDS_REGEX = `^\\s*(\\d+\\s+)?(${searchCommands.map(({ token }) => sanitizeToken(token)).join('|')})\\b`
+
+  return {
     defaultToken: '',
     tokenPostfix: '.redis',
     ignoreCase: true,
+    includeLF: true,
     brackets: [
       { open: '[', close: ']', token: 'delimiter.square' },
       { open: '(', close: ')', token: 'delimiter.parenthesis' },
     ],
-    keywords: commands,
-    operators: [
-      // NOT SUPPORTED
-    ],
-    builtinFunctions: [
-      // NOT SUPPORTED
-    ],
-    builtinVariables: [
-      // NOT SUPPORTED
-    ],
-    pseudoColumns: [
-      // NOT SUPPORTED
-    ],
+    keywords: [],
+    operators: [],
     tokenizer: {
       root: [
+        { include: '@startOfLine' },
         { include: '@whitespace' },
-        { include: '@pseudoColumns' },
-        { include: '@numbers' },
         { include: '@strings' },
-        { include: '@scopes' },
         { include: '@keyword' },
         [/[;,.]/, 'delimiter'],
         [/[()]/, '@brackets'],
@@ -40,34 +41,27 @@ export const getRedisMonarchTokensProvider = (commands: string[]): monacoEditor.
             cases: {
               '@keywords': 'keyword',
               '@operators': 'operator',
-              '@builtinVariables': 'predefined',
-              '@builtinFunctions': 'predefined',
               '@default': 'identifier',
             },
           },
         ],
         [/[<>=!%&+\-*/|~^]/, 'operator'],
+        { include: '@numbers' },
       ],
       keyword: [
+        [COMMON_COMMANDS_REGEX, { token: 'keyword' }],
         [
-          `(${commands.join('|')})\\b`,
-          'keyword'
-        ]
+          SEARCH_COMMANDS_REGEX,
+          {
+            token: '@rematch',
+            nextEmbedded: 'redisearch',
+            next: '@endRedisearch',
+          },
+        ],
       ],
       whitespace: [
         [/\s+/, 'white'],
-        [/\/\/.*$/, 'comment'],
-      ],
-      pseudoColumns: [
-        [
-          /[$][A-Za-z_][\w@#$]*/,
-          {
-            cases: {
-              '@pseudoColumns': 'predefined',
-              '@default': 'identifier',
-            },
-          },
-        ],
+        [/\/\/.*/, 'comment'],
       ],
       numbers: [
         [/0[xX][0-9a-fA-F]*/, 'number'],
@@ -79,18 +73,28 @@ export const getRedisMonarchTokensProvider = (commands: string[]): monacoEditor.
         [/"/, { token: STRING_DOUBLE, next: '@stringDouble' }],
       ],
       string: [
-        [/[^']+/, 'string'],
-        [/''/, 'string'],
+        [/\\./, 'string'],
         [/'/, { token: 'string', next: '@pop' }],
+        [/[^\\']+/, 'string'],
       ],
       stringDouble: [
-        [/[^"]+/, STRING_DOUBLE],
-        [/""/, STRING_DOUBLE],
+        [/\\./, STRING_DOUBLE],
         [/"/, { token: STRING_DOUBLE, next: '@pop' }],
+        [/[^\\"]+/, STRING_DOUBLE],
       ],
-      scopes: [
-        // NOT SUPPORTED
+      // TODO: can be tokens or functions the same - need to think how to avoid wrong ending
+      endRedisearch: [
+        [
+          `^\\s*${COMMON_COMMANDS_REGEX}`,
+          {
+            token: '@rematch',
+            next: '@root',
+            nextEmbedded: '@pop',
+            log: 'end',
+          },
+        ],
       ],
+      startOfLine: [[/\n/, { next: '@root', token: '@pop' }]],
     },
   }
-)
+}

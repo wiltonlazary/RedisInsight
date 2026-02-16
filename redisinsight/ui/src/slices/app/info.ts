@@ -7,23 +7,17 @@ import { GetServerInfoResponse } from 'apiSrc/modules/server/dto/server.dto'
 import { AppDispatch, RootState } from '../store'
 import { RedisResponseEncoding, StateAppInfo } from '../interfaces'
 
-const segmentWriteKey = process.env.SEGMENT_WRITE_KEY || 'SOURCE_WRITE_KEY'
-
 export const initialState: StateAppInfo = {
   loading: true,
   error: '',
   server: null,
   encoding: RedisResponseEncoding.Buffer,
-  analytics: {
-    identified: false,
-    segmentWriteKey,
-  },
   electron: {
     isUpdateAvailable: null,
     updateDownloadedVersion: '',
     isReleaseNotesViewed: null,
   },
-  isShortcutsFlyoutOpen: false
+  isShortcutsFlyoutOpen: false,
 }
 
 // A slice for recipes
@@ -32,9 +26,6 @@ const appInfoSlice = createSlice({
   initialState,
   reducers: {
     setServerInfoInitialState: () => initialState,
-    setAnalyticsIdentified: (state, { payload }) => {
-      state.analytics.identified = payload
-    },
     setElectronInfo: (state, { payload }) => {
       state.electron.isUpdateAvailable = payload.isUpdateAvailable
       state.electron.updateDownloadedVersion = payload.updateDownloadedVersion
@@ -58,14 +49,15 @@ const appInfoSlice = createSlice({
     },
     setEncoding: (state, { payload }: PayloadAction<RedisResponseEncoding>) => {
       state.encoding = payload
-    }
+    },
+    setServerLoaded: (state) => {
+      state.loading = false
+    },
   },
 })
 
 // Actions generated from the slice
 export const {
-  setAnalyticsIdentified,
-  setServerInfoInitialState,
   setElectronInfo,
   setReleaseNotesViewed,
   getServerInfo,
@@ -73,24 +65,30 @@ export const {
   getServerInfoFailure,
   setShortcutsFlyoutState,
   setEncoding,
+  setServerLoaded,
 } = appInfoSlice.actions
 
 // A selector
 export const appInfoSelector = (state: RootState) => state.app.info
 export const appServerInfoSelector = (state: RootState) => state.app.info.server
-export const appAnalyticsInfoSelector = (state: RootState) => state.app.info.analytics
-export const appElectronInfoSelector = (state: RootState) => state.app.info.electron
+export const appElectronInfoSelector = (state: RootState) =>
+  state.app.info.electron
 
 // The reducer
 export default appInfoSlice.reducer
 
 // Asynchronous thunk action
-export function fetchServerInfo(onSuccessAction?: () => void, onFailAction?: () => void) {
+export function fetchServerInfo(
+  onSuccessAction?: () => void,
+  onFailAction?: () => void,
+) {
   return async (dispatch: AppDispatch) => {
     dispatch(getServerInfo())
 
     try {
-      const { data, status } = await apiService.get<GetServerInfoResponse>(ApiEndpoints.INFO)
+      const { data, status } = await apiService.get<GetServerInfoResponse>(
+        ApiEndpoints.INFO,
+      )
 
       if (isStatusSuccessful(status)) {
         dispatch(getServerInfoSuccess(data))

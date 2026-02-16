@@ -3,7 +3,11 @@ import { Injectable } from '@nestjs/common';
 import { TelemetryBaseService } from 'src/modules/analytics/telemetry.base.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TelemetryEvents } from 'src/constants';
-import { DatabaseImportResponse, DatabaseImportResult } from 'src/modules/database-import/dto/database-import.response';
+import {
+  DatabaseImportResponse,
+  DatabaseImportResult,
+} from 'src/modules/database-import/dto/database-import.response';
+import { SessionMetadata } from 'src/common/models';
 
 @Injectable()
 export class DatabaseImportAnalytics extends TelemetryBaseService {
@@ -11,51 +15,50 @@ export class DatabaseImportAnalytics extends TelemetryBaseService {
     super(eventEmitter);
   }
 
-  sendImportResults(importResult: DatabaseImportResponse): void {
+  sendImportResults(
+    sessionMetadata: SessionMetadata,
+    importResult: DatabaseImportResponse,
+  ): void {
     if (importResult.success?.length) {
-      this.sendEvent(
-        TelemetryEvents.DatabaseImportSucceeded,
-        {
-          succeed: importResult.success.length,
-        },
-      );
+      this.sendEvent(sessionMetadata, TelemetryEvents.DatabaseImportSucceeded, {
+        succeed: importResult.success.length,
+      });
     }
 
     if (importResult.fail?.length) {
-      this.sendEvent(
-        TelemetryEvents.DatabaseImportFailed,
-        {
-          failed: importResult.fail.length,
-          errors: DatabaseImportAnalytics.getUniqueErrorNamesFromResults(importResult.fail),
-        },
-      );
+      this.sendEvent(sessionMetadata, TelemetryEvents.DatabaseImportFailed, {
+        failed: importResult.fail.length,
+        errors: DatabaseImportAnalytics.getUniqueErrorNamesFromResults(
+          importResult.fail,
+        ),
+      });
     }
 
     if (importResult.partial?.length) {
       this.sendEvent(
+        sessionMetadata,
         TelemetryEvents.DatabaseImportPartiallySucceeded,
         {
           partially: importResult.partial.length,
-          errors: DatabaseImportAnalytics.getUniqueErrorNamesFromResults(importResult.partial),
+          errors: DatabaseImportAnalytics.getUniqueErrorNamesFromResults(
+            importResult.partial,
+          ),
         },
       );
     }
   }
 
-  sendImportFailed(e: Error): void {
-    this.sendEvent(
-      TelemetryEvents.DatabaseImportParseFailed,
-      {
-        error: e?.constructor?.name || 'UncaughtError',
-      },
-    );
+  sendImportFailed(sessionMetadata: SessionMetadata, e: Error): void {
+    this.sendEvent(sessionMetadata, TelemetryEvents.DatabaseImportParseFailed, {
+      error: e?.constructor?.name || 'UncaughtError',
+    });
   }
 
   static getUniqueErrorNamesFromResults(results: DatabaseImportResult[]) {
     return uniq(
       [].concat(
-        ...results.map(
-          (res) => (res?.errors || []).map(
+        ...results.map((res) =>
+          (res?.errors || []).map(
             (error) => error?.constructor?.name || 'UncaughtError',
           ),
         ),

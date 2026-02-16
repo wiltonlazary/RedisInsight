@@ -27,15 +27,18 @@
   }
 }
 
+.scrollContainer {
+  scroll-padding-bottom: 60px;
+
+  // move scrollbar outside
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+
 .contentFields {
   max-width: 680px;
   margin: 0 auto;
   width: 100%;
-}
-
-.divider {
-  margin-top: 30px;
-  margin-bottom: 30px;
 }
 
 .helpText {
@@ -53,5 +56,19 @@
   svg {
     width: 20px;
     height: 20px;
+  }
+}
+
+.backBtn:global(.euiButton.euiButton--fill.euiButton--secondary) {
+  background-color: var(--browserComponentActive) !important;
+  border-color: var(--browserComponentActive) !important;
+  color: var(--buttonSecondaryTextColor) !important;
+
+  position: absolute;
+  top: 22px;
+  right: 18px;
+
+  &:hover, &:focus {
+    color: var(--buttonSecondaryTextColor) !important;
   }
 }

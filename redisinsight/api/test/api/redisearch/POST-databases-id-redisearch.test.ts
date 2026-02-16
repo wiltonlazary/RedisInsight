@@ -1,14 +1,14 @@
 import {
   expect,
   describe,
-  it,
   before,
   Joi,
   deps,
   requirements,
   generateInvalidDataTestCases,
   validateInvalidDataTestCase,
-  validateApiCall, getMainCheckFn,
+  validateApiCall,
+  getMainCheckFn,
   _,
 } from '../deps';
 const { server, request, constants, rte } = deps;
@@ -32,10 +32,12 @@ const validInputData = {
   index: constants.TEST_SEARCH_HASH_INDEX_1,
   type: constants.TEST_SEARCH_HASH_TYPE,
   prefixes: ['*'],
-  fields: [{
-    name: '*',
-    type: 'text',
-  }],
+  fields: [
+    {
+      name: '*',
+      type: 'text',
+    },
+  ],
 };
 
 const mainCheckFn = getMainCheckFn(endpoint);
@@ -63,7 +65,10 @@ describe('POST /databases/:id/redisearch', () => {
           statusCode: 201,
           before: async () => {
             await validateApiCall({
-              endpoint: () => request(server).get(`/${constants.API.DATABASES}/${constants.TEST_INSTANCE_ID}/redisearch`),
+              endpoint: () =>
+                request(server).get(
+                  `/${constants.API.DATABASES}/${constants.TEST_INSTANCE_ID}/redisearch`,
+                ),
               checkFn: ({ body }) => {
                 expect(body.indexes.length).to.eq(0);
               },
@@ -71,10 +76,15 @@ describe('POST /databases/:id/redisearch', () => {
           },
           after: async () => {
             await validateApiCall({
-              endpoint: () => request(server).get(`/${constants.API.DATABASES}/${constants.TEST_INSTANCE_ID}/redisearch`),
+              endpoint: () =>
+                request(server).get(
+                  `/${constants.API.DATABASES}/${constants.TEST_INSTANCE_ID}/redisearch`,
+                ),
               checkFn: ({ body }) => {
                 expect(body.indexes.length).to.eq(1);
-                expect(body.indexes).to.include(constants.TEST_SEARCH_HASH_INDEX_1);
+                expect(body.indexes).to.include(
+                  constants.TEST_SEARCH_HASH_INDEX_1,
+                );
               },
             });
           },
@@ -97,9 +107,125 @@ describe('POST /databases/:id/redisearch', () => {
               responseBody: {
                 statusCode: 409,
                 message: 'This index name is already in use.',
-                error: 'Conflict'
+                error: 'Conflict',
               },
             });
+          },
+        },
+      ].map(mainCheckFn);
+    });
+
+    describe('Client Errors (400 Bad Request)', () => {
+      beforeEach(rte.data.truncate);
+
+      [
+        {
+          name: 'Should return 400 for Invalid JSONPath error (JSON type with invalid path)',
+          data: {
+            index: constants.getRandomString(),
+            type: 'json',
+            prefixes: ['test:'],
+            fields: [
+              {
+                name: 'embedding', // Missing $ prefix for JSONPath
+                type: 'vector',
+                algorithm: 'FLAT',
+                dim: 3,
+                distanceMetric: 'L2',
+              },
+            ],
+          },
+          statusCode: 400,
+          responseBody: {
+            statusCode: 400,
+            error: 'Bad Request',
+          },
+          checkFn: ({ body }) => {
+            expect(body.message).to.satisfy((msg: string) =>
+              msg.startsWith('Invalid'),
+            );
+          },
+        },
+        {
+          name: 'Should return 400 for Invalid field type error (VECTOR without DIM)',
+          data: {
+            index: constants.getRandomString(),
+            type: 'hash',
+            prefixes: ['test:'],
+            fields: [
+              {
+                name: 'embedding',
+                type: 'vector',
+                algorithm: 'FLAT',
+                // Missing 'dim' which is mandatory for VECTOR
+                distanceMetric: 'L2',
+              },
+            ],
+          },
+          statusCode: 400,
+          responseBody: {
+            statusCode: 400,
+            error: 'Bad Request',
+          },
+          checkFn: ({ body }) => {
+            expect(body.message).to.satisfy((msg: string) =>
+              msg.startsWith('Invalid'),
+            );
+          },
+        },
+        {
+          name: 'Should return 400 for Invalid field type error (VECTOR with invalid algorithm)',
+          data: {
+            index: constants.getRandomString(),
+            type: 'hash',
+            prefixes: ['test:'],
+            fields: [
+              {
+                name: 'embedding',
+                type: 'vector',
+                algorithm: 'INVALID_ALGO', // Invalid algorithm
+                dim: 3,
+                distanceMetric: 'L2',
+              },
+            ],
+          },
+          statusCode: 400,
+          responseBody: {
+            statusCode: 400,
+            error: 'Bad Request',
+          },
+          checkFn: ({ body }) => {
+            expect(body.message).to.satisfy((msg: string) =>
+              msg.startsWith('Invalid'),
+            );
+          },
+        },
+        {
+          name: 'Should return 400 for Duplicate field error',
+          data: {
+            index: constants.getRandomString(),
+            type: 'hash',
+            prefixes: ['test:'],
+            fields: [
+              {
+                name: 'field1',
+                type: 'text',
+              },
+              {
+                name: 'field1', // Duplicate field name
+                type: 'text',
+              },
+            ],
+          },
+          statusCode: 400,
+          responseBody: {
+            statusCode: 400,
+            error: 'Bad Request',
+          },
+          checkFn: ({ body }) => {
+            expect(body.message).to.satisfy((msg: string) =>
+              msg.startsWith('Duplicate'),
+            );
           },
         },
       ].map(mainCheckFn);
@@ -131,7 +257,7 @@ describe('POST /databases/:id/redisearch', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -ft.info')
+          before: () => rte.data.setAclUserRules('~* +@all -ft.info'),
         },
         {
           name: 'Should throw error if no permissions for "ft.create" command',
@@ -145,7 +271,7 @@ describe('POST /databases/:id/redisearch', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -ft.create')
+          before: () => rte.data.setAclUserRules('~* +@all -ft.create'),
         },
       ].map(mainCheckFn);
     });

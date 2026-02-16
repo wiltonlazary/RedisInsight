@@ -6,7 +6,7 @@ import {
 } from 'nest-winston';
 import { join } from 'path';
 import config from 'src/utils/config';
-import { prettyFormat, sensitiveDataFormatter } from 'src/utils/logsFormatter';
+import { prepareLogsData, prettyFileFormat } from 'src/utils/logsFormatter';
 
 const PATH_CONFIG = config.get('dir_path');
 const LOGGER_CONFIG = config.get('logger');
@@ -17,9 +17,16 @@ if (LOGGER_CONFIG.stdout) {
   transportsConfig.push(
     new transports.Console({
       format: format.combine(
-        sensitiveDataFormatter({ omitSensitiveData: LOGGER_CONFIG.omitSensitiveData }),
+        prepareLogsData({
+          omitSensitiveData: LOGGER_CONFIG.omitSensitiveData,
+        }),
         format.timestamp(),
-        nestWinstonModuleUtilities.format.nestLike(),
+        nestWinstonModuleUtilities.format.nestLike('Redis Insight', {
+          colors: true,
+          prettyPrint: true,
+          processId: true,
+          appName: true,
+        }),
       ),
     }),
   );
@@ -35,8 +42,10 @@ if (LOGGER_CONFIG.files) {
       filename: 'redisinsight-errors-%DATE%.log',
       level: 'error',
       format: format.combine(
-        sensitiveDataFormatter({ omitSensitiveData: LOGGER_CONFIG.omitSensitiveData }),
-        prettyFormat,
+        prepareLogsData({
+          omitSensitiveData: LOGGER_CONFIG.omitSensitiveData,
+        }),
+        prettyFileFormat,
       ),
     }),
   );
@@ -48,8 +57,10 @@ if (LOGGER_CONFIG.files) {
       maxFiles: '7d',
       filename: 'redisinsight-%DATE%.log',
       format: format.combine(
-        sensitiveDataFormatter({ omitSensitiveData: LOGGER_CONFIG.omitSensitiveData }),
-        prettyFormat,
+        prepareLogsData({
+          omitSensitiveData: LOGGER_CONFIG.omitSensitiveData,
+        }),
+        prettyFileFormat,
       ),
     }),
   );

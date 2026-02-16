@@ -1,6 +1,5 @@
-# Ignores folders covered with custom linters configs
-redisinsight/api
 tests/e2e
+tests/e2e-playwright
 
 # Logs
 logs
@@ -61,3 +60,6 @@ package.json
 # temp folders - remove in future after fix all issues
 redisinsight/ui/src/packages/redisgraph
 redisinsight/ui/src/packages/redistimeseries-app
+
+/report
+__mocks__

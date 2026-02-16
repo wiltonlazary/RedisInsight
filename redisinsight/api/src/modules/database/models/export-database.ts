@@ -14,7 +14,6 @@ export class ExportDatabase extends PickType(Database, [
   'provider',
   'lastConnection',
   'sentinelMaster',
-  'nodes',
   'modules',
   'tls',
   'tlsServername',
@@ -23,4 +22,8 @@ export class ExportDatabase extends PickType(Database, [
   'clientCert',
   'ssh',
   'sshOptions',
+  'compressor',
+  'forceStandalone',
+  'tags',
+  'providerDetails',
 ] as const) {}

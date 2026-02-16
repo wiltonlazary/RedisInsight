@@ -18,6 +18,11 @@ lerna-debug.log*
 /.nyc_output
 **/coverage
 
+#CI
+.actrc
+my.secrets
+my.inputs
+
 # IDEs and editors
 /.idea
 .idea/
@@ -32,9 +37,6 @@ lerna-debug.log*
 *.scss.d.ts
 **/*.scss.d.ts
 
-# IDE - VSCode
-.vscode
-
 # App packaged
 release
 main.prod.js
@@ -48,21 +50,51 @@ redisinsight/ui/style.css.map
 redisinsight/ui/dist
 redisinsight/api/commands
 redisinsight/api/guides
+redisinsight/api/report
+redisinsight/api/reports
+redisinsight/api/dist-minified
 redisinsight/api/tutorials
 redisinsight/api/content
-dist
+redisinsight/ui/dist-stats.html
+report
+reports
 distWeb
 dll
 main.js
 main.js.map
 vendor
+redisinsight/main.js.LICENSE.txt
+redisinsight/main.prod.js.LICENSE.txt
+licenses
+redisinsight/ui/src/packages/common/index*
+
 
 # E2E tests report
 /tests/e2e/report
+/tests/e2e/results
+/tests/e2e/remote
 /tests/e2e/.redisinsight-v2
+/tests/e2e/.redisinsight-app
+/tests/e2e/.redisinsight-insight
 
 # Parcel
 .parcel-cache
 
 # caches
 .temp_cache
+
+static/
+
+.env*
+.npmrc
+
+# AI rules
+.windsurfrules
+.junie/
+*storybook.log
+storybook-static
+
+# MCP Environment Configuration (contains secrets)
+.env.mcp
+
+.eslintcache

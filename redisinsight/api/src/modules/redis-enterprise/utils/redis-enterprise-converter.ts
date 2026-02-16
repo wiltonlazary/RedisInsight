@@ -1,5 +1,10 @@
-import { AdditionalRedisModuleName, RE_CLUSTER_MODULES_NAMES } from 'src/constants';
+import {
+  AdditionalRedisModuleName,
+  REDIS_SOFTWARE_MODULES_NAMES,
+} from 'src/constants';
 
-export function convertREClusterModuleName(name: string): AdditionalRedisModuleName {
-  return RE_CLUSTER_MODULES_NAMES[name] ?? name;
+export function convertRedisSoftwareModuleName(
+  name: string,
+): AdditionalRedisModuleName {
+  return REDIS_SOFTWARE_MODULES_NAMES[name] ?? name;
 }

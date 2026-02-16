@@ -1,6 +1,12 @@
 import { cloneDeep, uniqBy } from 'lodash'
-import { cleanup, initialStateDefault, mockedStore, } from 'uiSrc/utils/test-utils'
-import { apiService } from 'uiSrc/services'
+import set from 'lodash/set'
+import {
+  cleanup,
+  initialStateDefault,
+  mockedStore,
+} from 'uiSrc/utils/test-utils'
+import { getConfig } from 'uiSrc/config'
+import { apiService, resourcesService } from 'uiSrc/services'
 import { ICommand, MOCK_COMMANDS_SPEC } from 'uiSrc/constants'
 import reducer, {
   initialState,
@@ -8,12 +14,20 @@ import reducer, {
   getRedisCommandsFailure,
   getRedisCommandsSuccess,
   appRedisCommandsSelector,
-  fetchRedisCommandsInfo
+  fetchRedisCommandsInfo,
+  commands,
 } from '../../app/redis-commands'
+
+const riConfig = getConfig()
+
+const mockConfig = (useLocalResources = false) => {
+  set(riConfig, 'app.useLocalResources', useLocalResources)
+}
 
 let store: typeof mockedStore
 beforeEach(() => {
   cleanup()
+  mockConfig()
   store = cloneDeep(mockedStore)
   store.clearActions()
 })
@@ -38,7 +52,7 @@ describe('slices', () => {
       const loading = true
       const state = {
         ...initialState,
-        loading
+        loading,
       }
 
       // Act
@@ -61,8 +75,9 @@ describe('slices', () => {
         ...initialState,
         spec: data,
         commandsArray: Object.keys(data).sort(),
-        commandGroups: uniqBy(Object.values(data), 'group')
-          .map((item: ICommand) => item.group)
+        commandGroups: uniqBy(Object.values(data), 'group').map(
+          (item: ICommand) => item.group,
+        ),
       }
 
       // Act
@@ -84,7 +99,7 @@ describe('slices', () => {
       const state = {
         ...initialState,
         loading: false,
-        error
+        error,
       }
 
       // Act
@@ -142,6 +157,72 @@ describe('slices', () => {
       ]
 
       expect(mockedStore.getActions()).toEqual(expectedActions)
+    })
+
+    it('successfully fetches all local commands', async () => {
+      mockConfig(true)
+      let expectedResult = {}
+      const onSuccessAction = jest.fn()
+      const onFailAction = jest.fn()
+      const resourceGetSpy = jest.spyOn(resourcesService, 'get')
+
+      commands.forEach((command) => {
+        expectedResult = { ...expectedResult, [command]: {} }
+        resourceGetSpy.mockResolvedValueOnce({
+          status: 200,
+          data: { [command]: {} },
+        })
+      })
+
+      // Act
+      await store.dispatch<any>(
+        fetchRedisCommandsInfo(onSuccessAction, onFailAction),
+      )
+
+      // Assert
+      const expectedActions = [
+        getRedisCommands(),
+        getRedisCommandsSuccess(expectedResult),
+      ]
+
+      expect(mockedStore.getActions()).toEqual(expectedActions)
+      expect(onSuccessAction).toHaveBeenCalledTimes(1)
+      expect(onFailAction).not.toHaveBeenCalled()
+    })
+
+    it('handles local commands fetch failures', async () => {
+      let expectedResult = {}
+      const onSuccessAction = jest.fn()
+      const onFailAction = jest.fn()
+      const resourceGetSpy = jest.spyOn(resourcesService, 'get')
+      const errorMessage = 'Something was wrong!'
+
+      commands.slice(0, -1).forEach((command) => {
+        expectedResult = { ...expectedResult, [command]: {} }
+        resourceGetSpy.mockResolvedValueOnce({
+          status: 200,
+          data: { [command]: {} },
+        })
+      })
+      resourceGetSpy.mockRejectedValueOnce({
+        status: 500,
+        data: { message: errorMessage },
+      })
+
+      // Act
+      await store.dispatch<any>(
+        fetchRedisCommandsInfo(onSuccessAction, onFailAction),
+      )
+
+      // Assert
+      const expectedActions = [
+        getRedisCommands(),
+        getRedisCommandsFailure(errorMessage),
+      ]
+
+      expect(mockedStore.getActions()).toEqual(expectedActions)
+      expect(onFailAction).toHaveBeenCalledTimes(1)
+      expect(onSuccessAction).not.toHaveBeenCalled()
     })
   })
 })

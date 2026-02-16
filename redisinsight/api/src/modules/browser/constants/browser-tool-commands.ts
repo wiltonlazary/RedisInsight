@@ -6,6 +6,7 @@ export enum BrowserToolKeysCommands {
   Expire = 'expire',
   Persist = 'persist',
   Del = 'del',
+  Unlink = 'unlink',
   Rename = 'rename',
   RenameNX = 'renamenx',
   MemoryUsage = 'memory usage',
@@ -14,15 +15,21 @@ export enum BrowserToolKeysCommands {
 export enum BrowserToolStringCommands {
   Set = 'set',
   Get = 'get',
+  Getrange = 'getrange',
   StrLen = 'strlen',
 }
 
 export enum BrowserToolHashCommands {
   HSet = 'hset',
+  HGetAll = 'hgetall',
+  HGETALL = 'HGETALL',
   HGet = 'hget',
   HLen = 'hlen',
   HScan = 'hscan',
   HDel = 'hdel',
+  HExpire = 'hexpire',
+  HPersist = 'hpersist',
+  HTtl = 'httl',
 }
 
 export enum BrowserToolListCommands {

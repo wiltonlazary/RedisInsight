@@ -1,20 +1,34 @@
 import React, { Ref, useEffect, useRef } from 'react'
 import cx from 'classnames'
-import { EuiIcon, EuiTextColor } from '@elastic/eui'
 
+import { ColorText } from 'uiSrc/components/base/text'
 import { scrollIntoView } from 'uiSrc/utils'
+import { AllIconsType, RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
-type Colors = 'default' | 'secondary' | 'accent' | 'warning' | 'danger' | 'subdued' | 'ghost'
+type Colors =
+  | 'default'
+  | 'secondary'
+  | 'accent'
+  | 'warning'
+  | 'danger'
+  | 'subdued'
+  | 'ghost'
 export interface Props {
-  children: React.ReactElement | string;
-  color?: Colors,
-  scrollViewOnAppear?: boolean;
-  icon?: string,
-  testID?: string,
+  children: React.ReactElement | string
+  color?: Colors
+  scrollViewOnAppear?: boolean
+  icon?: AllIconsType
+  testID?: string
 }
 
-const FieldMessage = ({ children, color, testID, icon, scrollViewOnAppear }: Props) => {
+const FieldMessage = ({
+  children,
+  color,
+  testID,
+  icon,
+  scrollViewOnAppear,
+}: Props) => {
   const divRef: Ref<HTMLDivElement> = useRef(null)
 
   useEffect(() => {
@@ -31,15 +45,19 @@ const FieldMessage = ({ children, color, testID, icon, scrollViewOnAppear }: Pro
   return (
     <div ref={divRef} className={cx(styles.container)}>
       {icon && (
-        <EuiIcon className={cx(styles.icon)} type={icon} color={color || 'danger'} />
+        <RiIcon
+          className={cx(styles.icon)}
+          type={icon}
+          color={color || 'danger'}
+        />
       )}
-      <EuiTextColor
+      <ColorText
         className={cx(styles.message)}
         data-testid={testID}
         color={color || 'danger'}
       >
         {children}
-      </EuiTextColor>
+      </ColorText>
     </div>
   )
 }

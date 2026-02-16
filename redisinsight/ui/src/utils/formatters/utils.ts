@@ -1,5 +1,8 @@
 export const bufferFormatRangeItems = (
-  items: any[], startIndex: number, lastIndex: number, formatItem: (item: any) => any,
+  items: any[],
+  startIndex: number,
+  lastIndex: number,
+  formatItem: (item: any) => any,
 ): any[] => {
   const newItems = []
   if (lastIndex >= startIndex) {
@@ -11,8 +14,3 @@ export const bufferFormatRangeItems = (
 
   return newItems
 }
-
-export const replaceBigIntWithString = (obj: Object) => JSON.parse(JSON.stringify(obj, (_, value) => (
-  typeof value === 'bigint'
-    ? value.toString()
-    : value)))

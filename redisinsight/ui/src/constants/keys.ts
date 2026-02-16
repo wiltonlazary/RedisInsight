@@ -27,8 +27,7 @@ export const GROUP_TYPES_DISPLAY = Object.freeze({
   [KeyTypes.ReJSON]: 'JSON',
   [KeyTypes.JSON]: 'JSON',
   [KeyTypes.Stream]: 'Stream',
-  [ModulesKeyTypes.Graph]: 'Graph',
-  [ModulesKeyTypes.TimeSeries]: 'TS',
+  [ModulesKeyTypes.TimeSeries]: 'Time Series',
   [CommandGroup.Bitmap]: 'Bitmap',
   [CommandGroup.Cluster]: 'Cluster',
   [CommandGroup.Connection]: 'Connection',
@@ -48,7 +47,7 @@ export const GROUP_TYPES_DISPLAY = Object.freeze({
   [CommandGroup.CuckooFilter]: 'Cuckoo Filter',
 })
 
-export type GroupTypesDisplay = keyof (typeof GROUP_TYPES_DISPLAY)
+export type GroupTypesDisplay = keyof typeof GROUP_TYPES_DISPLAY
 
 // Enums don't allow to use dynamic key
 export const GROUP_TYPES_COLORS = Object.freeze({
@@ -75,7 +74,7 @@ export const GROUP_TYPES_COLORS = Object.freeze({
   [CommandGroup.HyperLogLog]: 'var(--groupHyperLolLogColor)',
 })
 
-export type GroupTypesColors = keyof (typeof GROUP_TYPES_COLORS)
+export type GroupTypesColors = keyof typeof GROUP_TYPES_COLORS
 
 export type KeyTypesActions = {
   [key: string]: {
@@ -91,57 +90,25 @@ export type KeyTypesActions = {
   }
 }
 
-export const KEY_TYPES_ACTIONS: KeyTypesActions = Object.freeze({
-  [KeyTypes.Hash]: {
-    addItems: {
-      name: 'Add Fields',
-    },
-  },
-  [KeyTypes.List]: {
-    addItems: {
-      name: 'Add Element',
-    },
-    removeItems: {
-      name: 'Remove Elements',
-    },
-  },
-  [KeyTypes.Set]: {
-    addItems: {
-      name: 'Add Members',
-    },
-  },
-  [KeyTypes.ZSet]: {
-    addItems: {
-      name: 'Add Members',
-    },
-  },
-  [KeyTypes.String]: {
-    editItem: {
-      name: 'Edit Value',
-    },
-  },
-  [KeyTypes.ReJSON]: {}
-})
-
 export const STREAM_ADD_GROUP_VIEW_TYPES = [
   StreamViewType.Groups,
   StreamViewType.Consumers,
-  StreamViewType.Messages
+  StreamViewType.Messages,
 ]
 
 export const STREAM_ADD_ACTION = Object.freeze({
   [StreamViewType.Data]: {
-    name: 'New Entry'
+    name: 'New Entry',
   },
   [StreamViewType.Groups]: {
-    name: 'New Group'
+    name: 'New Group',
   },
   [StreamViewType.Consumers]: {
-    name: 'New Group'
+    name: 'New Group',
   },
   [StreamViewType.Messages]: {
-    name: 'New Group'
-  }
+    name: 'New Group',
+  },
 })
 
 export enum SortOrder {
@@ -156,7 +123,8 @@ export interface LengthNamingByType {
 export const LENGTH_NAMING_BY_TYPE: LengthNamingByType = Object.freeze({
   [ModulesKeyTypes.Graph]: 'Nodes',
   [ModulesKeyTypes.TimeSeries]: 'Samples',
-  [KeyTypes.Stream]: 'Entries'
+  [KeyTypes.Stream]: 'Entries',
+  [KeyTypes.ReJSON]: 'Top-level values',
 })
 
 export interface ModulesKeyTypesNames {
@@ -179,7 +147,12 @@ export enum KeyValueFormat {
   JAVA = 'Java serialized',
   Protobuf = 'Protobuf',
   Pickle = 'Pickle',
+  Vector32Bit = 'Vector 32-bit',
+  Vector64Bit = 'Vector 64-bit',
+  DateTime = 'DateTime',
 }
+
+export const DATETIME_FORMATTER_DEFAULT = 'HH:mm:ss d MMM yyyy'
 
 export enum KeyValueCompressor {
   GZIP = 'GZIP',
@@ -213,9 +186,48 @@ export const ENDPOINT_BASED_ON_KEY_TYPE = Object.freeze({
   [KeyTypes.Stream]: ApiEndpoints.STREAMS,
 })
 
-export type EndpointBasedOnKeyType = keyof (typeof ENDPOINT_BASED_ON_KEY_TYPE)
+export type EndpointBasedOnKeyType = keyof typeof ENDPOINT_BASED_ON_KEY_TYPE
 
 export enum SearchHistoryMode {
   Pattern = 'pattern',
-  Redisearch = 'redisearch'
+  Redisearch = 'redisearch',
+}
+
+export const ENTER = 'Enter'
+export const SPACE = ' '
+export const ESCAPE = 'Escape'
+export const TAB = 'Tab'
+export const BACKSPACE = 'Backspace'
+export const F2 = 'F2'
+
+export const ALT = 'Alt'
+export const SHIFT = 'Shift'
+export const CTRL = 'Control'
+export const META = 'Meta' // Windows, Command, Option
+
+export const ARROW_DOWN = 'ArrowDown'
+export const ARROW_UP = 'ArrowUp'
+export const ARROW_LEFT = 'ArrowLeft'
+export const ARROW_RIGHT = 'ArrowRight'
+
+export const PAGE_UP = 'PageUp'
+export const PAGE_DOWN = 'PageDown'
+export const END = 'End'
+export const HOME = 'Home'
+
+export enum KeyboardKeys {
+  ENTER = 'Enter',
+  SPACE = ' ',
+  ESCAPE = 'Escape',
+  TAB = 'Tab',
+  BACKSPACE = 'Backspace',
+  F2 = 'F2',
+  ARROW_DOWN = 'ArrowDown',
+  ARROW_UP = 'ArrowUp',
+  ARROW_LEFT = 'ArrowLeft',
+  ARROW_RIGHT = 'ArrowRight',
+  PAGE_UP = 'PageUp',
+  PAGE_DOWN = 'PageDown',
+  END = 'End',
+  HOME = 'Home',
 }

@@ -1,12 +1,8 @@
-@import "@elastic/eui/src/global_styling/mixins/helpers";
-@import "@elastic/eui/src/components/table/mixins";
-@import "@elastic/eui/src/global_styling/index";
-
 $headerHeight: 44px;
 $footerHeight: 38px;
 
 .customScroll {
-  @include euiScrollBar;
+  @include eui.scrollBar;
 }
 
 .grid {
@@ -17,15 +13,10 @@ $footerHeight: 38px;
   overflow-y: hidden !important;
 }
 
-.progress {
-  z-index: 2;
-}
-
 .container {
   position: relative;
   height: 100%;
   width: 100%;
-  padding-bottom: $footerHeight;
 
   &.isResizing {
     user-select: none;
@@ -38,9 +29,28 @@ $footerHeight: 38px;
 }
 
 .table {
-  @include euiScrollBar;
+  @include eui.scrollBar;
   overflow-x: auto;
   overflow-y: hidden;
+
+  &.autoHeight {
+    max-height: 100% !important;
+    height: auto !important;
+
+    display: flex;
+    flex-direction: column;
+
+    :global {
+      .ReactVirtualized__Table__headerRow {
+        flex-shrink: 0;
+      }
+
+      .ReactVirtualized__Table__Grid {
+        flex-grow: 1;
+        height: auto !important;
+      }
+    }
+  }
 
   :global {
     .ReactVirtualized__Table__headerRow {
@@ -56,6 +66,12 @@ $footerHeight: 38px;
 
   .tableRowColumn {
     margin: 0 !important;
+
+    &:global(.noPadding) {
+      .tableRowCell {
+        padding: 0 !important;
+      }
+    }
   }
 
   .tableRowCell {
@@ -86,9 +102,6 @@ $footerHeight: 38px;
   :global(.table-row-selected) {
     background: var(--browserComponentActive) !important;
 
-    * {
-      color: var(--euiColorFullShade) !important;
-    }
 
     & > div:first-of-type {
       border-left: 3px solid transparent;
@@ -163,38 +176,44 @@ $footerHeight: 38px;
 :global(.key-details-table) {
   height: calc(100% - 94px);
   position: relative;
-  &:global(.footerOpened) {
-    :global(.ReactVirtualized__Table__Grid) {
-      padding-bottom: 254px;
-      overflow-y: auto !important;
-    }
-    &:global(.footerOpened--short) {
-      :global(.ReactVirtualized__Table__Grid) {
-        padding-bottom: 134px;
-        overflow-y: auto !important;
-      }
-    }
-  }
+
   :global(.ReactVirtualized__Table__row) {
     font-size: 13px;
     align-items: normal;
   }
+
   :global(.ReactVirtualized__Table__headerRow) {
-    border: 1px solid var(--tableLightestBorderColor) !important;
+    border: 1px solid var(--separatorColorLight) !important;
   }
+
   :global(.ReactVirtualized__Table__rowColumn) {
     overflow: visible !important;
+
+    &:global(.actions.singleAction) {
+      .tableRowCell {
+        padding: 4px 8px !important;
+      }
+    }
   }
 
   :global(.ReactVirtualized__Table__Grid) {
-    border: 1px solid var(--tableDarkestBorderColor);
+    border: 1px solid var(--separatorColor);
     border-top: none;
   }
 
   &:not(&:global(.set-members-container)) {
     .tableRow {
-      & > div:first-of-type {
-        border-right: 1px solid var(--tableDarkestBorderColor);
+      & > div:not(:last-of-type) {
+        border-right: 1px solid var(--separatorColor);
+      }
+
+      :global(.ReactVirtualized__Table__headerColumn) {
+        border-right-color: var(--separatorColorLight) !important;
+
+        &:last-child {
+          // fix border alignment, need to investigate why this happens
+          margin-left: -2px !important;
+        }
       }
     }
   }
@@ -203,9 +222,19 @@ $footerHeight: 38px;
     padding: 18px 4px 18px 20px;
   }
 
+  .tableRowColumn {
+    min-height: 100%;
+  }
+
   .tableRowCell {
     padding: 8px 6px 8px 20px !important;
     min-height: 42px;
+
+    :global(.innerCellAsCell) {
+      display: flex;
+      max-width: 100%;
+      padding: 8px 6px 8px 20px !important;
+    }
   }
 
   .tableFooter {
@@ -214,15 +243,12 @@ $footerHeight: 38px;
 
   :global {
     .value-table-actions {
-      margin-right: 5px;
-
       .editFieldBtn {
         margin-right: 10px;
       }
     }
 
     .value-table-separate-border {
-      border-right-color: var(--tableLightestBorderColor) !important;
       box-sizing: content-box;
     }
 

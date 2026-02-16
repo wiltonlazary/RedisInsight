@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LogFileProvider } from 'src/modules/profiler/providers/log-file.provider';
 import {
   mockDatabaseService,
-  mockLogFile, mockLogFileProvider, mockMonitorSettings,
+  mockLogFile,
+  mockLogFileProvider,
+  mockMonitorSettings,
+  mockSessionMetadata,
   mockSocket,
   MockType,
 } from 'src/__mocks__';
@@ -38,6 +41,7 @@ describe('ProfilerClientProvider', () => {
 
   it('getOrCreateClient', async () => {
     await service.getOrCreateClient(
+      mockSessionMetadata,
       mockLogFile.instanceId,
       mockSocket,
       null,
@@ -48,6 +52,7 @@ describe('ProfilerClientProvider', () => {
     expect(logFileProvider.getOrCreate).not.toHaveBeenCalled();
 
     await service.getOrCreateClient(
+      mockSessionMetadata,
       mockLogFile.instanceId,
       { ...mockSocket, id: '2' },
       mockMonitorSettings,
@@ -60,6 +65,7 @@ describe('ProfilerClientProvider', () => {
 
   it('getClient', async () => {
     const profilerClient = await service.getOrCreateClient(
+      mockSessionMetadata,
       mockLogFile.instanceId,
       mockSocket,
       null,

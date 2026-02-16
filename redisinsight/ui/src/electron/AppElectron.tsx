@@ -1,11 +1,16 @@
 import React from 'react'
 import App from 'uiSrc/App'
-import { ConfigElectron } from './components'
+import Router from 'uiSrc/RouterElectron'
+import { ConfigElectron, ConfigOAuth, ConfigAzureAuth } from './components'
 
 const AppElectron = () => (
-  <App>
-    <ConfigElectron />
-  </App>
+  <Router>
+    <App>
+      <ConfigElectron />
+      <ConfigOAuth />
+      <ConfigAzureAuth />
+    </App>
+  </Router>
 )
 
 export default AppElectron

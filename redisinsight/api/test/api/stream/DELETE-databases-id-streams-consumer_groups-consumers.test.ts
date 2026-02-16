@@ -1,31 +1,38 @@
 import {
   expect,
   describe,
-  it,
   before,
   deps,
   Joi,
   requirements,
   generateInvalidDataTestCases,
   validateInvalidDataTestCase,
-  validateApiCall, getMainCheckFn
+  getMainCheckFn,
 } from '../deps';
 const { server, request, constants, rte } = deps;
 
 // endpoint to test
 const endpoint = (instanceId = constants.TEST_INSTANCE_ID) =>
-  request(server).delete(`/${constants.API.DATABASES}/${instanceId}/streams/consumer-groups/consumers`);
+  request(server).delete(
+    `/${constants.API.DATABASES}/${instanceId}/streams/consumer-groups/consumers`,
+  );
 
 const dataSchema = Joi.object({
   keyName: Joi.string().allow('').required(),
   groupName: Joi.string().required().messages({
     'any.required': '{#label} should not be empty',
   }),
-  consumerNames: Joi.array().items(Joi.string().required().label('consumerNames').messages({
-    'any.required': '{#label} should not be empty',
-  })).min(1).required().messages({
-    'array.sparse': 'each value in consumerNames should not be empty',
-  }),
+  consumerNames: Joi.array()
+    .items(
+      Joi.string().required().label('consumerNames').messages({
+        'any.required': '{#label} should not be empty',
+      }),
+    )
+    .min(1)
+    .required()
+    .messages({
+      'array.sparse': 'each value in consumerNames should not be empty',
+    }),
 }).strict();
 
 const validInputData = {
@@ -33,7 +40,6 @@ const validInputData = {
   groupName: constants.TEST_STREAM_GROUP_1,
   consumerNames: [constants.TEST_STREAM_GROUP_1],
 };
-
 
 const mainCheckFn = getMainCheckFn(endpoint);
 
@@ -142,11 +148,19 @@ describe('DELETE /databases/:instanceId/streams/consumer-groups/consumers', () =
             consumerNames: [constants.TEST_STREAM_CONSUMER_1],
           },
           before: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(2);
           },
           after: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(1);
           },
         },
@@ -155,14 +169,25 @@ describe('DELETE /databases/:instanceId/streams/consumer-groups/consumers', () =
           data: {
             keyName: constants.TEST_STREAM_KEY_1,
             groupName: constants.TEST_STREAM_GROUP_1,
-            consumerNames: [constants.TEST_STREAM_CONSUMER_1, constants.TEST_STREAM_CONSUMER_2],
+            consumerNames: [
+              constants.TEST_STREAM_CONSUMER_1,
+              constants.TEST_STREAM_CONSUMER_2,
+            ],
           },
           before: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(2);
           },
           after: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(0);
           },
         },
@@ -171,14 +196,26 @@ describe('DELETE /databases/:instanceId/streams/consumer-groups/consumers', () =
           data: {
             keyName: constants.TEST_STREAM_KEY_1,
             groupName: constants.TEST_STREAM_GROUP_1,
-            consumerNames: [constants.TEST_STREAM_CONSUMER_1, constants.getRandomString(), constants.getRandomString()],
+            consumerNames: [
+              constants.TEST_STREAM_CONSUMER_1,
+              constants.getRandomString(),
+              constants.getRandomString(),
+            ],
           },
           before: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(2);
           },
           after: async () => {
-            const consumers = await rte.data.sendCommand('xinfo', ['consumers', constants.TEST_STREAM_KEY_1, constants.TEST_STREAM_GROUP_1]);
+            const consumers = await rte.data.sendCommand('xinfo', [
+              'consumers',
+              constants.TEST_STREAM_KEY_1,
+              constants.TEST_STREAM_GROUP_1,
+            ]);
             expect(consumers.length).to.eq(1);
           },
         },
@@ -261,7 +298,7 @@ describe('DELETE /databases/:instanceId/streams/consumer-groups/consumers', () =
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -exists')
+          before: () => rte.data.setAclUserRules('~* +@all -exists'),
         },
         {
           name: 'Should throw error if no permissions for "xgroup)" command',
@@ -274,7 +311,7 @@ describe('DELETE /databases/:instanceId/streams/consumer-groups/consumers', () =
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -xgroup')
+          before: () => rte.data.setAclUserRules('~* +@all -xgroup'),
         },
       ].map(mainCheckFn);
     });

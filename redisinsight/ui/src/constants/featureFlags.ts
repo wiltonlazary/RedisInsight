@@ -1,0 +1,17 @@
+export enum FeatureFlags {
+  insightsRecommendations = 'insightsRecommendations',
+  cloudSso = 'cloudSso',
+  cloudSsoRecommendedSettings = 'cloudSsoRecommendedSettings',
+  databaseChat = 'databaseChat',
+  documentationChat = 'documentationChat',
+  envDependent = 'envDependent',
+  rdi = 'redisDataIntegration',
+  hashFieldExpiration = 'hashFieldExpiration',
+  enhancedCloudUI = 'enhancedCloudUI',
+  cloudAds = 'cloudAds',
+  databaseManagement = 'databaseManagement',
+  vectorSearch = 'vectorSearch',
+  devVectorSearch = 'dev-vectorSearch',
+  databasesListV2 = 'databasesListV2',
+  azureEntraId = 'dev-azureEntraId',
+}

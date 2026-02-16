@@ -1,10 +1,16 @@
 import React from 'react'
-import { EuiBadge, EuiButtonIcon, EuiText, EuiTextColor } from '@elastic/eui'
 
 import { GroupBadge } from 'uiSrc/components'
 import { CommandGroup } from 'uiSrc/constants'
 
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { ArrowLeftIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiBadge } from 'uiSrc/components/base/display/badge/RiBadge'
+import { Row } from 'uiSrc/components/base/layout/flex'
+
 import styles from './styles.module.scss'
+import { HorizontalSpacer } from 'uiSrc/components/base/layout'
 
 export interface Props {
   args: string
@@ -14,23 +20,43 @@ export interface Props {
 }
 
 const CHCommandInfo = (props: Props) => {
-  const { args = '', group = CommandGroup.Generic, complexity = '', onBackClick } = props
+  const {
+    args = '',
+    group = CommandGroup.Generic,
+    complexity = '',
+    onBackClick,
+  } = props
 
   return (
-    <div className={styles.container} data-testid="cli-helper-title">
-      <EuiButtonIcon iconType="sortLeft" onClick={onBackClick} data-testid="cli-helper-back-to-list-btn" style={{ marginRight: '4px' }} />
-      <GroupBadge type={group} className={styles.groupBadge} />
-      <EuiTextColor className={styles.title} color="subdued" data-testid="cli-helper-title-args">
+    <Row
+      align="center"
+      className={styles.container}
+      data-testid="cli-helper-title"
+    >
+      <IconButton
+        icon={ArrowLeftIcon}
+        onClick={onBackClick}
+        data-testid="cli-helper-back-to-list-btn"
+        style={{ marginRight: '4px' }}
+      />
+      <GroupBadge type={group} />
+      <HorizontalSpacer size="s" />
+      <Text
+        data-testid="cli-helper-title-args"
+        variant="semiBold"
+        color="primary"
+      >
         {args}
-      </EuiTextColor>
+      </Text>
       {complexity && (
-        <EuiBadge className={styles.badge} data-testid="cli-helper-complexity-short">
-          <EuiText style={{ color: 'white' }} className="text-capitalize" size="xs">
-            {complexity}
-          </EuiText>
-        </EuiBadge>
+        <RiBadge
+          label={complexity}
+          variant="light"
+          className={styles.badge}
+          data-testid="cli-helper-complexity-short"
+        />
       )}
-    </div>
+    </Row>
   )
 }
 

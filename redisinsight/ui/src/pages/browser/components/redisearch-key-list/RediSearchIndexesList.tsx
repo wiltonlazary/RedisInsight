@@ -1,10 +1,3 @@
-import {
-  EuiButtonEmpty,
-  EuiOutsideClickDetector,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-} from '@elastic/eui'
-import cx from 'classnames'
 import React, { useEffect, useState } from 'react'
 import { isString } from 'lodash'
 import { useDispatch, useSelector } from 'react-redux'
@@ -18,14 +11,35 @@ import {
 } from 'uiSrc/slices/browser/redisearch'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import { KeyViewType, SearchMode } from 'uiSrc/slices/interfaces/keys'
-import { changeSearchMode, fetchKeys, keysSelector } from 'uiSrc/slices/browser/keys'
+import {
+  changeSearchMode,
+  fetchKeys,
+  keysSelector,
+} from 'uiSrc/slices/browser/keys'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { bufferToString, formatLongName, isRedisearchAvailable, Nullable } from 'uiSrc/utils'
-import { SCAN_COUNT_DEFAULT, SCAN_TREE_COUNT_DEFAULT } from 'uiSrc/constants/api'
+import {
+  bufferToString,
+  formatLongName,
+  isRedisearchAvailable,
+  Nullable,
+} from 'uiSrc/utils'
+import {
+  SCAN_COUNT_DEFAULT,
+  SCAN_TREE_COUNT_DEFAULT,
+} from 'uiSrc/constants/api'
 import { localStorageService } from 'uiSrc/services'
 import { BrowserStorageItem } from 'uiSrc/constants'
 
-import styles from './styles.module.scss'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { PlusIcon, ResetIcon } from 'uiSrc/components/base/icons'
+import { RiTooltip } from 'uiSrc/components'
+import {
+  RiSelect,
+  SelectValueRenderParams,
+} from 'uiSrc/components/base/forms/select/RiSelect'
+import { Text } from 'uiSrc/components/base/text'
+import { Row } from 'uiSrc/components/base/layout/flex'
+import * as S from './RediSearchIndexesList.styles'
 
 export const CREATE = 'create'
 
@@ -39,15 +53,20 @@ const RediSearchIndexesList = (props: Props) => {
   const { viewType, searchMode } = useSelector(keysSelector)
   const { selectedIndex = '' } = useSelector(redisearchSelector)
   const { data: list = [], loading } = useSelector(redisearchListSelector)
-  const { id: instanceId, modules, loading: instanceLoading } = useSelector(connectedInstanceSelector)
+  const {
+    id: instanceId,
+    modules,
+    host: instanceHost,
+  } = useSelector(connectedInstanceSelector)
 
-  const [isSelectOpen, setIsSelectOpen] = useState<boolean>(false)
-  const [index, setIndex] = useState<Nullable<string>>(JSON.stringify(selectedIndex))
+  const [index, setIndex] = useState<Nullable<string>>(
+    JSON.stringify(selectedIndex),
+  )
 
   const dispatch = useDispatch()
 
   useEffect(() => {
-    if (instanceLoading) return
+    if (!instanceHost) return
 
     const moduleExists = isRedisearchAvailable(modules)
     if (moduleExists) {
@@ -55,38 +74,56 @@ const RediSearchIndexesList = (props: Props) => {
     } else {
       dispatch(changeSearchMode(SearchMode.Pattern))
 
-      localStorageService.set(BrowserStorageItem.browserSearchMode, SearchMode.Pattern)
+      localStorageService.set(
+        BrowserStorageItem.browserSearchMode,
+        SearchMode.Pattern,
+      )
     }
-  }, [instanceLoading, modules])
+  }, [instanceHost, modules])
 
   useEffect(() => {
     setIndex(JSON.stringify(selectedIndex || ''))
   }, [selectedIndex])
 
-  useEffect(() =>
-    () => {
+  useEffect(
+    () => () => {
       redisearchController?.abort()
-    }, [])
-
-  const options: EuiSuperSelectOption<string>[] = list.map(
-    (index) => {
-      const value = formatLongName(bufferToString(index))
-
-      return {
-        value: JSON.stringify(index),
-        inputDisplay: value,
-        dropdownDisplay: value,
-        'data-test-subj': `mode-option-type-${value}`,
-      }
-    }
+    },
+    [],
   )
 
-  options.unshift({
+  const options = list.map((index) => {
+    const value = formatLongName(bufferToString(index), 100, 10)
+
+    return {
+      value: JSON.stringify(index),
+      inputDisplay: (
+        <Text data-test-subj={`mode-option-type-${value}`}>{value}</Text>
+      ),
+      dropdownDisplay: (
+        <Text color="primary" data-test-subj={`mode-option-type-${value}`}>
+          {value}
+        </Text>
+      ),
+    }
+  })
+
+  options.push({
     value: JSON.stringify(CREATE),
-    inputDisplay: CREATE,
+    inputDisplay: <span>CREATE</span>,
     dropdownDisplay: (
-      <div className={styles.createIndexBtn} data-testid="create-index-btn">Create Index</div>
-    )
+      <Row align="center" justify="start" gap="xs">
+        <PlusIcon size="M" />
+        <Text
+          size="M"
+          variant="semiBold"
+          color="primary"
+          data-testid="create-index-btn"
+        >
+          Create Index
+        </Text>
+      </Row>
+    ),
   })
 
   const onChangeIndex = (initValue: string) => {
@@ -94,28 +131,31 @@ const RediSearchIndexesList = (props: Props) => {
 
     if (isString(value) && value === CREATE) {
       onCreateIndex(true)
-      setIsSelectOpen(false)
 
       sendEventTelemetry({
         event: TelemetryEvent.SEARCH_INDEX_ADD_BUTTON_CLICKED,
         eventData: {
           databaseId: instanceId,
           view: viewType,
-        }
+        },
       })
 
       return
     }
 
     setIndex(initValue)
-    setIsSelectOpen(false)
 
     dispatch(setSelectedIndex(value))
-    dispatch(fetchKeys({
-      searchMode,
-      cursor: '0',
-      count: viewType === KeyViewType.Browser ? SCAN_COUNT_DEFAULT : SCAN_TREE_COUNT_DEFAULT,
-    }))
+    dispatch(
+      fetchKeys({
+        searchMode,
+        cursor: '0',
+        count:
+          viewType === KeyViewType.Browser
+            ? SCAN_COUNT_DEFAULT
+            : SCAN_TREE_COUNT_DEFAULT,
+      }),
+    )
 
     sendEventTelemetry({
       event: TelemetryEvent.SEARCH_INDEX_CHANGED,
@@ -123,37 +163,58 @@ const RediSearchIndexesList = (props: Props) => {
         databaseId: instanceId,
         totalNumberOfIndexes: list.length,
         view: viewType,
-      }
+      },
     })
   }
 
+  const handleRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    dispatch(fetchRedisearchListAction())
+  }
+
+  const selectValueRender = ({
+    option,
+    isOptionValue,
+  }: SelectValueRenderParams): JSX.Element => {
+    if (isOptionValue) {
+      return option.dropdownDisplay as JSX.Element
+    }
+    return option.inputDisplay as JSX.Element
+  }
+
   return (
-    <EuiOutsideClickDetector
-      onOutsideClick={() => setIsSelectOpen(false)}
-    >
-      <div className={cx(styles.container)}>
-        <EuiSuperSelect
-          fullWidth
-          itemClassName={cx('withColorDefinition', styles.searchMode)}
-          disabled={loading}
-          isLoading={loading}
-          options={options}
-          isOpen={isSelectOpen}
-          valueOfSelected={index || ''}
-          onChange={onChangeIndex}
-          data-testid="select-search-mode"
-        />
-        {!selectedIndex && (
-          <EuiButtonEmpty
-            className={styles.placeholder}
-            onClick={() => setIsSelectOpen(true)}
+    <S.Container>
+      <RiSelect.Compose
+        disabled={loading}
+        options={options}
+        value={index || ''}
+        onChange={onChangeIndex}
+      >
+        <RiSelect.Trigger.Compose data-testid="select-search-mode">
+          <RiSelect.Trigger.Value
+            placeholder="Select Index"
             data-testid="select-index-placeholder"
-          >
-            Select Index
-          </EuiButtonEmpty>
-        )}
-      </div>
-    </EuiOutsideClickDetector>
+            valueRender={selectValueRender}
+          />
+          <RiSelect.Trigger.LoadingIndicator loading={loading} />
+          <RiSelect.Trigger.Arrow data-testid="select-index-arrow" />
+          <div style={{ zIndex: 6 }}>
+            <RiTooltip content="Refresh Indexes">
+              <IconButton
+                size="M"
+                icon={ResetIcon}
+                disabled={loading}
+                onClick={handleRefresh}
+                aria-label="refresh indexes list"
+                data-testid="refresh-indexes-btn"
+                onPointerDown={(e) => e.stopPropagation()}
+              />
+            </RiTooltip>
+          </div>
+        </RiSelect.Trigger.Compose>
+        <RiSelect.Content optionValueRender={selectValueRender} />
+      </RiSelect.Compose>
+    </S.Container>
   )
 }
 

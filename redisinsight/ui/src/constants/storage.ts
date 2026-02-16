@@ -1,8 +1,11 @@
 enum BrowserStorageItem {
+  homePage = 'homePage',
   instancesCount = 'instancesCount',
   instancesSorting = 'instancesSorting',
+  rdiInstancesSorting = 'rdiInstancesSorting',
   theme = 'theme',
   browserViewType = 'browserViewType',
+  browserShownColumns = 'browserShownColumns',
   browserSearchMode = 'browserSearchMode',
   cliClientUuid = 'cliClientUuid',
   cliResizableContainer = 'cliResizableContainer',
@@ -11,23 +14,53 @@ enum BrowserStorageItem {
   segmentAnonymousId = 'ajs_anonymous_id',
   wbClientUuid = 'wbClientUuid',
   wbInputHistory = 'wbInputHistory',
-  isEnablementAreaMinimized = 'isEnablementAreaMinimized',
+  wbCommandsHistory = 'command_execution',
   treeViewDelimiter = 'treeViewDelimiter',
+  treeViewSort = 'treeViewSort',
   autoRefreshRate = 'autoRefreshRate',
-  bulkActionId = 'bulkActionId',
+  bulkActionDeleteId = 'bulkActionDeleteId',
   dbConfig = 'dbConfig_',
   RunQueryMode = 'RunQueryMode',
+  SQRunQueryMode = 'SQRunQueryMode',
   wbCleanUp = 'wbCleanUp',
   viewFormat = 'viewFormat',
   wbGroupMode = 'wbGroupMode',
   keyDetailSizes = 'keyDetailSizes',
   featuresHighlighting = 'featuresHighlighting',
   dbIndex = 'dbIndex_',
-  onboardingStep = 'onboardingStep'
+  onboardingStep = 'onboardingStep',
+  recommendationsViewed = 'recommendationsViewed',
+  showHiddenRecommendations = 'showHiddenRecommendations',
+  OAuthJobId = 'OAuthJobId',
+  OAuthAgreement = 'OAuthAgreement',
+  insightsPanel = 'insightsPanel',
+  sidePanel = 'sidePanel',
+  capability = 'capability',
+  aiChatSession = 'aiChatSession',
+  selectedAiChat = 'selectedAiChat',
+  generalChatAgreements = 'generalChatAgreements',
+  vectorSearchOnboarding = 'vectorSearchOnboarding',
+  tablePaginationState = 'tablePaginationState',
 }
 
 export default BrowserStorageItem
 
 export enum ConfigDBStorageItem {
-  slowLogDurationUnit = 'slowLogDurationUnit'
+  slowLogDurationUnit = 'slowLogDurationUnit',
+  notShowConfirmationRunTutorial = 'notShowConfirmationRunTutorial',
+}
+
+export enum CapabilityStorageItem {
+  source = 'source',
+  tutorialPopoverShown = 'tutorialPopoverShown',
+}
+
+export enum AppStorageItem {
+  returnUrl = 'returnUrl',
+}
+
+export enum TableStorageKey {
+  dbList = 'dbList',
+  rdiList = 'rdiList',
+  pubSubList = 'pubSubList',
 }

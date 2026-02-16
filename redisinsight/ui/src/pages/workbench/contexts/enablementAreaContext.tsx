@@ -1,14 +1,14 @@
 import React from 'react'
+import { CodeButtonParams } from 'uiSrc/constants/workbench'
 import { Nullable } from 'uiSrc/utils'
-import { CodeButtonParams, ExecuteButtonMode } from 'uiSrc/pages/workbench/components/enablement-area/interfaces'
 
 interface IContext {
   setScript: (
     script: string,
-    execute?: { mode?: ExecuteButtonMode, params?: CodeButtonParams },
-    file?: { path?: string, name?: string }
+    params?: CodeButtonParams,
+    onFinish?: () => void,
   ) => void
-  openPage: (page: IInternalPage, manifestPath?: string) => void
+  openPage: (page: IInternalPage, fromUser?: boolean) => void
   isCodeBtnDisabled?: boolean
 }
 export interface IInternalPage {
@@ -19,7 +19,7 @@ export interface IInternalPage {
 export const defaultValue = {
   setScript: (script: string) => script,
   openPage: (page: IInternalPage) => page,
-  isCodeBtnDisabled: false
+  isCodeBtnDisabled: false,
 }
 const EnablementAreaContext = React.createContext<IContext>(defaultValue)
 export const EnablementAreaProvider = EnablementAreaContext.Provider

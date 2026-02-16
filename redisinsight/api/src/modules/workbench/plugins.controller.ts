@@ -41,7 +41,7 @@ export class PluginsController {
   @ApiRedisParams()
   async sendCommand(
     @WorkbenchClientMetadata() clientMetadata: ClientMetadata,
-      @Body() dto: CreateCommandExecutionDto,
+    @Body() dto: CreateCommandExecutionDto,
   ): Promise<PluginCommandExecution> {
     return this.service.sendCommand(clientMetadata, dto);
   }
@@ -74,11 +74,17 @@ export class PluginsController {
   @UseInterceptors(ClassSerializerInterceptor)
   @ApiRedisParams()
   async saveState(
+    @WorkbenchClientMetadata() clientMetadata: ClientMetadata,
     @Param('visualizationId') visualizationId: string,
-      @Param('id') commandExecutionId: string,
-      @Body() dto: CreatePluginStateDto,
+    @Param('id') commandExecutionId: string,
+    @Body() dto: CreatePluginStateDto,
   ): Promise<void> {
-    await this.service.saveState(visualizationId, commandExecutionId, dto);
+    await this.service.saveState(
+      clientMetadata,
+      visualizationId,
+      commandExecutionId,
+      dto,
+    );
   }
 
   @ApiEndpoint({
@@ -96,9 +102,14 @@ export class PluginsController {
   @UseInterceptors(ClassSerializerInterceptor)
   @ApiRedisParams()
   async getState(
+    @WorkbenchClientMetadata() clientMetadata: ClientMetadata,
     @Param('visualizationId') visualizationId: string,
-      @Param('id') commandExecutionId: string,
+    @Param('id') commandExecutionId: string,
   ): Promise<PluginState> {
-    return this.service.getState(visualizationId, commandExecutionId);
+    return this.service.getState(
+      clientMetadata,
+      visualizationId,
+      commandExecutionId,
+    );
   }
 }

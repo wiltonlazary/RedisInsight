@@ -1,7 +1,6 @@
-import { EuiIcon, EuiProgress, EuiResizeObserver, EuiText, } from '@elastic/eui'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import cx from 'classnames'
 import { findIndex, isNumber, sumBy, xor } from 'lodash'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CellMeasurer,
   CellMeasurerCache,
@@ -18,7 +17,19 @@ import { SortOrder } from 'uiSrc/constants'
 import { SCAN_COUNT_DEFAULT } from 'uiSrc/constants/api'
 
 import { isEqualBuffers, Maybe, Nullable } from 'uiSrc/utils'
-import { ColumnWidthSizes, IColumnSearchState, IProps, IResizeEvent, ITableColumn, ResizableState } from './interfaces'
+
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { RIResizeObserver } from 'uiSrc/components/base/utils'
+import { ProgressBarLoader } from 'uiSrc/components/base/display'
+import {
+  ColumnWidthSizes,
+  IColumnSearchState,
+  IProps,
+  IResizeEvent,
+  ITableColumn,
+  ResizableState,
+} from './interfaces'
 import KeysSummary from '../keys-summary'
 
 import styles from './styles.module.scss'
@@ -28,6 +39,8 @@ const TABLE_OUTSIDE_WIDTH = 24
 
 const VirtualTable = (props: IProps) => {
   const {
+    autoHeight,
+    tableRef,
     selectable = false,
     expandable = false,
     headerHeight = 44,
@@ -63,21 +76,28 @@ const VirtualTable = (props: IProps) => {
       fixedWidth: true,
       minHeight: rowHeight,
     }),
-    onColResizeEnd
+    onColResizeEnd,
   } = props
   let selectTimer: number = 0
   const selectTimerDelay = 300
   let preventSelect = false
 
   const scrollTopRef = useRef<number>(0)
-  const resizeColRef = useRef<ResizableState>({ column: null, active: false, x: 0 })
+  const resizeColRef = useRef<ResizableState>({
+    column: null,
+    active: false,
+    x: 0,
+  })
 
-  const [selectedRowIndex, setSelectedRowIndex] = useState<Nullable<number>>(null)
+  const [selectedRowIndex, setSelectedRowIndex] =
+    useState<Nullable<number>>(null)
   const [search, setSearch] = useState<IColumnSearchState[]>([])
   const [width, setWidth] = useState<number>(100)
   const [height, setHeight] = useState<number>(100)
-  const [forceScrollTop, setForceScrollTop] = useState<Maybe<number>>(scrollTopProp)
-  const [columnWidthSizes, setColumnWidthSizes] = useState<Nullable<ColumnWidthSizes>>(null)
+  const [forceScrollTop, setForceScrollTop] =
+    useState<Maybe<number>>(scrollTopProp)
+  const [columnWidthSizes, setColumnWidthSizes] =
+    useState<Nullable<ColumnWidthSizes>>(null)
   const [isColResizing, setIsColResizing] = useState(false)
   const [, forceUpdate] = useState({})
 
@@ -85,7 +105,7 @@ const VirtualTable = (props: IProps) => {
 
   useEffect(() => {
     const searchableFields: ITableColumn[] = columns.filter(
-      (column: ITableColumn) => column.isSearchable
+      (column: ITableColumn) => column.isSearchable,
     )
     searchableFields.forEach((column) => {
       setSearch([
@@ -110,7 +130,7 @@ const VirtualTable = (props: IProps) => {
   }, [])
 
   useEffect(() => {
-    setMinWidthAllCols(sumBy(columns, ((col) => col?.minWidth || 0)))
+    setMinWidthAllCols(sumBy(columns, (col) => col?.minWidth || 0))
   }, [columns])
 
   useEffect(() => {
@@ -120,8 +140,14 @@ const VirtualTable = (props: IProps) => {
   }, [forceScrollTop])
 
   useEffect(() => {
-    const selectedRowIndex = selectedKey ? findIndex(items, ({ name }) => isEqualBuffers(name, selectedKey.name)) : null
-    setSelectedRowIndex(isNumber(selectedRowIndex) && selectedRowIndex > -1 ? selectedRowIndex : null)
+    const selectedRowIndex = selectedKey
+      ? findIndex(items, ({ name }) => isEqualBuffers(name, selectedKey.name))
+      : null
+    setSelectedRowIndex(
+      isNumber(selectedRowIndex) && selectedRowIndex > -1
+        ? selectedRowIndex
+        : null,
+    )
   }, [selectedKey, items])
 
   useEffect(() => {
@@ -134,18 +160,27 @@ const VirtualTable = (props: IProps) => {
     preventSelect = true
   }
 
-  const clearCache = () => setTimeout(() => {
-    cellCache.clearAll()
-    forceUpdate({})
-  }, 0)
+  const clearCache = () =>
+    setTimeout(() => {
+      cellCache.clearAll()
+      forceUpdate({})
+    }, 0)
 
-  const getWidthOfColumn = (colId: string, colWidth: number, width: number, isRelative = false) => {
+  const getWidthOfColumn = (
+    colId: string,
+    colWidth: number,
+    width: number,
+    isRelative = false,
+  ) => {
     let newColWidth = isRelative ? (colWidth / 100) * width : colWidth
 
     const currentColumn = columns.find((col) => col.id === colId)
-    const maxWidthFromTable = width - (minWidthAllCols - (currentColumn?.minWidth || 0)) - TABLE_OUTSIDE_WIDTH
+    const maxWidthFromTable =
+      width -
+      (minWidthAllCols - (currentColumn?.minWidth || 0)) -
+      TABLE_OUTSIDE_WIDTH
     const maxWidth = currentColumn?.maxWidth || maxWidthFromTable
-    const minWidth = (currentColumn?.minWidth || 60)
+    const minWidth = currentColumn?.minWidth || 60
 
     if (newColWidth > maxWidth) newColWidth = maxWidth
     if (newColWidth < minWidth) newColWidth = minWidth
@@ -153,7 +188,7 @@ const VirtualTable = (props: IProps) => {
     const newAbsWidth = Math.floor(newColWidth)
     return {
       abs: newAbsWidth,
-      relative: (newAbsWidth / width) * 100
+      relative: (newAbsWidth / width) * 100,
     }
   }
 
@@ -166,17 +201,26 @@ const VirtualTable = (props: IProps) => {
     }
 
     if (isRowSelectable && expandable) {
-      selectTimer = window.setTimeout(() => {
-        const textSelected = window.getSelection()?.toString()
-        if (!preventSelect && !textSelected) {
-          setExpandedRows(xor(expandedRows, [data.index]))
-          onRowToggleViewClick?.(expandedRows.indexOf(data.index) === -1, data.index)
+      selectTimer = window.setTimeout(
+        () => {
+          const textSelected = window.getSelection()?.toString()
+          if (!preventSelect && !textSelected) {
+            setExpandedRows(xor(expandedRows, [data.index]))
+            onRowToggleViewClick?.(
+              expandedRows.indexOf(data.index) === -1,
+              data.index,
+            )
 
-          clearCache()
-          setTimeout(() => { clearCache() }, 0)
-        }
-        preventSelect = false
-      }, selectTimerDelay, cellCache)
+            clearCache()
+            setTimeout(() => {
+              clearCache()
+            }, 0)
+          }
+          preventSelect = false
+        },
+        selectTimerDelay,
+        cellCache,
+      )
 
       if (data.event?.detail === 3) {
         clearSelectTimeout(selectTimer)
@@ -187,9 +231,12 @@ const VirtualTable = (props: IProps) => {
     }
   }
 
-  const onScroll = useCallback(({ scrollTop }: { scrollTop: number }) => {
-    scrollTopRef.current = scrollTop
-  }, [scrollTopRef])
+  const onScroll = useCallback(
+    ({ scrollTop }: { scrollTop: number }) => {
+      scrollTopRef.current = scrollTop
+    },
+    [scrollTopRef],
+  )
 
   const onResize = ({ height, width }: IResizeEvent): void => {
     setHeight(height)
@@ -202,14 +249,17 @@ const VirtualTable = (props: IProps) => {
         columns
           .filter((col) => col.isResizable)
           .reduce((prev, next) => {
-            const propAbsWidth = next.absoluteWidth && isNumber(next.absoluteWidth) ? next.absoluteWidth : 0
+            const propAbsWidth =
+              next.absoluteWidth && isNumber(next.absoluteWidth)
+                ? next.absoluteWidth
+                : 0
             return {
               ...prev,
               [next.id]: next.relativeWidth
                 ? getWidthOfColumn(next.id, next.relativeWidth, width, true)
-                : getWidthOfColumn(next.id, propAbsWidth, width)
+                : getWidthOfColumn(next.id, propAbsWidth, width),
             }
-          }, {})
+          }, {}),
       )
     }
 
@@ -218,7 +268,12 @@ const VirtualTable = (props: IProps) => {
         const newSizes: ColumnWidthSizes = {}
         // eslint-disable-next-line guard-for-in,no-restricted-syntax
         for (const col in colWidthSizesPrev) {
-          newSizes[col] = getWidthOfColumn(col, colWidthSizesPrev[col].relative, width, true)
+          newSizes[col] = getWidthOfColumn(
+            col,
+            colWidthSizesPrev[col].relative,
+            width,
+            true,
+          )
         }
         return newSizes
       })
@@ -235,10 +290,10 @@ const VirtualTable = (props: IProps) => {
         if (!prev) return null
 
         resizeColRef.current.x = e.clientX
-        return ({
+        return {
           ...prev,
-          [column]: getWidthOfColumn(column, prev[column].abs - diffX, width)
-        })
+          [column]: getWidthOfColumn(column, prev[column].abs - diffX, width),
+        }
       })
 
       cellCache?.clearAll()
@@ -249,7 +304,7 @@ const VirtualTable = (props: IProps) => {
     resizeColRef.current = {
       column: column.id,
       active: true,
-      x: e.clientX
+      x: e.clientX,
     }
     setIsColResizing(true)
   }
@@ -259,18 +314,20 @@ const VirtualTable = (props: IProps) => {
       resizeColRef.current = {
         active: false,
         column: null,
-        x: 0
+        x: 0,
       }
       setIsColResizing(false)
       cellCache?.clearAll()
 
       if (columnWidthSizes) {
         onColResizeEnd?.(
-          Object.keys(columnWidthSizes)
-            .reduce((prev, next) => ({
+          Object.keys(columnWidthSizes).reduce(
+            (prev, next) => ({
               ...prev,
-              [next]: columnWidthSizes[next].relative
-            }), {})
+              [next]: columnWidthSizes[next].relative,
+            }),
+            {},
+          ),
         )
       }
     }
@@ -278,7 +335,14 @@ const VirtualTable = (props: IProps) => {
 
   const checkIfRowSelectable = (rowData: any) => !!rowData
 
-  const cellRenderer = ({ cellData, columnIndex, rowData, rowIndex, parent, dataKey }: TableCellProps) => {
+  const cellRenderer = ({
+    cellData,
+    columnIndex,
+    rowData,
+    rowIndex,
+    parent,
+    dataKey,
+  }: TableCellProps) => {
     const column = columns[columnIndex]
     if (column.render) {
       return (
@@ -291,10 +355,18 @@ const VirtualTable = (props: IProps) => {
         >
           <div
             className={styles.tableRowCell}
-            style={{ justifyContent: column.alignment, wordBreak: 'break-word' }}
+            style={{
+              justifyContent: column.alignment,
+              wordBreak: 'break-word',
+            }}
             role="presentation"
           >
-            {column?.render?.(cellData, rowData, expandedRows.indexOf(rowIndex) !== -1, rowIndex)}
+            {column?.render?.(
+              cellData,
+              rowData,
+              expandedRows.indexOf(rowIndex) !== -1,
+              rowIndex,
+            )}
           </div>
         </CellMeasurer>
       )
@@ -307,25 +379,35 @@ const VirtualTable = (props: IProps) => {
         parent={parent}
         key={rowIndex + columnIndex + dataKey}
       >
-        <div className={styles.tableRowCell} style={{ justifyContent: column.alignment, whiteSpace: 'normal' }}>
-          <EuiText color="subdued" style={{ maxWidth: '100%' }}>
-            <div style={{ display: 'flex' }} className={column.truncateText ? 'truncateText' : ''}>
+        <div
+          className={styles.tableRowCell}
+          style={{ justifyContent: column.alignment, whiteSpace: 'normal' }}
+        >
+          <Text component="div" style={{ maxWidth: '100%' }}>
+            <div
+              style={{ display: 'flex' }}
+              className={column.truncateText ? 'truncateText' : ''}
+            >
               {cellData}
             </div>
-          </EuiText>
+          </Text>
         </div>
       </CellMeasurer>
     )
   }
 
   const changeSorting = (column: any) => {
-    if (!sortedColumn || !sortedColumn.column || sortedColumn.column !== column) {
+    if (
+      !sortedColumn ||
+      !sortedColumn.column ||
+      sortedColumn.column !== column
+    ) {
       onChangeSorting(column, SortOrder.DESC)
       return
     }
     onChangeSorting(
       column,
-      sortedColumn.order === SortOrder.DESC ? SortOrder.ASC : SortOrder.DESC
+      sortedColumn.order === SortOrder.DESC ? SortOrder.ASC : SortOrder.DESC,
     )
   }
 
@@ -339,7 +421,10 @@ const VirtualTable = (props: IProps) => {
         style={{ justifyContent: column.alignment, position: 'relative' }}
       >
         {column.isSortable && !searching && (
-          <div className={styles.headerCell} style={{ justifyContent: column.alignment }}>
+          <div
+            className={styles.headerCell}
+            style={{ justifyContent: column.alignment }}
+          >
             <button
               type="button"
               onClick={() => changeSorting(column.id)}
@@ -351,12 +436,17 @@ const VirtualTable = (props: IProps) => {
               data-testid="score-button"
               style={{ justifyContent: column.alignment }}
             >
-              <EuiText size="m" className={cellClass}><span>{column.label}</span></EuiText>
+              <Text size="m" className={cellClass} variant="semiBold">
+                <span>{column.label}</span>
+              </Text>
             </button>
           </div>
         )}
         {(!column.isSortable || (column.isSortable && searching)) && (
-          <div className={cx(styles.headerCell, cellClass, 'relative')} style={{ flex: '1' }}>
+          <div
+            className={cx(styles.headerCell, cellClass, 'relative')}
+            style={{ flex: '1' }}
+          >
             <div
               style={{
                 justifyContent: column.alignment,
@@ -364,7 +454,9 @@ const VirtualTable = (props: IProps) => {
                 flex: '1',
               }}
             >
-              <EuiText size="m" className={cellClass}><span>{column.label}</span></EuiText>
+              <Text size="m" className={cellClass} variant="semiBold">
+                <span>{column.label}</span>
+              </Text>
             </div>
             {column.isSearchable && searchRenderer(column)}
           </div>
@@ -380,9 +472,14 @@ const VirtualTable = (props: IProps) => {
               )}
               data-testid="header-sorting-button"
             >
-              <EuiIcon
+              <RiIcon
                 style={{ marginLeft: '4px' }}
-                type={sortedColumn?.order === SortOrder.DESC ? 'sortDown' : 'sortUp'}
+                size="S"
+                type={
+                  sortedColumn?.order === SortOrder.DESC
+                    ? 'ArrowDownIcon'
+                    : 'ArrowUpIcon'
+                }
               />
             </button>
           </div>
@@ -403,9 +500,9 @@ const VirtualTable = (props: IProps) => {
     <>
       {noItemsMessage && (
         <div className={styles.placeholder}>
-          <EuiText textAlign="center" grow color="subdued" size="m">
-            <div>{loading ? 'loading...' : noItemsMessage}</div>
-          </EuiText>
+          <Text textAlign="center" size="m">
+            {loading ? 'loading...' : noItemsMessage}
+          </Text>
         </div>
       )}
     </>
@@ -424,7 +521,10 @@ const VirtualTable = (props: IProps) => {
 
   const isRowLoaded = ({ index }: any) => !!items[index]
 
-  const handleColumnSearchVisibility = (columnId: string, isOpened: boolean) => {
+  const handleColumnSearchVisibility = (
+    columnId: string,
+    isOpened: boolean,
+  ) => {
     const newSearch = search.map((column) => {
       if (column.id === columnId) {
         return {
@@ -453,7 +553,9 @@ const VirtualTable = (props: IProps) => {
   }
 
   const searchRenderer = (column: ITableColumn) => {
-    const columnSearchState = search.find((columnState) => columnState.id === column.id)
+    const columnSearchState = search.find(
+      (columnState) => columnState.id === column.id,
+    )
     if (!columnSearchState) {
       return null
     }
@@ -476,18 +578,22 @@ const VirtualTable = (props: IProps) => {
         onApply={(value) => handleColumnSearchApply(column.id, value)}
         isOpen={columnSearchState.isOpened}
         prependSearchName={columnSearchState.prependSearchName}
-        handleOpenState={(isOpen) => handleColumnSearchVisibility(column.id, isOpen)}
+        handleOpenState={(isOpen) =>
+          handleColumnSearchVisibility(column.id, isOpen)
+        }
         searchValidation={columnSearchState.searchValidation}
       />
     )
   }
 
   return (
-    <EuiResizeObserver onResize={onResize}>
+    <RIResizeObserver onResize={onResize}>
       {(resizeRef) => (
         <div
           ref={resizeRef}
-          className={cx(styles.container, { [styles.isResizing]: isColResizing })}
+          className={cx(styles.container, {
+            [styles.isResizing]: isColResizing,
+          })}
           onWheel={onWheel}
           onMouseMove={onDragColumn}
           onMouseUp={onDragColumnEnd}
@@ -496,12 +602,10 @@ const VirtualTable = (props: IProps) => {
           data-testid="virtual-table-container"
         >
           {loading && !hideProgress && (
-            <EuiProgress
+            <ProgressBarLoader
+              absolute
               color="primary"
-              size="xs"
-              position="absolute"
-              className={styles.progress}
-              data-testid="progress-key-list"
+              data-testid="progress-key-table"
             />
           )}
           <InfiniteLoader
@@ -516,13 +620,21 @@ const VirtualTable = (props: IProps) => {
                 onRowClick={onRowSelect}
                 onRowDoubleClick={() => clearSelectTimeout()}
                 estimatedRowSize={rowHeight}
-                ref={registerChild}
+                ref={(ref) => {
+                  if (tableRef) {
+                    tableRef.current = ref
+                  }
+
+                  return registerChild(ref)
+                }}
                 headerHeight={headerHeight}
                 rowHeight={cellCache.rowHeight}
                 width={tableWidth > width ? tableWidth : width}
                 noRowsRenderer={noRowsRenderer}
                 height={height}
-                className={styles.table}
+                className={cx(styles.table, {
+                  [styles.autoHeight]: autoHeight,
+                })}
                 gridClassName={cx(styles.customScroll, styles.grid, {
                   [styles.disableScroll]: disableScroll,
                 })}
@@ -533,7 +645,8 @@ const VirtualTable = (props: IProps) => {
                       'table-row-selected': selectedRowIndex === index,
                       [styles.tableRowEven]: index % 2 === 0,
                     },
-                  ])}
+                  ])
+                }
                 headerClassName={styles.headerColumn}
                 rowCount={items.length}
                 rowGetter={({ index }) => items[index]}
@@ -551,19 +664,28 @@ const VirtualTable = (props: IProps) => {
                     maxWidth={column.maxWidth}
                     label={column.label}
                     dataKey={column.id}
-                    width={columnWidthSizes?.[column.id]?.abs || (
-                      column.absoluteWidth || column.relativeWidth ? column.relativeWidth ?? 0 : 20
-                    )}
-                    flexGrow={!column.absoluteWidth && !column.relativeWidth ? 1 : 0}
+                    width={
+                      columnWidthSizes?.[column.id]?.abs ||
+                      (column.absoluteWidth || column.relativeWidth
+                        ? (column.relativeWidth ?? 0)
+                        : 20)
+                    }
+                    flexGrow={
+                      !column.absoluteWidth && !column.relativeWidth ? 1 : 0
+                    }
                     headerRenderer={(headerProps) =>
                       headerRenderer({
                         ...headerProps,
                         columnIndex: index,
                         cellClass: column.headerCellClassName,
-                      })}
+                      })
+                    }
                     cellRenderer={cellRenderer}
                     headerClassName={column.headerClassName ?? ''}
-                    className={cx(styles.tableRowColumn, column.className ?? '')}
+                    className={cx(
+                      styles.tableRowColumn,
+                      column.className ?? '',
+                    )}
                     key={column.id}
                   />
                 ))}
@@ -583,7 +705,7 @@ const VirtualTable = (props: IProps) => {
           )}
         </div>
       )}
-    </EuiResizeObserver>
+    </RIResizeObserver>
   )
 }
 

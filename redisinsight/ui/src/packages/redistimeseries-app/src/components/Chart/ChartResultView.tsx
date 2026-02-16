@@ -1,7 +1,14 @@
-import React, { useState } from 'react'
-import { TimeSeries, YAxisConfig, ChartConfig, AxisScale, GraphMode } from './interfaces'
+import React, { useMemo, useState } from 'react'
+import {
+  AxisScale,
+  ChartConfig,
+  GraphMode,
+  TimeSeries,
+  YAxisConfig,
+} from './interfaces'
 import ChartConfigForm from './ChartConfigForm'
 import Chart from './Chart'
+import { determineDefaultTimeUnits, normalizeDatapointUnits } from './utils'
 
 enum LAYOUT_STATE {
   INITIAL_STATE,
@@ -9,19 +16,22 @@ enum LAYOUT_STATE {
 }
 
 interface ChartResultViewProps {
-    data: TimeSeries[]
+  data: TimeSeries[]
 }
 
 export default function ChartResultView(props: ChartResultViewProps) {
-
   const defaultYAxisConfig: YAxisConfig = { label: '', scale: AxisScale.linear }
-  const keyToY2AxisDefault = props.data.reduce((keyToYAxis: any, timeSeries) => {
-    keyToYAxis[timeSeries.key] = false
-    return keyToYAxis
-  }, {})
+  const keyToY2AxisDefault = props.data.reduce(
+    (keyToYAxis: any, timeSeries) => {
+      keyToYAxis[timeSeries.key] = false
+      return keyToYAxis
+    },
+    {},
+  )
 
   const [chartConfig, setChartConfig] = useState<ChartConfig>({
     mode: GraphMode.line,
+    timeUnit: determineDefaultTimeUnits(props.data),
     title: '',
     xlabel: '',
     staircase: false,
@@ -31,18 +41,19 @@ export default function ChartResultView(props: ChartResultViewProps) {
     yAxisConfig: defaultYAxisConfig,
     yAxis2Config: defaultYAxisConfig,
   })
-  const [chartState, setChartState] = useState<LAYOUT_STATE>(LAYOUT_STATE.INITIAL_STATE)
+  const [chartState, setChartState] = useState<LAYOUT_STATE>(
+    LAYOUT_STATE.INITIAL_STATE,
+  )
 
-  function handleChartConfigChanged (control: string, value: any) {
+  function handleChartConfigChanged(control: string, value: any) {
     onChartConfigChange(control, value)
     if (chartState !== LAYOUT_STATE.INITIAL_STATE) {
       setChartState(LAYOUT_STATE.INITIAL_STATE)
     }
   }
 
-
   function onChartConfigChange(control: string, value: any) {
-    setChartConfig({...chartConfig, [control]: value})
+    setChartConfig({ ...chartConfig, [control]: value })
   }
 
   function onRelayout() {
@@ -51,28 +62,29 @@ export default function ChartResultView(props: ChartResultViewProps) {
     }
   }
 
-  function onDoubleClick(){
+  function onDoubleClick() {
     if (chartState !== LAYOUT_STATE.INITIAL_STATE) {
       setChartState(LAYOUT_STATE.INITIAL_STATE)
     }
   }
 
+  const memoizedChartData = useMemo(
+    () => normalizeDatapointUnits(props.data, chartConfig.timeUnit),
+    [props.data, chartConfig.timeUnit],
+  )
+
   return (
     <div>
       <div className="zoom-helper-text">
         <i>
-          {
-            chartState === LAYOUT_STATE.INITIAL_STATE
-            ?
-            'Drag over the part of the chart to zoom into it'
-            :
-            'Double click on the graph to reset the view'
-          }
+          {chartState === LAYOUT_STATE.INITIAL_STATE
+            ? 'Drag over the part of the chart to zoom into it'
+            : 'Double click on the graph to reset the view'}
         </i>
       </div>
       <Chart
         chartConfig={chartConfig}
-        data={props.data}
+        data={memoizedChartData}
         onRelayout={onRelayout}
         onDoubleClick={onDoubleClick}
       />

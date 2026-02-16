@@ -9,6 +9,8 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { ApiEndpoint } from 'src/decorators/api-endpoint.decorator';
 import { SettingsService } from 'src/modules/settings/settings.service';
+import { SessionMetadata } from 'src/common/models';
+import { RequestSessionMetadata } from 'src/common/decorators';
 import {
   GetAgreementsSpecResponse,
   GetAppSettingsResponse,
@@ -19,9 +21,7 @@ import {
 @Controller('settings')
 @UsePipes(new ValidationPipe({ transform: true }))
 export class SettingsController {
-  constructor(
-    private settingsService: SettingsService,
-  ) {}
+  constructor(private settingsService: SettingsService) {}
 
   @Get('')
   @ApiEndpoint({
@@ -35,8 +35,10 @@ export class SettingsController {
       },
     ],
   })
-  async getAppSettings(): Promise<GetAppSettingsResponse> {
-    return this.settingsService.getAppSettings('1');
+  async getAppSettings(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+  ): Promise<GetAppSettingsResponse> {
+    return this.settingsService.getAppSettings(sessionMetadata);
   }
 
   @Get('/agreements/spec')
@@ -67,15 +69,10 @@ export class SettingsController {
       },
     ],
   })
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-    }),
-  )
   async update(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Body() dto: UpdateSettingsDto,
   ): Promise<GetAppSettingsResponse> {
-    return this.settingsService.updateAppSettings('1', dto);
+    return this.settingsService.updateAppSettings(sessionMetadata, dto);
   }
 }

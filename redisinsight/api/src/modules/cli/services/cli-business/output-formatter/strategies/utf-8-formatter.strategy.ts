@@ -5,7 +5,7 @@ import { IOutputFormatterStrategy } from '../output-formatter.interface';
 export class UTF8FormatterStrategy implements IOutputFormatterStrategy {
   public format(reply: any): any {
     if (reply instanceof Buffer) {
-      return getUTF8FromBuffer(reply)
+      return getUTF8FromBuffer(reply);
     }
     if (isArray(reply)) {
       return this.formatRedisArrayReply(reply);
@@ -30,8 +30,13 @@ export class UTF8FormatterStrategy implements IOutputFormatterStrategy {
     return result;
   }
 
-  private formatRedisObjectReply(reply: Object): object {
+  private formatRedisObjectReply(reply: Object): object | string {
     const result = {};
+
+    if (reply instanceof Error) {
+      return reply.toString();
+    }
+
     Object.keys(reply).forEach((key) => {
       result[key] = this.format(reply[key]);
     });

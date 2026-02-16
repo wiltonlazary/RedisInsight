@@ -1,12 +1,12 @@
 import { cloneDeep } from 'lodash'
 import { apiService } from 'uiSrc/services'
-import { cleanup, mockedStore, initialStateDefault, clearStoreActions } from 'uiSrc/utils/test-utils'
-import { concatToOutput, setCliDbIndex } from 'uiSrc/slices/cli/cli-output'
 import {
-  cliTexts,
-  ConnectionSuccessOutputText,
-  InitOutputText,
-} from 'uiSrc/constants/cliOutput'
+  cleanup,
+  mockedStore,
+  initialStateDefault,
+  clearStoreActions,
+} from 'uiSrc/utils/test-utils'
+import { setCliDbIndex } from 'uiSrc/slices/cli/cli-output'
 import { INSTANCE_ID_MOCK } from 'uiSrc/mocks/handlers/instances/instancesHandlers'
 import reducer, {
   initialState,
@@ -30,7 +30,8 @@ import reducer, {
   setSearchingCommand,
   clearSearchingCommand,
   resetCliClientUuid,
-  resetCliHelperSettings, goBackFromCommand,
+  resetCliHelperSettings,
+  goBackFromCommand,
 } from '../../cli/cli-settings'
 
 let mathRandom: jest.SpyInstance<number>
@@ -164,11 +165,14 @@ describe('cliSettings slice', () => {
       const state: typeof initialState = {
         ...initialState,
         searchedCommand,
-        isSearching: false
+        isSearching: false,
       }
 
       // Act
-      const nextState = reducer(initialState, setSearchedCommand(searchedCommand))
+      const nextState = reducer(
+        initialState,
+        setSearchedCommand(searchedCommand),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -188,11 +192,14 @@ describe('cliSettings slice', () => {
         ...initialState,
         searchingCommand,
         isEnteringCommand: false,
-        isSearching: true
+        isSearching: true,
       }
 
       // Act
-      const nextState = reducer(initialState, setSearchingCommand(searchingCommand))
+      const nextState = reducer(
+        initialState,
+        setSearchingCommand(searchingCommand),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -212,11 +219,14 @@ describe('cliSettings slice', () => {
         ...initialState,
         searchingCommandFilter,
         isEnteringCommand: false,
-        isSearching: true
+        isSearching: true,
       }
 
       // Act
-      const nextState = reducer(initialState, setSearchingCommandFilter(searchingCommandFilter))
+      const nextState = reducer(
+        initialState,
+        setSearchingCommandFilter(searchingCommandFilter),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -236,7 +246,7 @@ describe('cliSettings slice', () => {
         searchingCommand: '',
         searchedCommand: '',
         searchingCommandFilter: '',
-        isSearching: false
+        isSearching: false,
       }
 
       // Act
@@ -282,13 +292,18 @@ describe('cliSettings slice', () => {
       }
 
       // Act
-      const nextState = reducer({ ...initialState, cliClientUuid: '123' }, resetCliClientUuid())
+      const nextState = reducer(
+        { ...initialState, cliClientUuid: '123' },
+        resetCliClientUuid(),
+      )
 
       // Assert
-      const rootState = { ...initialStateDefault,
+      const rootState = {
+        ...initialStateDefault,
         cli: {
           settings: nextState,
-        }, }
+        },
+      }
       expect(cliSettingsSelector(rootState)).toEqual(state)
     })
   })
@@ -324,10 +339,12 @@ describe('cliSettings slice', () => {
       const nextState = reducer(initState, resetCliHelperSettings())
 
       // Assert
-      const rootState = { ...initialStateDefault,
+      const rootState = {
+        ...initialStateDefault,
         cli: {
           settings: nextState,
-        }, }
+        },
+      }
       expect(cliSettingsSelector(rootState)).toEqual(state)
     })
   })
@@ -351,7 +368,7 @@ describe('cliSettings slice', () => {
         ...initState,
         matchedCommand: '',
         searchedCommand: '',
-        isSearching: true
+        isSearching: true,
       }
 
       // Act
@@ -396,7 +413,10 @@ describe('cliSettings slice', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, processCliClientSuccess(data?.uuid))
+      const nextState = reducer(
+        initialState,
+        processCliClientSuccess(data?.uuid),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -418,7 +438,10 @@ describe('cliSettings slice', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, processCliClientSuccess(data?.uuid))
+      const nextState = reducer(
+        initialState,
+        processCliClientSuccess(data?.uuid),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -464,7 +487,10 @@ describe('cliSettings slice', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, getUnsupportedCommandsSuccess(data))
+      const nextState = reducer(
+        initialState,
+        getUnsupportedCommandsSuccess(data),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -485,22 +511,25 @@ describe('cliSettings slice', () => {
       apiService.post = jest.fn().mockResolvedValue(responsePayload)
 
       // Act
-      await store.dispatch<any>(createCliClientAction(INSTANCE_ID_MOCK, () => {}))
+      await store.dispatch<any>(
+        createCliClientAction(INSTANCE_ID_MOCK, () => {}),
+      )
 
       // Assert
       const expectedActions = [
         processCliClient(),
-        concatToOutput(InitOutputText('', 0, 0, true, () => {})),
         processCliClientSuccess(responsePayload.data?.uuid),
-        concatToOutput(ConnectionSuccessOutputText),
-        setCliDbIndex(0)
+        setCliDbIndex(0),
       ]
-      expect(clearStoreActions(store.getActions())).toEqual(clearStoreActions(expectedActions))
+      expect(clearStoreActions(store.getActions())).toEqual(
+        clearStoreActions(expectedActions),
+      )
     })
 
     it('call both createCliClientAction and processCliClientFailure when fetch is fail', async () => {
       // Arrange
-      const errorMessage = 'Could not connect to aoeu:123, please check the connection details.'
+      const errorMessage =
+        'Could not connect to aoeu:123, please check the connection details.'
       const responsePayload = {
         response: {
           status: 500,
@@ -511,16 +540,18 @@ describe('cliSettings slice', () => {
       apiService.post = jest.fn().mockRejectedValueOnce(responsePayload)
 
       // Act
-      await store.dispatch<any>(createCliClientAction(INSTANCE_ID_MOCK, () => {}))
+      await store.dispatch<any>(
+        createCliClientAction(INSTANCE_ID_MOCK, () => {}),
+      )
 
       // Assert
       const expectedActions = [
         processCliClient(),
-        concatToOutput(InitOutputText('', 0, 0, true, () => {})),
         processCliClientFailure(responsePayload.response.data.message),
-        concatToOutput(cliTexts.CLI_ERROR_MESSAGE(errorMessage))
       ]
-      expect(clearStoreActions(store.getActions())).toEqual(clearStoreActions(expectedActions))
+      expect(clearStoreActions(store.getActions())).toEqual(
+        clearStoreActions(expectedActions),
+      )
     })
 
     it('call both updateCliClientAction and processCliClientSuccess when fetch is successed', async () => {
@@ -538,7 +569,7 @@ describe('cliSettings slice', () => {
       const expectedActions = [
         processCliClient(),
         processCliClientSuccess(responsePayload.data?.uuid),
-        setCliDbIndex(0)
+        setCliDbIndex(0),
       ]
       expect(store.getActions()).toEqual(expectedActions)
     })
@@ -546,7 +577,8 @@ describe('cliSettings slice', () => {
     it('call both updateCliClientAction and processCliClientFailure when fetch is fail', async () => {
       // Arrange
       const uuid = '70b95d32-c19d-4311-bb24-e684af12cf15'
-      const errorMessage = 'Could not connect to aoeu:123, please check the connection details.'
+      const errorMessage =
+        'Could not connect to aoeu:123, please check the connection details.'
       const responsePayload = {
         response: {
           status: 500,
@@ -586,7 +618,8 @@ describe('cliSettings slice', () => {
     it('call both deleteCliClientAction and processCliClientFailure when fetch is fail', async () => {
       // Arrange
       const uuid = '70b95d32-c19d-4311-bb24-e684af12cf15'
-      const errorMessage = 'Could not connect to aoeu:123, please check the connection details.'
+      const errorMessage =
+        'Could not connect to aoeu:123, please check the connection details.'
       const responsePayload = {
         response: {
           status: 500,
@@ -618,7 +651,10 @@ describe('cliSettings slice', () => {
       await store.dispatch<any>(fetchUnsupportedCliCommandsAction())
 
       // Assert
-      const expectedActions = [processCliClient(), getUnsupportedCommandsSuccess(data)]
+      const expectedActions = [
+        processCliClient(),
+        getUnsupportedCommandsSuccess(data),
+      ]
       expect(store.getActions()).toEqual(expectedActions)
     })
   })

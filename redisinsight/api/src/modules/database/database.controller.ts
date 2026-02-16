@@ -8,7 +8,6 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
@@ -24,11 +23,16 @@ import { UpdateDatabaseDto } from 'src/modules/database/dto/update.database.dto'
 import { BuildType } from 'src/modules/server/models/server';
 import { DeleteDatabasesDto } from 'src/modules/database/dto/delete.databases.dto';
 import { DeleteDatabasesResponse } from 'src/modules/database/dto/delete.databases.response';
-import { ClientMetadataParam } from 'src/common/decorators';
-import { ClientMetadata } from 'src/common/models';
-import { ModifyDatabaseDto } from 'src/modules/database/dto/modify.database.dto';
+import {
+  ClientMetadataParam,
+  RequestSessionMetadata,
+  DatabaseManagement,
+} from 'src/common/decorators';
+import { ClientMetadata, SessionMetadata } from 'src/common/models';
 import { ExportDatabasesDto } from 'src/modules/database/dto/export.databases.dto';
 import { ExportDatabase } from 'src/modules/database/models/export-database';
+import { DatabaseResponse } from 'src/modules/database/dto/database.response';
+import { classToClass } from 'src/utils';
 
 @ApiTags('Database')
 @Controller('databases')
@@ -51,8 +55,10 @@ export class DatabaseController {
       },
     ],
   })
-  async list(): Promise<Database[]> {
-    return this.service.list();
+  async list(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+  ): Promise<Database[]> {
+    return this.service.list(sessionMetadata);
   }
 
   @UseInterceptors(ClassSerializerInterceptor)
@@ -64,14 +70,18 @@ export class DatabaseController {
       {
         status: 200,
         description: 'Database instance',
-        type: Database,
+        type: DatabaseResponse,
       },
     ],
   })
   async get(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Param('id') id: string,
-  ): Promise<Database> {
-    return await this.service.get(id);
+  ): Promise<DatabaseResponse> {
+    return classToClass(
+      DatabaseResponse,
+      await this.service.get(sessionMetadata, id),
+    );
   }
 
   @UseInterceptors(ClassSerializerInterceptor)
@@ -84,7 +94,7 @@ export class DatabaseController {
       {
         status: 201,
         description: 'Created database instance',
-        type: Database,
+        type: DatabaseResponse,
       },
     ],
   })
@@ -95,38 +105,15 @@ export class DatabaseController {
       forbidNonWhitelisted: true,
     }),
   )
+  @DatabaseManagement()
   async create(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Body() dto: CreateDatabaseDto,
-  ): Promise<Database> {
-    return await this.service.create(dto);
-  }
-
-  @UseInterceptors(ClassSerializerInterceptor)
-  @UseInterceptors(new TimeoutInterceptor(ERROR_MESSAGES.CONNECTION_TIMEOUT))
-  @Put(':id')
-  @ApiEndpoint({
-    description: 'Update database instance by id',
-    statusCode: 200,
-    responses: [
-      {
-        status: 200,
-        description: 'Updated database instance\' response',
-        type: Database,
-      },
-    ],
-  })
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  )
-  async update(
-    @Param('id') id: string,
-      @Body() database: UpdateDatabaseDto,
-  ): Promise<Database> {
-    return await this.service.update(id, database, true);
+  ): Promise<DatabaseResponse> {
+    return classToClass(
+      DatabaseResponse,
+      await this.service.create(sessionMetadata, dto, true),
+    );
   }
 
   @UseInterceptors(ClassSerializerInterceptor)
@@ -138,8 +125,8 @@ export class DatabaseController {
     responses: [
       {
         status: 200,
-        description: 'Updated database instance\' response',
-        type: Database,
+        description: "Updated database instance' response",
+        type: DatabaseResponse,
       },
     ],
   })
@@ -150,11 +137,49 @@ export class DatabaseController {
       forbidNonWhitelisted: true,
     }),
   )
-  async modify(
+  @DatabaseManagement()
+  async update(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Param('id') id: string,
-      @Body() database: ModifyDatabaseDto,
-  ): Promise<Database> {
-    return await this.service.update(id, database, true);
+    @Body() database: UpdateDatabaseDto,
+  ): Promise<DatabaseResponse> {
+    return classToClass(
+      DatabaseResponse,
+      await this.service.update(sessionMetadata, id, database, true),
+    );
+  }
+
+  @UseInterceptors(ClassSerializerInterceptor)
+  @UseInterceptors(new TimeoutInterceptor(ERROR_MESSAGES.CONNECTION_TIMEOUT))
+  @Post('clone/:id')
+  @ApiEndpoint({
+    description: 'Update database instance by id',
+    statusCode: 200,
+    responses: [
+      {
+        status: 200,
+        description: "Updated database instance' response",
+        type: DatabaseResponse,
+      },
+    ],
+  })
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  )
+  @DatabaseManagement()
+  async clone(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+    @Param('id') id: string,
+    @Body() database: UpdateDatabaseDto,
+  ): Promise<DatabaseResponse> {
+    return classToClass(
+      DatabaseResponse,
+      await this.service.clone(sessionMetadata, id, database),
+    );
   }
 
   @UseInterceptors(ClassSerializerInterceptor)
@@ -174,10 +199,38 @@ export class DatabaseController {
       whitelist: true,
     }),
   )
+  @DatabaseManagement()
   async testConnection(
-    @Body() database: CreateDatabaseDto,
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+    @Body() dto: CreateDatabaseDto,
   ): Promise<void> {
-    return await this.service.testConnection(database);
+    return await this.service.testConnection(sessionMetadata, dto);
+  }
+
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Post('/test/:id')
+  @ApiEndpoint({
+    description: 'Test connection',
+    statusCode: 200,
+    responses: [
+      {
+        status: 200,
+      },
+    ],
+  })
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  )
+  async testExistConnection(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+    @Param('id') id: string,
+    @Body() dto: UpdateDatabaseDto,
+  ): Promise<void> {
+    return this.service.testConnection(sessionMetadata, dto, id);
   }
 
   @Delete('/:id')
@@ -186,8 +239,12 @@ export class DatabaseController {
     description: 'Delete database instance by id',
     excludeFor: [BuildType.RedisStack],
   })
-  async deleteDatabaseInstance(@Param('id') id: string): Promise<void> {
-    await this.service.delete(id);
+  @DatabaseManagement()
+  async deleteDatabaseInstance(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.service.delete(sessionMetadata, id);
   }
 
   @Delete('')
@@ -204,10 +261,12 @@ export class DatabaseController {
     ],
   })
   @UsePipes(new ValidationPipe({ transform: true }))
+  @DatabaseManagement()
   async bulkDeleteDatabaseInstance(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Body() dto: DeleteDatabasesDto,
   ): Promise<DeleteDatabasesResponse> {
-    return await this.service.bulkDelete(dto.ids);
+    return await this.service.bulkDelete(sessionMetadata, dto.ids);
   }
 
   @Get(':id/connect')
@@ -226,7 +285,8 @@ export class DatabaseController {
     @ClientMetadataParam({
       databaseIdParam: 'id',
       ignoreDbIndex: true,
-    }) clientMetadata: ClientMetadata,
+    })
+    clientMetadata: ClientMetadata,
   ): Promise<void> {
     await this.connectionService.connect(clientMetadata);
   }
@@ -235,7 +295,8 @@ export class DatabaseController {
   @ApiEndpoint({
     statusCode: 201,
     excludeFor: [BuildType.RedisStack],
-    description: 'Export many databases by ids. With or without passwords and certificates bodies.',
+    description:
+      'Export many databases by ids. With or without passwords and certificates bodies.',
     responses: [
       {
         status: 201,
@@ -245,9 +306,11 @@ export class DatabaseController {
     ],
   })
   @UsePipes(new ValidationPipe({ transform: true }))
+  @DatabaseManagement()
   async exportConnections(
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
     @Body() dto: ExportDatabasesDto,
   ): Promise<ExportDatabase[]> {
-    return await this.service.export(dto.ids, dto.withSecrets);
+    return await this.service.export(sessionMetadata, dto.ids, dto.withSecrets);
   }
 }

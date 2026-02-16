@@ -1,15 +1,13 @@
-import React, { ChangeEvent } from 'react'
+import React from 'react'
 import { toNumber } from 'lodash'
-import {
-  EuiFieldText,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiFormFieldset,
-  EuiFormRow,
-  EuiSuperSelect
-} from '@elastic/eui'
 import { MAX_TTL_NUMBER, Maybe, validateTTLNumberForAddKey } from 'uiSrc/utils'
 
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { FormFieldset } from 'uiSrc/components/base/forms/fieldset'
+import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import { TextInput } from 'uiSrc/components/base/inputs'
 import { AddCommonFieldsFormConfig as config } from '../constants/fields-config'
 
 import styles from './styles.module.scss'
@@ -34,15 +32,13 @@ const AddKeyCommonFields = (props: Props) => {
     keyName,
     setKeyName,
     keyTTL,
-    setKeyTTL
+    setKeyTTL,
   } = props
 
-  const handleTTLChange = (event: ChangeEvent<HTMLInputElement>) => {
-    event.preventDefault()
-    const target = event.currentTarget
-    const value = validateTTLNumberForAddKey(target.value)
-    if (value.toString().length) {
-      setKeyTTL(toNumber(value))
+  const handleTTLChange = (value: string) => {
+    const validatedValue = validateTTLNumberForAddKey(value)
+    if (validatedValue.toString().length) {
+      setKeyTTL(toNumber(validatedValue))
     } else {
       setKeyTTL(undefined)
     }
@@ -50,31 +46,28 @@ const AddKeyCommonFields = (props: Props) => {
 
   return (
     <div className={styles.wrapper}>
-      <EuiFlexGroup className={styles.container} responsive={false}>
-        <EuiFlexItem>
-          <EuiFormFieldset
+      <Row className={styles.container} gap="m">
+        <FlexItem grow>
+          <FormFieldset
             legend={{ children: 'Select key type', display: 'hidden' }}
           >
-            <EuiFormRow
-              label="Key Type*"
-              fullWidth
-            >
-              <EuiSuperSelect
-                itemClassName="withColorDefinition"
-                fullWidth
-                disabled={loading}
+            <FormField label="Key Type*">
+              <RiSelect
                 options={options}
-                valueOfSelected={typeSelected}
+                valueRender={({ option }): JSX.Element =>
+                  (option.inputDisplay ?? option.value) as JSX.Element
+                }
+                value={typeSelected}
                 onChange={(value: string) => onChangeType(value)}
+                disabled={loading}
                 data-testid="select-key-type"
               />
-            </EuiFormRow>
-          </EuiFormFieldset>
-        </EuiFlexItem>
-        <EuiFlexItem>
-          <EuiFormRow label={config.keyTTL.label} fullWidth>
-            <EuiFieldText
-              fullWidth
+            </FormField>
+          </FormFieldset>
+        </FlexItem>
+        <FlexItem grow>
+          <FormField label={config.keyTTL.label}>
+            <TextInput
               name={config.keyTTL.name}
               id={config.keyTTL.name}
               maxLength={200}
@@ -87,23 +80,22 @@ const AddKeyCommonFields = (props: Props) => {
               autoComplete="off"
               data-testid="ttl"
             />
-          </EuiFormRow>
-        </EuiFlexItem>
-      </EuiFlexGroup>
-      <EuiFormRow label={config.keyName.label} fullWidth>
-        <EuiFieldText
-          fullWidth
+          </FormField>
+        </FlexItem>
+      </Row>
+      <Spacer size="m" />
+      <FormField label={config.keyName.label}>
+        <TextInput
           name={config.keyName.name}
           id={config.keyName.name}
           value={keyName}
           placeholder={config.keyName.placeholder}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setKeyName(e.target.value)}
+          onChange={setKeyName}
           disabled={loading}
           autoComplete="off"
           data-testid="key"
         />
-      </EuiFormRow>
+      </FormField>
     </div>
   )
 }

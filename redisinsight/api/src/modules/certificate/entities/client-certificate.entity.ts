@@ -1,6 +1,4 @@
-import {
-  Column, Entity, OneToMany, PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { DatabaseEntity } from 'src/modules/database/entities/database.entity';
 import { Expose } from 'class-transformer';
 
@@ -24,6 +22,10 @@ export class ClientCertificateEntity {
   @Expose()
   @Column({ nullable: true })
   key: string;
+
+  @Expose()
+  @Column({ nullable: true })
+  isPreSetup: boolean;
 
   @OneToMany(() => DatabaseEntity, (database) => database.clientCert)
   public databases: DatabaseEntity[];

@@ -1,6 +1,4 @@
 body {
-  font-family: 'Graphik', sans-serif;
-  font-size: 14px;
   letter-spacing: -0.14px;
 
   b {
@@ -89,24 +87,11 @@ body {
   color: var(--euiColorGhost) !important;
 }
 
-.euiButtonIcon.euiButtonIcon--primary {
-  color: var(--iconsDefaultColor);
-  &:hover {
-    color: var(--iconsDefaultHoverColor);
-  }
-  &[disabled] {
-    color: var(--controlsBorderColor);
-  }
-}
-
 .euiContextMenuItem,
 .euiSelect,
 .euiSuperSelectControl,
 .euiFieldText,
-.euiFieldSearch,
-.euiFieldNumber,
-.euiFieldPassword,
-.euiTextArea {
+.euiFieldNumber {
   font-family: 'Graphik', sans-serif !important;
   color: var(--htmlColor) !important;
 }

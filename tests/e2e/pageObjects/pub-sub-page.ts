@@ -3,7 +3,7 @@ import { InstancePage } from './instance-page';
 
 export class PubSubPage extends InstancePage {
     //CSS Selectors
-    cssSelectorMessage = '[data-testid^=row]';
+    cssSelectorMessage = '[data-testid="messages-list"] tr';
     //-------------------------------------------------------------------------------------------
     //DECLARATION OF SELECTORS
     //*Declare all elements/components of the relevant page.
@@ -11,22 +11,31 @@ export class PubSubPage extends InstancePage {
     //*The following categories are ordered alphabetically (Alerts, Buttons, Checkboxes, etc.).
     //-------------------------------------------------------------------------------------------
     //COMPONENTS
-    subscribeStatus = Selector('[data-testid=subscribe-status-text]');
-    messages = Selector('[data-testid^=row]');
-    totalMessagesCount = Selector('[data-testid=messages-count]');
+    initialPage = Selector('[data-testid=pub-sub-page] [data-testid="empty-messages-list"]')
+    subscribeStatus = Selector('[data-testid=pub-sub-status]');
+    messages = Selector('[data-testid="messages-list"] tr');
+    messagesTable = Selector('[data-testid="messages-list"] table')
+    messagesTableBottomNav = Selector('[data-testid="messages-list"] nav[data-role=pagination]')
+    messagesTableFirstPageBtn = Selector('[data-testid="messages-list"] nav[data-role=pagination] button[title="First page"]')
+    messagesTableLastPageBtn = Selector('[data-testid="messages-list"] nav[data-role=pagination] button[title="Last page"]')
+    totalMessagesCount = Selector('[data-testid=pub-sub-messages-count]');
     pubSubPageContainer = Selector('[data-testid=pub-sub-page]');
-    clientBadge = Selector('[data-testid=affected-clients-badge]');
-    clearButtonTooltip = Selector('.euiToolTipPopover');
+    publishResult = Selector('[data-testid=publish-result]');
+    clearButtonTooltip = Selector('[data-radix-popper-content-wrapper]');
     ossClusterEmptyMessage = Selector('[data-testid=empty-messages-list-cluster]');
     //BUTTONS
     subscribeButton = Selector('[data-testid=subscribe-btn]').withText('Subscribe');
-    unsubscribeButton = Selector('[data-testid=subscribe-btn]').withText('Unsubscribe');
+    unsubscribeButton = Selector('[data-testid=subscribe-btn]');
     publishButton = Selector('[data-testid=publish-message-submit]');
     clearPubSubButton = Selector('[data-testid=clear-pubsub-btn]');
     scrollDownButton = Selector('[data-testid=messages-list-anchor-btn]');
     //INPUTS
     channelNameInput = Selector('[data-testid=field-channel-name]');
     messageInput = Selector('[data-testid=field-message]');
+    channelsSubscribeInput = Selector('[data-testid=channels-input]');
+
+    patternsCount = Selector('[data-testid=patterns-count]');
+    messageCount = Selector('[data-testid=pub-sub-messages-count]');
 
     /**
      * Publish message in pubsub
@@ -34,12 +43,11 @@ export class PubSubPage extends InstancePage {
      * @param message The message
      */
     async publishMessage(channel: string, message: string): Promise<void> {
-        await t
-            .click(this.channelNameInput)
-            .typeText(this.channelNameInput, channel, { replace: true, paste: true })
-            .click(this.messageInput)
-            .typeText(this.messageInput, message, { replace: true, paste: true })
-            .click(this.publishButton);
+        await t.click(this.channelNameInput);
+        await t.typeText(this.channelNameInput, channel, { replace: true, paste: true });
+        await t.click(this.messageInput);
+        await t.typeText(this.messageInput, message, { replace: true, paste: true });
+        await t.click(this.publishButton);
     }
 
     /**
@@ -49,7 +57,9 @@ export class PubSubPage extends InstancePage {
      */
     async subsribeToChannelAndPublishMessage(channel: string, message: string): Promise<void> {
         await t.click(this.subscribeButton);
+        // Wait for pubsub loading
+        await t.wait(1000);
         await this.publishMessage(channel, message);
-        await t.expect(this.pubSubPageContainer.find('[data-testid^=row]').withText('message').exists).ok('Message is not displayed');
+        await t.expect((this.messages.withText('message')).exists).ok('Message is not displayed');
     }
 }

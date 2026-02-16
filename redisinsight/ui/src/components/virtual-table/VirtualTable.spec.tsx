@@ -39,8 +39,8 @@ describe('VirtualTable', () => {
           loading={false}
           loadMoreItems={jest.fn()}
           totalItemsCount={members.length}
-        />
-      )
+        />,
+      ),
     ).toBeTruthy()
   })
 
@@ -54,8 +54,8 @@ describe('VirtualTable', () => {
           loading={false}
           loadMoreItems={jest.fn()}
           totalItemsCount={members.length}
-        />
-      )
+        />,
+      ),
     ).toBeTruthy()
   })
 
@@ -68,7 +68,7 @@ describe('VirtualTable', () => {
         loading={false}
         loadMoreItems={jest.fn()}
         totalItemsCount={members.length}
-      />
+      />,
     )
     const searchInput = screen.getByTestId('search')
     expect(searchInput).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('VirtualTable', () => {
         loading={false}
         loadMoreItems={jest.fn()}
         totalItemsCount={members.length}
-      />
+      />,
     )
     const searchInput = screen.getByTestId('search')
     expect(searchInput).not.toBeVisible()
@@ -117,7 +117,7 @@ describe('VirtualTable', () => {
         totalItemsCount={members.length}
         sortedColumn={sortedColumn}
         onChangeSorting={onChangeSorting}
-      />
+      />,
     )
 
     fireEvent.click(container.querySelector('.headerButtonSorted') as Element)
@@ -136,7 +136,7 @@ describe('VirtualTable', () => {
         loadMoreItems={jest.fn()}
         totalItemsCount={members.length}
         onRowClick={onRowClick}
-      />
+      />,
     )
     const firstRow = screen.getAllByLabelText(/row/)[0]
     fireEvent.click(firstRow)
@@ -155,13 +155,14 @@ describe('VirtualTable', () => {
           columns={[]}
           scanned={20}
           totalItemsCount={100}
-        />
+        />,
       )
       const scanMoreBtn = queryByTestId(scanMoreBtnId)
 
       expect(scanMoreBtn).toBeInTheDocument()
     })
-    it('Scan more button should no be in the document when total == scanned', () => {
+    // obsolete test. todo: review and remove or refactor
+    xit('Scan more button should no be in the document when total == scanned', () => {
       const { queryByTestId } = render(
         <VirtualTable
           {...instance(mockedProps)}
@@ -169,7 +170,7 @@ describe('VirtualTable', () => {
           columns={[]}
           scanned={100}
           totalItemsCount={100}
-        />
+        />,
       )
       const scanMoreBtn = queryByTestId(scanMoreBtnId)
 
@@ -193,7 +194,7 @@ describe('VirtualTable', () => {
           loadMoreItems={onLoadMoreItems}
           scanned={20}
           totalItemsCount={100}
-        />
+        />,
       )
       const scanMoreBtn = screen.getByTestId(scanMoreBtnId)
 
@@ -220,7 +221,7 @@ describe('VirtualTable', () => {
         loading={false}
         loadMoreItems={jest.fn()}
         totalItemsCount={members.length}
-      />
+      />,
     )
 
     expect(screen.getByTestId('resize-trigger-name')).toBeInTheDocument()

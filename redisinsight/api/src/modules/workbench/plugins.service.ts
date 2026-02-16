@@ -4,15 +4,15 @@ import { CreateCommandExecutionDto } from 'src/modules/workbench/dto/create-comm
 import { CommandNotSupportedError } from 'src/modules/cli/constants/errors';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import { PluginCommandExecution } from 'src/modules/workbench/models/plugin-command-execution';
-import { plainToClass } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import { PluginCommandsWhitelistProvider } from 'src/modules/workbench/providers/plugin-commands-whitelist.provider';
 import { CommandExecutionStatus } from 'src/modules/cli/dto/cli.dto';
-import { CommandExecutionResult } from 'src/modules/workbench/models/command-execution-result';
 import { CreatePluginStateDto } from 'src/modules/workbench/dto/create-plugin-state.dto';
 import { PluginState } from 'src/modules/workbench/models/plugin-state';
 import config from 'src/utils/config';
 import { ClientMetadata } from 'src/common/models';
 import { PluginStateRepository } from 'src/modules/workbench/repositories/plugin-state.repository';
+import { DatabaseClientFactory } from 'src/modules/database/providers/database.client.factory';
 
 const PLUGINS_CONFIG = config.get('plugins');
 
@@ -22,6 +22,7 @@ export class PluginsService {
     private commandsExecutor: WorkbenchCommandsExecutor,
     private pluginStateRepository: PluginStateRepository,
     private whitelistProvider: PluginCommandsWhitelistProvider,
+    private databaseClientFactory: DatabaseClientFactory,
   ) {}
 
   /**
@@ -35,24 +36,28 @@ export class PluginsService {
     dto: CreateCommandExecutionDto,
   ): Promise<PluginCommandExecution> {
     try {
+      const client =
+        await this.databaseClientFactory.getOrCreateClient(clientMetadata);
       await this.checkWhitelistedCommands(clientMetadata, dto.command);
 
-      const result = await this.commandsExecutor.sendCommand(clientMetadata, dto);
+      const result = await this.commandsExecutor.sendCommand(client, dto);
 
-      return plainToClass(PluginCommandExecution, {
+      return plainToInstance(PluginCommandExecution, {
         ...dto,
         databaseId: clientMetadata.databaseId,
         result,
       });
     } catch (error) {
       if (error instanceof CommandNotSupportedError) {
-        return new PluginCommandExecution({
+        return plainToInstance(PluginCommandExecution, {
           ...dto,
           databaseId: clientMetadata.databaseId,
-          result: [new CommandExecutionResult({
-            response: error.message,
-            status: CommandExecutionStatus.Fail,
-          })],
+          result: [
+            {
+              response: error.message,
+              status: CommandExecutionStatus.Fail,
+            },
+          ],
         });
       }
 
@@ -64,23 +69,35 @@ export class PluginsService {
    * Get database white listed commands for plugins
    * @param clientMetadata
    */
-  async getWhitelistCommands(clientMetadata: ClientMetadata): Promise<string[]> {
-    return await this.whitelistProvider.getWhitelistCommands(clientMetadata);
+  async getWhitelistCommands(
+    clientMetadata: ClientMetadata,
+  ): Promise<string[]> {
+    const client =
+      await this.databaseClientFactory.getOrCreateClient(clientMetadata);
+    return await this.whitelistProvider.getWhitelistCommands(client);
   }
 
   /**
    * Save plugin state
    *
+   * @param clientMetadata
    * @param visualizationId
    * @param commandExecutionId
    * @param dto
    */
-  async saveState(visualizationId: string, commandExecutionId: string, dto: CreatePluginStateDto): Promise<void> {
+  async saveState(
+    clientMetadata: ClientMetadata,
+    visualizationId: string,
+    commandExecutionId: string,
+    dto: CreatePluginStateDto,
+  ): Promise<void> {
     if (JSON.stringify(dto.state).length > PLUGINS_CONFIG.stateMaxSize) {
-      throw new BadRequestException(ERROR_MESSAGES.PLUGIN_STATE_MAX_SIZE(PLUGINS_CONFIG.stateMaxSize));
+      throw new BadRequestException(
+        ERROR_MESSAGES.PLUGIN_STATE_MAX_SIZE(PLUGINS_CONFIG.stateMaxSize),
+      );
     }
 
-    await this.pluginStateRepository.upsert({
+    await this.pluginStateRepository.upsert(clientMetadata.sessionMetadata, {
       visualizationId,
       commandExecutionId,
       ...dto,
@@ -90,11 +107,20 @@ export class PluginsService {
   /**
    * Get plugin state
    *
+   * @param clientMetadata
    * @param visualizationId
    * @param commandExecutionId
    */
-  async getState(visualizationId: string, commandExecutionId: string): Promise<PluginState> {
-    return this.pluginStateRepository.getOne(visualizationId, commandExecutionId);
+  async getState(
+    clientMetadata: ClientMetadata,
+    visualizationId: string,
+    commandExecutionId: string,
+  ): Promise<PluginState> {
+    return this.pluginStateRepository.getOne(
+      clientMetadata.sessionMetadata,
+      visualizationId,
+      commandExecutionId,
+    );
   }
 
   /**
@@ -103,7 +129,10 @@ export class PluginsService {
    * @param commandLine
    * @private
    */
-  private async checkWhitelistedCommands(clientMetadata: ClientMetadata, commandLine: string) {
+  private async checkWhitelistedCommands(
+    clientMetadata: ClientMetadata,
+    commandLine: string,
+  ) {
     const targetCommand = commandLine.toLowerCase();
 
     const whitelist = await this.getWhitelistCommands(clientMetadata);
@@ -111,7 +140,7 @@ export class PluginsService {
     if (!whitelist.find((command) => targetCommand.startsWith(command))) {
       throw new CommandNotSupportedError(
         ERROR_MESSAGES.PLUGIN_COMMAND_NOT_SUPPORTED(
-          (targetCommand.split(' '))[0].toUpperCase(),
+          targetCommand.split(' ')[0].toUpperCase(),
         ),
       );
     }

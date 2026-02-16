@@ -1,152 +1,199 @@
-import {
-  EuiHealth,
-  EuiIcon,
-  EuiOutsideClickDetector,
-  EuiPopover,
-  EuiSuperSelect,
-  EuiSuperSelectOption,
-} from '@elastic/eui'
 import cx from 'classnames'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { SCAN_COUNT_DEFAULT, SCAN_TREE_COUNT_DEFAULT } from 'uiSrc/constants/api'
+import { useParams } from 'react-router-dom'
+import {
+  SCAN_COUNT_DEFAULT,
+  SCAN_TREE_COUNT_DEFAULT,
+} from 'uiSrc/constants/api'
+import { KeyTypes } from 'uiSrc/constants'
 import { CommandsVersions } from 'uiSrc/constants/commandsVersions'
 import { connectedInstanceOverviewSelector } from 'uiSrc/slices/instances/instances'
-import { fetchKeys, fetchSearchHistoryAction, keysSelector, setFilter } from 'uiSrc/slices/browser/keys'
+import {
+  fetchKeys,
+  fetchSearchHistoryAction,
+  keysSelector,
+  setFilter,
+} from 'uiSrc/slices/browser/keys'
+import { setBulkDeleteFilter } from 'uiSrc/slices/browser/bulkActions'
 import { isVersionHigherOrEquals } from 'uiSrc/utils'
-import HelpTexts from 'uiSrc/constants/help-texts'
 import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
+import { FilterNotAvailable } from 'uiSrc/components'
+import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
+import { resetBrowserTree } from 'uiSrc/slices/app/context'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
+import { AdditionalRedisModule } from 'uiSrc/slices/interfaces'
+import { OutsideClickDetector } from 'uiSrc/components/base/utils'
+import { HealthText } from 'uiSrc/components/base/text/HealthText'
+import {
+  defaultValueRender,
+  RiSelect,
+} from 'uiSrc/components/base/forms/select/RiSelect'
+import { Modal } from 'uiSrc/components/base/display'
 import { FILTER_KEY_TYPE_OPTIONS } from './constants'
 
 import styles from './styles.module.scss'
+import styled from 'styled-components'
 
-const FilterKeyType = () => {
+const ALL_KEY_TYPES_VALUE = 'all'
+
+export interface Props {
+  modules?: AdditionalRedisModule[]
+}
+
+const FilterKeyTypeSelect = styled(RiSelect)`
+  height: 100%;
+`
+
+const FilterKeyType = ({ modules }: Props) => {
   const [isSelectOpen, setIsSelectOpen] = useState<boolean>(false)
-  const [typeSelected, setTypeSelected] = useState<string>('')
+  const [typeSelected, setTypeSelected] = useState<string>('all')
   const [isVersionSupported, setIsVersionSupported] = useState<boolean>(true)
   const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState<boolean>(false)
 
   const { version } = useSelector(connectedInstanceOverviewSelector)
   const { filter, viewType, searchMode } = useSelector(keysSelector)
+  const features = useSelector(appFeatureFlagsFeaturesSelector)
+
+  const { instanceId } = useParams<{ instanceId: string }>()
   const dispatch = useDispatch()
 
   useEffect(() => {
     setIsVersionSupported(
       isVersionHigherOrEquals(
         version,
-        CommandsVersions.FILTER_PER_KEY_TYPES.since
-      )
+        CommandsVersions.FILTER_PER_KEY_TYPES.since,
+      ),
     )
   }, [version])
 
   useEffect(() => {
-    setTypeSelected(filter ?? '')
+    setTypeSelected(filter ?? ALL_KEY_TYPES_VALUE)
   }, [filter])
 
-  const options: EuiSuperSelectOption<string>[] = FILTER_KEY_TYPE_OPTIONS.map(
-    (item) => {
-      const { value, color, text } = item
-      return {
-        value,
-        inputDisplay: (
-          <>
-            <EuiIcon
-              type="controlsVertical"
-              className={styles.controlsIcon}
-              data-testid={`filter-option-type-selected-${value}`}
-            />
-          </>
-        ),
-        dropdownDisplay: <EuiHealth color={color} className={styles.dropdownDisplay}>{text}</EuiHealth>,
-        'data-test-subj': `filter-option-type-${value}`,
-      }
+  const options: {
+    value: string
+    inputDisplay: JSX.Element
+    dropdownDisplay: JSX.Element
+  }[] = FILTER_KEY_TYPE_OPTIONS.filter(({ featureFlag, skipIfNoModule }) => {
+    if (
+      skipIfNoModule &&
+      !modules?.some(({ name }) => name === skipIfNoModule)
+    ) {
+      return false
     }
-  )
+    return !featureFlag || features[featureFlag]?.flag
+  }).map((item) => {
+    const { value, color, text } = item
+    return {
+      value,
+      inputDisplay: (
+        <HealthText
+          color={color}
+          data-test-subj={`filter-option-type-${value}`}
+        >
+          {text}
+        </HealthText>
+      ),
+      dropdownDisplay: (
+        <HealthText
+          color={color}
+          data-test-subj={`filter-option-type-${value}`}
+        >
+          {text}
+        </HealthText>
+      ),
+      'data-test-subj': `filter-option-type-${value}`,
+    }
+  })
 
-  options.push({
-    value: 'clear',
-    inputDisplay: null,
-    dropdownDisplay: (
-      <div className={styles.clearSelectionBtn} data-testid="clear-selection-btn">Clear Selection</div>
-    )
+  options.unshift({
+    value: ALL_KEY_TYPES_VALUE,
+    inputDisplay: (
+      <div className={styles.dropdownOption} data-testid="all-key-types-option">
+        All Key Types
+      </div>
+    ),
+    dropdownDisplay: <span>All Key Types</span>,
   })
 
   const onChangeType = (initValue: string) => {
-    const value = (initValue === 'clear') ? '' : typeSelected === initValue ? '' : initValue
+    const value = initValue || ALL_KEY_TYPES_VALUE
+    const filterValue = value === ALL_KEY_TYPES_VALUE ? null : value
     setTypeSelected(value)
     setIsSelectOpen(false)
-    dispatch(setFilter(value || null))
+    dispatch(setFilter(filterValue))
+    // Sync filter to bulk delete state (for when bulk actions panel is open)
+    dispatch(setBulkDeleteFilter(filterValue as KeyTypes))
+    if (viewType === KeyViewType.Tree) {
+      dispatch(resetBrowserTree())
+    }
     dispatch(
       fetchKeys(
         {
           searchMode,
           cursor: '0',
-          count: viewType === KeyViewType.Browser ? SCAN_COUNT_DEFAULT : SCAN_TREE_COUNT_DEFAULT,
+          count:
+            viewType === KeyViewType.Browser
+              ? SCAN_COUNT_DEFAULT
+              : SCAN_TREE_COUNT_DEFAULT,
         },
-        () => { dispatch(fetchSearchHistoryAction(searchMode)) }
-      )
+        () => {
+          dispatch(fetchSearchHistoryAction(searchMode))
+        },
+      ),
     )
   }
 
-  const UnsupportedInfo = () => (
-    <EuiPopover
-      anchorPosition="upCenter"
-      isOpen={isInfoPopoverOpen}
-      anchorClassName={styles.unsupportedInfo}
-      panelClassName={cx('euiToolTip', 'popoverLikeTooltip')}
-      closePopover={() => setIsInfoPopoverOpen(false)}
-      initialFocus={false}
-      button={(
-        <EuiIcon
-          className={styles.infoIcon}
-          type="iInCircle"
-          color="subdued"
-          onClick={() => setIsInfoPopoverOpen((isPopoverOpen) => !isPopoverOpen)}
-          style={{ cursor: 'pointer' }}
-          data-testid="filter-info-popover-icon"
-        />
-      )}
-    >
-      <div className={styles.popover}>{HelpTexts.FILTER_UNSUPPORTED}</div>
-    </EuiPopover>
-  )
+  const handleClickSelect = () => {
+    setIsInfoPopoverOpen(true)
+    sendEventTelemetry({
+      event: TelemetryEvent.BROWSER_FILTER_MODE_CHANGE_FAILED,
+      eventData: {
+        databaseId: instanceId,
+      },
+    })
+  }
 
   return (
-    <EuiOutsideClickDetector
+    <OutsideClickDetector
       onOutsideClick={() => isVersionSupported && setIsSelectOpen(false)}
     >
       <div
         className={cx(
           styles.container,
-          !isVersionSupported && styles.unsupported
+          !isVersionSupported && styles.unsupported,
         )}
       >
-        {!typeSelected && (
+        <Modal
+          open={!isVersionSupported && isInfoPopoverOpen}
+          onCancel={() => setIsInfoPopoverOpen(false)}
+          className={styles.unsupportedInfoModal}
+          data-testid="filter-not-available-modal"
+          content={
+            <FilterNotAvailable onClose={() => setIsInfoPopoverOpen(false)} />
+          }
+          title={null}
+        />
+        {!isVersionSupported && (
           <div
-            className={styles.allTypes}
-            onClick={() => isVersionSupported && setIsSelectOpen(!isSelectOpen)}
             role="presentation"
-          >
-            <EuiIcon
-              type="controlsVertical"
-              data-testid="filter-option-type-default"
-              className={cx(styles.controlsIcon, styles.allTypesIcon)}
-            />
-          </div>
+            onClick={handleClickSelect}
+            className={styles.unsupportedInfo}
+            data-testid="unsupported-btn-anchor"
+          />
         )}
-        {!isVersionSupported && UnsupportedInfo()}
-        <EuiSuperSelect
-          fullWidth
-          itemClassName={cx('withColorDefinition', styles.filterKeyType)}
+        <FilterKeyTypeSelect
           disabled={!isVersionSupported}
           options={options}
-          isOpen={isSelectOpen}
-          valueOfSelected={typeSelected}
+          valueRender={defaultValueRender}
+          defaultOpen={isSelectOpen}
+          value={typeSelected}
           onChange={(value: string) => onChangeType(value)}
           data-testid="select-filter-key-type"
         />
       </div>
-    </EuiOutsideClickDetector>
+    </OutsideClickDetector>
   )
 }
 

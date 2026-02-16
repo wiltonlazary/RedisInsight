@@ -1,8 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNumber, Min, NotEquals, ValidateIf,
-} from 'class-validator';
+import { IsInt, Min, NotEquals, ValidateIf } from 'class-validator';
 
 export class SlowLogConfig {
   @ApiPropertyOptional({
@@ -17,7 +14,8 @@ export class SlowLogConfig {
   slowlogMaxLen?: number;
 
   @ApiPropertyOptional({
-    description: 'Store logs with execution time greater than this value (in microseconds)',
+    description:
+      'Store logs with execution time greater than this value (in microseconds)',
     example: 10000,
     type: Number,
   })

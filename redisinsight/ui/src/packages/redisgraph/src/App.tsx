@@ -1,8 +1,9 @@
 import React from 'react'
 import { JSONTree } from 'react-json-tree'
+import { Table } from 'uiSrc/components/base/layout/table'
+
 import { ResultsParser } from './parser'
 import Graph from './Graph'
-import { Table } from './Table'
 import { COMPACT_FLAG } from './constants'
 
 const isDarkTheme = document.body.classList.contains('theme_DARK')
@@ -28,7 +29,7 @@ const json_tree_theme = {
   base0F: '#d33682',
 }
 
-export function TableApp(props: { command?: string, data: any }) {
+export function TableApp(props: { command?: string; data: any }) {
   const ErrorResponse = HandleError(props)
 
   if (ErrorResponse !== null) return ErrorResponse
@@ -40,9 +41,10 @@ export function TableApp(props: { command?: string, data: any }) {
       <Table
         data={tableData.results}
         columns={tableData.headers.map((h) => ({
-          field: h,
-          name: h,
-          render: (d) => (
+          id: h,
+          header: h,
+          accessorKey: h,
+          cell: ({ row: { original: d } }) => (
             <JSONTree
               invertTheme={isDarkTheme}
               theme={{
@@ -51,18 +53,18 @@ export function TableApp(props: { command?: string, data: any }) {
                   style: { ...style, backgroundColor: undefined }, // removing default background color from styles
                 }),
               }}
-              labelRenderer={(key) => (key || null)}
+              labelRenderer={(key) => key || null}
               hideRoot
               data={d}
             />
-          )
+          ),
         }))}
       />
     </div>
   )
 }
 
-export function GraphApp(props: { command?: string, data: any }) {
+export function GraphApp(props: { command?: string; data: any }) {
   const { data, command = '' } = props
   const ErrorResponse = HandleError(props)
 
@@ -70,26 +72,34 @@ export function GraphApp(props: { command?: string, data: any }) {
 
   return (
     <div style={{ height: '100%' }}>
-      <Graph graphKey={command.split(' ')[1]} data={data[0].response} command={command} />
+      <Graph
+        graphKey={command.split(' ')[1]}
+        data={data[0].response}
+        command={command}
+      />
     </div>
   )
 }
 
-function HandleError(props: { command?: string, data: any }): JSX.Element {
+function HandleError(props: { command?: string; data: any }): JSX.Element {
   const { data: [{ response = '', status = '' } = {}] = [] } = props
 
   if (status === 'fail') {
     return <div className="responseFail">{JSON.stringify(response)}</div>
   }
 
-  if (status === 'success' && typeof (response) === 'string') {
+  if (status === 'success' && typeof response === 'string') {
     return <div className="responseFail">{JSON.stringify(response)}</div>
   }
 
   const command = props.command.split(' ')
 
   if (command[command.length - 1] === COMPACT_FLAG) {
-    return <div className="responseFail">'{COMPACT_FLAG}' flag is currently not supported.</div>
+    return (
+      <div className="responseFail">
+        '{COMPACT_FLAG}' flag is currently not supported.
+      </div>
+    )
   }
 
   return null

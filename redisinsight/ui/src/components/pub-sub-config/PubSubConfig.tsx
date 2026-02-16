@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 
 import { SocketEvent } from 'uiSrc/constants'
 import { PubSubEvent } from 'uiSrc/constants/pubSub'
@@ -15,16 +15,24 @@ import {
   setLoading,
   setPubSubConnected,
 } from 'uiSrc/slices/pubsub/pubsub'
-import { getBaseApiUrl, Nullable } from 'uiSrc/utils'
+import { getSocketApiUrl, Nullable } from 'uiSrc/utils'
+import { appCsrfSelector } from 'uiSrc/slices/app/csrf'
+import { useIoConnection } from 'uiSrc/services/hooks/useIoConnection'
 
 interface IProps {
-  retryDelay?: number;
+  retryDelay?: number
 }
 
-const PubSubConfig = ({ retryDelay = 5000 } : IProps) => {
+const PubSubConfig = ({ retryDelay = 5000 }: IProps) => {
   const { id: instanceId = '' } = useSelector(connectedInstanceSelector)
-  const { isSubscribeTriggered, isConnected, subscriptions } = useSelector(pubSubSelector)
+  const { isSubscribeTriggered, isConnected, subscriptions } =
+    useSelector(pubSubSelector)
+  const { token } = useSelector(appCsrfSelector)
   const socketRef = useRef<Nullable<Socket>>(null)
+  const connectIo = useIoConnection(getSocketApiUrl('pub-sub'), {
+    token,
+    query: { instanceId },
+  })
 
   const dispatch = useDispatch()
 
@@ -34,11 +42,7 @@ const PubSubConfig = ({ retryDelay = 5000 } : IProps) => {
     }
     let retryTimer: NodeJS.Timer
 
-    socketRef.current = io(`${getBaseApiUrl()}/pub-sub`, {
-      forceNew: true,
-      query: { instanceId },
-      rejectUnauthorized: false,
-    })
+    socketRef.current = connectIo()
 
     socketRef.current.on(SocketEvent.Connect, () => {
       clearTimeout(retryTimer)
@@ -82,7 +86,7 @@ const PubSubConfig = ({ retryDelay = 5000 } : IProps) => {
     socketRef.current?.emit(
       PubSubEvent.Subscribe,
       { subscriptions },
-      onChannelsSubscribe
+      onChannelsSubscribe,
     )
   }
 
@@ -91,7 +95,7 @@ const PubSubConfig = ({ retryDelay = 5000 } : IProps) => {
     socketRef.current?.emit(
       PubSubEvent.Unsubscribe,
       { subscriptions },
-      onChannelsUnSubscribe
+      onChannelsUnSubscribe,
     )
   }
 
@@ -100,7 +104,8 @@ const PubSubConfig = ({ retryDelay = 5000 } : IProps) => {
     dispatch(setIsPubSubSubscribed())
     subscriptions.forEach(({ channel, type }: PubSubSubscription) => {
       const subscription = `${type}:${channel}`
-      const isListenerExist = !!socketRef.current?.listeners(subscription).length
+      const isListenerExist =
+        !!socketRef.current?.listeners(subscription).length
 
       if (!isListenerExist) {
         socketRef.current?.on(subscription, (data) => {

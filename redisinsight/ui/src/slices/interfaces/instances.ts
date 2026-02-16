@@ -1,21 +1,26 @@
-import { RedisResponseBuffer } from 'uiSrc/slices/interfaces/app'
+import { RedisResponseBuffer, RedisString } from 'uiSrc/slices/interfaces/app'
 import { Maybe, Nullable } from 'uiSrc/utils'
-import { GetHashFieldsResponse } from 'apiSrc/modules/browser/dto/hash.dto'
-import { GetSetMembersResponse } from 'apiSrc/modules/browser/dto/set.dto'
-import { GetRejsonRlResponseDto, SafeRejsonRlDataDtO } from 'apiSrc/modules/browser/dto/rejson-rl.dto'
+import { OAuthSocialAction } from 'uiSrc/slices/interfaces/cloud'
+import { DatabaseListColumn } from 'uiSrc/constants'
+import { GetHashFieldsResponse } from 'apiSrc/modules/browser/hash/dto'
+import { GetSetMembersResponse } from 'apiSrc/modules/browser/set/dto'
+import {
+  GetRejsonRlResponseDto,
+  SafeRejsonRlDataDto,
+} from 'apiSrc/modules/browser/rejson-rl/dto'
 import {
   GetListElementsDto,
   GetListElementsResponse,
-} from 'apiSrc/modules/browser/dto/list.dto'
+} from 'apiSrc/modules/browser/list/dto'
 import { Database as DatabaseInstanceResponse } from 'apiSrc/modules/database/models/database'
-import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
-import { SearchZSetMembersResponse } from 'apiSrc/modules/browser/dto'
+import { SearchZSetMembersResponse } from 'apiSrc/modules/browser/z-set/dto'
 import { SentinelMaster } from 'apiSrc/modules/redis-sentinel/models/sentinel-master'
 import { CreateSentinelDatabaseDto } from 'apiSrc/modules/redis-sentinel/dto/create.sentinel.database.dto'
 import { CreateSentinelDatabaseResponse } from 'apiSrc/modules/redis-sentinel/dto/create.sentinel.database.response'
 import { RedisNodeInfoResponse } from 'apiSrc/modules/database/dto/redis-info.dto'
+import { Tag } from './tag'
 
-export interface Instance extends DatabaseInstanceResponse {
+export interface Instance extends Partial<DatabaseInstanceResponse> {
   host: string
   port: number
   nameFromProvider?: Nullable<string>
@@ -34,9 +39,9 @@ export interface Instance extends DatabaseInstanceResponse {
     host: string
     port: number
     username?: string
-    password?: string
+    password?: string | true
     privateKey?: string
-    passphrase?: string
+    passphrase?: string | true
   }
   tlsClientAuthRequired?: boolean
   verifyServerCert?: boolean
@@ -47,9 +52,18 @@ export interface Instance extends DatabaseInstanceResponse {
   isDeleting?: boolean
   sentinelMaster?: SentinelMaster
   modules: AdditionalRedisModule[]
+  version: Nullable<string>
   isRediStack?: boolean
   visible?: boolean
   loading?: boolean
+  isFreeDb?: boolean
+  tags?: Tag[]
+}
+
+export interface AdditionalRedisModule {
+  name: string
+  version: number
+  semanticVersion: string
 }
 
 interface CaCertificate {
@@ -74,8 +88,8 @@ export enum ConnectionType {
 export enum ConnectionProvider {
   UNKNOWN = 'UNKNOWN',
   LOCALHOST = 'LOCALHOST',
-  RE_CLUSTER = 'RE_CLUSTER',
-  RE_CLOUD = 'RE_CLOUD',
+  REDIS_SOFTWARE = 'REDIS_SOFTWARE',
+  REDIS_CLOUD = 'REDIS_CLOUD',
   AZURE = 'AZURE',
   AWS = 'AWS',
   GOOGLE = 'GOOGLE',
@@ -118,7 +132,7 @@ export interface InstanceRedisCloud {
   account: Nullable<RedisCloudAccount>
   host: string
   port: number
-  uid: number;
+  uid: number
   name: string
   id?: number
   dnsName: string
@@ -132,17 +146,19 @@ export interface InstanceRedisCloud {
   databaseId: number
   databaseIdAdded?: number
   subscriptionId?: number
+  subscriptionType?: RedisCloudSubscriptionType
   subscriptionName: string
   subscriptionIdAdded?: number
   statusAdded?: AddRedisDatabaseStatus
   messageAdded?: string
   databaseDetails?: InstanceRedisCluster
+  free: boolean
 }
 
 export interface IBulkOperationResult {
-  status: AddRedisDatabaseStatus,
-  message: string,
-  error?: any,
+  status: AddRedisDatabaseStatus
+  message: string
+  error?: any
 }
 
 export enum AddRedisDatabaseStatus {
@@ -161,6 +177,9 @@ export enum RedisDefaultModules {
   TimeSeries = 'timeseries',
   FT = 'ft',
   FTL = 'ftl',
+  RedisGears = 'redisgears',
+  RedisGears2 = 'redisgears_2',
+  VectorSet = 'vectorset',
 }
 
 export enum RedisCustomModulesName {
@@ -179,23 +198,26 @@ export const COMMAND_MODULES = {
   [RedisDefaultModules.Search]: REDISEARCH_MODULES,
   [RedisDefaultModules.ReJSON]: [RedisDefaultModules.ReJSON],
   [RedisDefaultModules.TimeSeries]: [RedisDefaultModules.TimeSeries],
-  [RedisDefaultModules.Graph]: [RedisDefaultModules.Graph],
   [RedisDefaultModules.Bloom]: [RedisDefaultModules.Bloom],
 }
 
-const RediSearchModulesText = [...REDISEARCH_MODULES].reduce((prev, next) => ({ ...prev, [next]: 'RediSearch' }), {})
-
 // Enums don't allow to use dynamic key
 export const DATABASE_LIST_MODULES_TEXT = Object.freeze({
-  [RedisDefaultModules.AI]: 'RedisAI',
-  [RedisDefaultModules.Graph]: 'RedisGraph',
-  [RedisDefaultModules.Gears]: 'RedisGears',
-  [RedisDefaultModules.Bloom]: 'RedisBloom',
-  [RedisDefaultModules.ReJSON]: 'RedisJSON',
-  [RedisDefaultModules.TimeSeries]: 'RedisTimeSeries',
+  [RedisDefaultModules.AI]: 'AI',
+  [RedisDefaultModules.Graph]: 'Graph',
+  [RedisDefaultModules.Gears]: 'Gears',
+  [RedisDefaultModules.RedisGears]: 'Gears',
+  [RedisDefaultModules.RedisGears2]: 'Gears',
+  [RedisDefaultModules.Bloom]: 'Probabilistic',
+  [RedisDefaultModules.ReJSON]: 'JSON',
+  [RedisDefaultModules.TimeSeries]: 'Time Series',
   [RedisCustomModulesName.Proto]: 'redis-protobuf',
   [RedisCustomModulesName.IpTables]: 'RedisPushIpTables',
-  ...RediSearchModulesText
+  [RedisDefaultModules.Search]: 'Redis Query Engine',
+  [RedisDefaultModules.SearchLight]: 'Redis Query Engine',
+  [RedisDefaultModules.FT]: 'Redis Query Engine',
+  [RedisDefaultModules.FTL]: 'Redis Query Engine',
+  [RedisDefaultModules.VectorSet]: 'Vector Set',
 })
 
 export enum AddRedisClusterDatabaseOptions {
@@ -269,13 +291,25 @@ export const RedisCloudSubscriptionStatusText = Object.freeze({
   [RedisCloudSubscriptionStatus.Error]: 'Error',
 })
 
+export enum RedisCloudSubscriptionType {
+  Flexible = 'flexible',
+  Fixed = 'fixed',
+}
+
+export const RedisCloudSubscriptionTypeText = Object.freeze({
+  [RedisCloudSubscriptionType.Fixed]: 'Fixed',
+  [RedisCloudSubscriptionType.Flexible]: 'Flexible',
+})
+
 export interface RedisCloudSubscription {
   id: number
   name: string
+  type: RedisCloudSubscriptionType
   numberOfDatabases: number
   provider: string
   region: string
   status: RedisCloudSubscriptionStatus
+  free: boolean
 }
 
 export interface DatabaseConfigInfo {
@@ -287,6 +321,16 @@ export interface DatabaseConfigInfo {
   networkInKbps?: Nullable<number>
   networkOutKbps?: Nullable<number>
   cpuUsagePercentage?: Nullable<number>
+  maxCpuUsagePercentage?: Nullable<number>
+  serverName?: Nullable<string>
+  cloudDetails?: {
+    cloudId: number
+    subscriptionId: number
+    subscriptionType: 'fixed' | 'flexible'
+    planMemoryLimit: number
+    memoryLimitMeasurementUnit: string
+    isBdbPackages: boolean
+  }
 }
 
 export interface InitialStateInstances {
@@ -301,11 +345,13 @@ export interface InitialStateInstances {
   editedInstance: InitialStateEditedInstances
   instanceOverview: DatabaseConfigInfo
   instanceInfo: RedisNodeInfoResponse
+  freeInstances: Nullable<Instance[]>
   importInstances: {
     loading: boolean
     error: string
     data: Nullable<ImportDatabasesData>
   }
+  shownColumns: DatabaseListColumn[]
 }
 
 export interface ErrorImportResult {
@@ -357,6 +403,8 @@ export interface InitialStateCloud {
   error: string
   credentials: Nullable<ICredentialsRedisCloud>
   subscriptions: Nullable<RedisCloudSubscription[]>
+  ssoFlow: Maybe<OAuthSocialAction>
+  isRecommendedSettings: Maybe<boolean>
   account: {
     data: Nullable<RedisCloudAccount>
     error: string
@@ -420,30 +468,44 @@ export interface ModifiedSentinelMaster extends CreateSentinelDatabaseDto {
   loading?: boolean
   message?: string
   status?: AddRedisDatabaseStatus
-  error?: string | object
+  error?:
+    | string
+    | {
+        statusCode?: number
+        name?: string
+      }
+  numberOfSlaves?: number
 }
 
 export interface ModifiedGetListElementsResponse
   extends GetListElementsDto,
-  GetListElementsResponse {
-  key?: string;
-  searchedIndex: Nullable<number>;
+    GetListElementsResponse {
+  elements: { index: number; element: RedisResponseBuffer }[]
+  key?: RedisString
+  searchedIndex: Nullable<number>
 }
 
 export interface InitialStateSet {
-  loading: boolean;
-  error: string;
-  data: ModifiedGetSetMembersResponse;
+  loading: boolean
+  error: string
+  data: ModifiedGetSetMembersResponse
 }
 
 export interface GetRejsonRlResponse extends GetRejsonRlResponseDto {
-  data: Maybe<SafeRejsonRlDataDtO[] | string | number | boolean | null>
+  data: Maybe<SafeRejsonRlDataDto[] | string | number | boolean | null>
+}
+
+export enum EditorType {
+  Default = 'default',
+  Text = 'text',
 }
 
 export interface InitialStateRejson {
   loading: boolean
-  error: string
+  error: Nullable<string>
   data: GetRejsonRlResponse
+  editorType: EditorType
+  isWithinThreshold: boolean
 }
 
 export interface ICredentialsRedisCluster {
@@ -467,8 +529,8 @@ export interface ICredentialsRedisCloud {
 
 export enum InstanceType {
   Standalone = 'Redis Database',
-  RedisCloudPro = 'Redis Enterprise Cloud',
-  RedisEnterpriseCluster = 'Redis Enterprise Cluster',
+  RedisCloudPro = 'Redis Cloud',
+  RedisEnterpriseCluster = 'Enterprise Software',
   AWSElasticache = 'AWS Elasticache',
-  Sentinel = 'Redis Sentinel',
+  Sentinel = 'Sentinel',
 }

@@ -1,37 +1,39 @@
-import {
-  EuiButton,
-  EuiComboBox,
-  EuiFieldText,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiFormFieldset,
-  EuiFormRow,
-  EuiHealth,
-  EuiPanel,
-  EuiSuperSelect,
-  EuiTextColor,
-  EuiText,
-  EuiLink,
-  EuiPopover,
-  EuiButtonIcon,
-} from '@elastic/eui'
 import { EuiComboBoxOptionOption } from '@elastic/eui/src/components/combo_box/types'
-import cx from 'classnames'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import styled from 'styled-components'
 
-import Divider from 'uiSrc/components/divider/Divider'
-import AddItemsActions from 'uiSrc/pages/browser/components/add-items-actions/AddItemsActions'
-import { createIndexStateSelector, createRedisearchIndexAction } from 'uiSrc/slices/browser/redisearch'
+import {
+  createIndexStateSelector,
+  createRedisearchIndexAction,
+} from 'uiSrc/slices/browser/redisearch'
 import { stringToBuffer } from 'uiSrc/utils'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 import { keysSelector } from 'uiSrc/slices/browser/keys'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
-import { CreateRedisearchIndexDto } from 'apiSrc/modules/browser/dto/redisearch'
+import { getFieldTypeOptions } from 'uiSrc/utils/redisearch'
+import { getUtmExternalLink } from 'uiSrc/utils/links'
+import AddMultipleFields from 'uiSrc/pages/browser/components/add-multiple-fields'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  IconButton,
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { AutoTag } from 'uiSrc/components/base/forms/combo-box/AutoTag'
+import { FormFieldset } from 'uiSrc/components/base/forms/fieldset'
+import { InfoIcon } from 'uiSrc/components/base/icons'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { HealthText, Text } from 'uiSrc/components/base/text'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiSelect } from 'uiSrc/components/base/forms/select/RiSelect'
+import { RiTooltip } from 'uiSrc/components/base'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { CreateRedisearchIndexDto } from 'apiSrc/modules/browser/redisearch/dto'
+import { Panel } from 'uiSrc/components/panel'
+import { HorizontalRule } from 'uiSrc/components/base/layout'
 
-import { FIELD_TYPE_OPTIONS, KEY_TYPE_OPTIONS, RedisearchIndexKeyType } from './constants'
-
-import styles from './styles.module.scss'
+import { KEY_TYPE_OPTIONS, RedisearchIndexKeyType } from './constants'
 
 export interface Props {
   onClosePanel?: () => void
@@ -43,30 +45,49 @@ const keyTypeOptions = KEY_TYPE_OPTIONS.map((item) => {
   return {
     value,
     inputDisplay: (
-      <EuiHealth color={color} style={{ lineHeight: 'inherit' }} data-test-subj={value}>
+      <HealthText
+        color={color}
+        style={{ lineHeight: 'inherit' }}
+        data-test-subj={value}
+      >
         {text}
-      </EuiHealth>
+      </HealthText>
     ),
   }
 })
 
-const fieldTypeOptions = FIELD_TYPE_OPTIONS.map(({ value, text }) => ({
-  value,
-  inputDisplay: text,
-}))
+const initialFieldValue = (fieldTypeOptions: any[], id = 0) => ({
+  id,
+  identifier: '',
+  fieldType: fieldTypeOptions[0]?.value || '',
+})
 
-const initialFieldValue = (id = 0) => ({ id, identifier: '', fieldType: fieldTypeOptions[0].value })
+const StyledFooter = styled(Panel)`
+  flex: 0 0 auto;
+`
+
+const StyledContent = styled(Col)`
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+`
 
 const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
   const { viewType } = useSelector(keysSelector)
   const { loading } = useSelector(createIndexStateSelector)
-  const { id: instanceId } = useSelector(connectedInstanceSelector)
+  const { id: instanceId, modules } = useSelector(connectedInstanceSelector)
 
-  const [keyTypeSelected, setKeyTypeSelected] = useState<RedisearchIndexKeyType>(keyTypeOptions[0].value)
+  const [keyTypeSelected, setKeyTypeSelected] =
+    useState<RedisearchIndexKeyType>(keyTypeOptions[0].value)
   const [prefixes, setPrefixes] = useState<EuiComboBoxOptionOption[]>([])
   const [indexName, setIndexName] = useState<string>('')
-  const [fields, setFields] = useState<any[]>([initialFieldValue()])
-  const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState<boolean>(false)
+  const [fieldTypeOptions, setFieldTypeOptions] =
+    useState<ReturnType<typeof getFieldTypeOptions>>(getFieldTypeOptions)
+  const [fields, setFields] = useState<any[]>([
+    initialFieldValue(fieldTypeOptions),
+  ])
 
   const lastAddedIdentifier = useRef<HTMLInputElement>(null)
   const prevCountFields = useRef<number>(0)
@@ -74,15 +95,22 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
   const dispatch = useDispatch()
 
   useEffect(() => {
-    if (prevCountFields.current !== 0 && prevCountFields.current < fields.length) {
+    if (
+      prevCountFields.current !== 0 &&
+      prevCountFields.current < fields.length
+    ) {
       lastAddedIdentifier.current?.focus()
     }
     prevCountFields.current = fields.length
   }, [fields.length])
 
+  useEffect(() => {
+    setFieldTypeOptions(getFieldTypeOptions)
+  }, [modules])
+
   const addField = () => {
     const lastFieldId = fields[fields.length - 1].id
-    setFields([...fields, initialFieldValue(lastFieldId + 1)])
+    setFields([...fields, initialFieldValue(fieldTypeOptions, lastFieldId + 1)])
   }
 
   const removeField = (id: number) => {
@@ -90,11 +118,28 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
   }
 
   const clearFieldsValues = (id: number) => {
-    setFields((fields) => fields.map((item) => (item.id === id ? initialFieldValue(id) : item)))
+    setFields((fields) =>
+      fields.map((item) =>
+        item.id === id ? initialFieldValue(fieldTypeOptions, id) : item,
+      ),
+    )
+  }
+
+  const onClickRemove = ({ id }: any) => {
+    if (fields.length === 1) {
+      clearFieldsValues(id)
+      return
+    }
+
+    removeField(id)
   }
 
   const handleFieldChange = (formField: string, id: number, value: string) => {
-    setFields((fields) => fields.map((item) => ((item.id === id) ? { ...item, [formField]: value } : item)))
+    setFields((fields) =>
+      fields.map((item) =>
+        item.id === id ? { ...item, [formField]: value } : item,
+      ),
+    )
   }
 
   const submitData = () => {
@@ -104,8 +149,8 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
       prefixes: prefixes.map((p) => stringToBuffer(p.label as string)),
       fields: fields.map((item) => ({
         name: stringToBuffer(item.identifier),
-        type: item.fieldType
-      }))
+        type: item.fieldType,
+      })),
     }
 
     dispatch(createRedisearchIndexAction(data, onSuccess))
@@ -120,214 +165,177 @@ const CreateRedisearchIndex = ({ onClosePanel, onCreateIndex }: Props) => {
         dataType: data.type,
         countOfPrefixes: data.prefixes?.length || 0,
         countOfFieldNames: data.fields?.length || 0,
-      }
+      },
     })
 
     onCreateIndex?.()
   }
 
-  const isClearDisabled = (item: any): boolean => fields.length === 1 && !(item.identifier.length)
+  const isClearDisabled = (item: any): boolean =>
+    fields.length === 1 && !item.identifier.length
 
   const IdentifierInfo = () => (
-    <EuiPopover
-      anchorPosition="upCenter"
-      isOpen={isInfoPopoverOpen}
-      anchorClassName={styles.unsupportedInfo}
-      panelClassName={cx('euiToolTip', 'popoverLikeTooltip')}
-      closePopover={() => setIsInfoPopoverOpen(false)}
-      initialFocus={false}
-      button={(
-        <EuiButtonIcon
-          iconType="iInCircle"
-          color="subdued"
-          id="identifier-info-icon"
-          aria-label="identifier info icon"
-          data-testid="identifier-info-icon"
-          className={styles.infoIcon}
-          onClick={() => setIsInfoPopoverOpen((isPopoverOpen) => !isPopoverOpen)}
-        />
-      )}
+    <RiTooltip
+      interactive
+      position="top"
+      content={
+        <Text>
+          <Link
+            variant="inline"
+            size="M"
+            href={getUtmExternalLink(
+              'https://redis.io/commands/ft.create/#SCHEMA',
+              {
+                campaign: 'browser_search',
+              },
+            )}
+            target="_blank"
+          >
+            Declares
+          </Link>
+          {' fields to index. '}
+          {keyTypeSelected === RedisearchIndexKeyType.HASH
+            ? 'Enter a hash field name.'
+            : 'Enter a JSON path expression.'}
+        </Text>
+      }
     >
-      <>
-        <EuiLink
-          external={false}
-          href="https://redis.io/commands/ft.create/#SCHEMA"
-          target="_blank"
-        >
-          Declares
-        </EuiLink>
-        {' fields to index. '}
-        {keyTypeSelected === RedisearchIndexKeyType.HASH
-          ? 'Enter a hash field name.'
-          : 'Enter a JSON path expression.'}
-
-      </>
-    </EuiPopover>
+      <IconButton
+        icon={InfoIcon}
+        id="identifier-info-icon"
+        aria-label="identifier info icon"
+        data-testid="identifier-info-icon"
+      />
+    </RiTooltip>
   )
 
   return (
     <>
-      <div className="eui-yScroll">
-        <div className={styles.contentFields}>
-          <div className={styles.fieldsContainer}>
-            <EuiFlexGroup responsive={false} className={styles.row}>
-              <EuiFlexItem>
-                <EuiFormRow label="Index Name" fullWidth>
-                  <EuiFieldText
-                    fullWidth
-                    name="Index name"
-                    id="index-name"
-                    placeholder="Enter Index Name"
-                    value={indexName}
-                    onChange={(e) => setIndexName(e.target.value)}
-                    autoComplete="off"
-                    data-testid="index-name"
-                  />
-                </EuiFormRow>
-              </EuiFlexItem>
-              <EuiFlexItem>
-                <EuiFormFieldset
-                  legend={{ children: 'Select key type', display: 'hidden' }}
-                >
-                  <EuiFormRow
-                    label="Key Type*"
-                    fullWidth
-                  >
-                    <EuiSuperSelect
-                      itemClassName="withColorDefinition"
-                      fullWidth
-                      options={keyTypeOptions}
-                      valueOfSelected={keyTypeSelected}
-                      onChange={(value: RedisearchIndexKeyType) => setKeyTypeSelected(value)}
-                      data-testid="key-type"
-                    />
-                  </EuiFormRow>
-                </EuiFormFieldset>
-              </EuiFlexItem>
-            </EuiFlexGroup>
-            <EuiFlexGroup responsive={false} className={styles.row} style={{ maxWidth: '100%' }}>
-              <EuiFlexItem style={{ minWidth: '100%', maxWidth: '100%' }}>
-                <EuiFormRow
-                  label="Key Prefixes"
-                  fullWidth
-                >
-                  <EuiComboBox
-                    noSuggestions
-                    isClearable={false}
-                    placeholder="Enter Prefix"
-                    selectedOptions={prefixes}
-                    onCreateOption={(searchValue) => setPrefixes([...prefixes, { label: searchValue }])}
-                    onChange={(selectedOptions) => setPrefixes(selectedOptions)}
-                    className={styles.combobox}
-                    data-testid="prefix-combobox"
-                  />
-                </EuiFormRow>
-              </EuiFlexItem>
-            </EuiFlexGroup>
-            <Divider colorVariable="separatorColor" className={styles.controlsDivider} />
-            <EuiText color="subdued">
-              Identifier
-              {IdentifierInfo()}
-            </EuiText>
-
-            {
-              fields.map((item, index) => (
-                <EuiFlexItem
-                  key={item.id}
-                  className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
-                  grow
-                  style={{ marginBottom: '8px', marginTop: '10px' }}
-                >
-                  <EuiFlexGroup gutterSize="m">
-                    <EuiFlexItem grow>
-                      <EuiFlexGroup gutterSize="none" alignItems="center">
-                        <EuiFlexItem grow>
-                          <EuiFormRow fullWidth>
-                            <EuiFieldText
-                              fullWidth
-                              name={`identifier-${item.id}`}
-                              id={`identifier-${item.id}`}
-                              placeholder="Enter Identifier"
-                              value={item.identifier}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFieldChange(
-                                'identifier',
-                                item.id,
-                                e.target.value
-                              )}
-                              inputRef={index === fields.length - 1 ? lastAddedIdentifier : null}
-                              autoComplete="off"
-                              data-testid={`identifier-${item.id}`}
-                            />
-                          </EuiFormRow>
-                        </EuiFlexItem>
-                        <EuiFlexItem grow>
-                          <EuiFormRow>
-                            <EuiSuperSelect
-                              itemClassName="withColorDefinition"
-                              options={fieldTypeOptions}
-                              valueOfSelected={item.fieldType}
-                              onChange={(value: string) => handleFieldChange(
-                                'fieldType',
-                                item.id,
-                                value
-                              )}
-                              data-testid={`field-type-${item.id}`}
-                            />
-                          </EuiFormRow>
-                        </EuiFlexItem>
-                      </EuiFlexGroup>
-                    </EuiFlexItem>
-                    <AddItemsActions
-                      id={item.id}
-                      index={index}
-                      length={fields.length}
-                      addItem={addField}
-                      removeItem={removeField}
-                      clearItemValues={clearFieldsValues}
-                      clearIsDisabled={isClearDisabled(item)}
-                      loading={loading}
-                      anchorClassName={styles.refreshKeyTooltip}
-                    />
-                  </EuiFlexGroup>
-                </EuiFlexItem>
-              ))
-            }
+      <StyledContent gap="l">
+        <Row gap="m" grow={false}>
+          <FlexItem grow>
+            <FormField label="Index Name">
+              <TextInput
+                name="Index name"
+                id="index-name"
+                placeholder="Enter Index Name"
+                value={indexName}
+                onChange={setIndexName}
+                autoComplete="off"
+                data-testid="index-name"
+              />
+            </FormField>
+          </FlexItem>
+          <FlexItem grow>
+            <FormFieldset
+              legend={{ children: 'Select key type', display: 'hidden' }}
+            >
+              <FormField label="Key Type*">
+                <RiSelect
+                  options={keyTypeOptions}
+                  valueRender={({ option }) =>
+                    option.inputDisplay || option.value
+                  }
+                  value={keyTypeSelected}
+                  onChange={(value: RedisearchIndexKeyType) =>
+                    setKeyTypeSelected(value)
+                  }
+                  data-testid="key-type"
+                />
+              </FormField>
+            </FormFieldset>
+          </FlexItem>
+        </Row>
+        <Row grow={false}>
+          <FlexItem grow>
+            <AutoTag
+              label="Key Prefixes"
+              placeholder="Enter Prefix"
+              selectedOptions={prefixes}
+              onCreateOption={(searchValue) =>
+                setPrefixes([...prefixes, { label: searchValue }])
+              }
+              onChange={(selectedOptions) => setPrefixes(selectedOptions)}
+              data-testid="prefix-combobox"
+            />
+          </FlexItem>
+        </Row>
+        <HorizontalRule margin="m" colorVariable="separatorColor" />
+        <Col grow={false} gap="m">
+          <Row align="center" gap="xs">
+            <Text>Identifier</Text>
+            {IdentifierInfo()}
+          </Row>
+          <div>
+            <AddMultipleFields
+              items={fields}
+              isClearDisabled={isClearDisabled}
+              onClickRemove={onClickRemove}
+              onClickAdd={addField}
+            >
+              {(item, index) => (
+                <Row align="center" gap="m">
+                  <FlexItem grow>
+                    <FormField>
+                      <TextInput
+                        name={`identifier-${item.id}`}
+                        id={`identifier-${item.id}`}
+                        placeholder="Enter Identifier"
+                        value={item.identifier}
+                        onChange={(value) =>
+                          handleFieldChange('identifier', item.id, value)
+                        }
+                        ref={
+                          index === fields.length - 1
+                            ? lastAddedIdentifier
+                            : null
+                        }
+                        autoComplete="off"
+                        data-testid={`identifier-${item.id}`}
+                      />
+                    </FormField>
+                  </FlexItem>
+                  <FlexItem grow>
+                    <FormField>
+                      <RiSelect
+                        options={fieldTypeOptions}
+                        value={item.fieldType}
+                        onChange={(value: string) =>
+                          handleFieldChange('fieldType', item.id, value)
+                        }
+                        data-testid={`field-type-${item.id}`}
+                      />
+                    </FormField>
+                  </FlexItem>
+                </Row>
+              )}
+            </AddMultipleFields>
           </div>
-        </div>
-      </div>
-      <EuiPanel
-        style={{ border: 'none' }}
-        color="transparent"
-        hasShadow={false}
-        borderRadius="none"
-        className={styles.footer}
-      >
-        <EuiFlexGroup justifyContent="flexEnd">
-          <EuiFlexItem grow={false}>
-            <EuiButton
-              color="secondary"
-              onClick={() => onClosePanel?.()}
-              className="btn-cancel btn-back"
-              data-testid="create-index-cancel-btn"
-            >
-              <EuiTextColor>Cancel</EuiTextColor>
-            </EuiButton>
-          </EuiFlexItem>
-          <EuiFlexItem grow={false}>
-            <EuiButton
-              fill
-              size="m"
-              color="secondary"
-              isLoading={loading}
-              isDisabled={loading}
-              onClick={submitData}
-              data-testid="create-index-btn"
-            >
-              Create Index
-            </EuiButton>
-          </EuiFlexItem>
-        </EuiFlexGroup>
-      </EuiPanel>
+        </Col>
+      </StyledContent>
+      <HorizontalRule margin="xs" colorVariable="separatorColor" />
+      <StyledFooter justify="end" gap="m">
+        <FlexItem>
+          <SecondaryButton
+            color="secondary"
+            onClick={() => onClosePanel?.()}
+            data-testid="create-index-cancel-btn"
+          >
+            Cancel
+          </SecondaryButton>
+        </FlexItem>
+        <FlexItem>
+          <PrimaryButton
+            size="m"
+            loading={loading}
+            disabled={loading}
+            onClick={submitData}
+            data-testid="create-index-btn"
+          >
+            Create Index
+          </PrimaryButton>
+        </FlexItem>
+      </StyledFooter>
     </>
   )
 }

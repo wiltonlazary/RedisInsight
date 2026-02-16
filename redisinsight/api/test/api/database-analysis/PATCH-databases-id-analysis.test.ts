@@ -9,15 +9,17 @@ import {
   validateInvalidDataTestCase,
 } from '../deps';
 import { analysisSchema } from './constants';
-const { localDb, request, server, constants, rte } = deps;
+const { localDb, request, server, constants } = deps;
 
 const endpoint = (
   instanceId = constants.TEST_INSTANCE_ID,
   id = constants.TEST_DATABASE_ANALYSIS_ID_1,
 ) =>
-  request(server).patch(`/${constants.API.DATABASES}/${instanceId}/analysis/${id}`);
+  request(server).patch(
+    `/${constants.API.DATABASES}/${instanceId}/analysis/${id}`,
+  );
 
-  // input data schema
+// input data schema
 const dataSchema = Joi.object({
   name: Joi.string(),
   vote: Joi.string(),
@@ -30,14 +32,19 @@ const validInputData = {
 
 const responseSchema = analysisSchema;
 const mainCheckFn = getMainCheckFn(endpoint);
-let repository;
 
 describe('PATCH /databases/:instanceId/analysis/:id', () => {
-  before(async () => await localDb.generateNDatabaseAnalysis({
-      databaseId: constants.TEST_INSTANCE_ID,
-      id: constants.TEST_DATABASE_ANALYSIS_ID_1,
-      createdAt: constants.TEST_DATABASE_ANALYSIS_CREATED_AT_1,
-    }, 1, true),
+  before(
+    async () =>
+      await localDb.generateNDatabaseAnalysis(
+        {
+          databaseId: constants.TEST_INSTANCE_ID,
+          id: constants.TEST_DATABASE_ANALYSIS_ID_1,
+          createdAt: constants.TEST_DATABASE_ANALYSIS_CREATED_AT_1,
+        },
+        1,
+        true,
+      ),
   );
 
   describe('Validation', () => {
@@ -59,7 +66,7 @@ describe('PATCH /databases/:instanceId/analysis/:id', () => {
           responseSchema,
           checkFn: async ({ body }) => {
             expect(body.recommendations).to.include.deep.members([
-              constants.TEST_LUA_SCRIPT_VOTE_RECOMMENDATION
+              constants.TEST_LUA_SCRIPT_VOTE_RECOMMENDATION,
             ]);
           },
         },

@@ -1,28 +1,40 @@
 import {
   BadRequestException,
   ForbiddenException,
-  GatewayTimeoutException,
   HttpException,
-  HttpStatus,
   InternalServerErrorException,
-  MethodNotAllowedException,
-  ServiceUnavailableException,
-  UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ReplyError } from 'src/models';
-import { RedisErrorCodes, CertificatesErrorCodes } from 'src/constants';
+import {
+  RedisErrorCodes,
+  RedisearchErrorCodes,
+  CertificatesErrorCodes,
+} from 'src/constants';
 import ERROR_MESSAGES from 'src/constants/error-messages';
-import { EncryptionServiceErrorException } from 'src/modules/encryption/exceptions';
+import { RedisClientCommandReply } from 'src/modules/redis/client';
+import {
+  RedisConnectionAuthUnsupportedException,
+  RedisConnectionClusterNodesUnavailableException,
+  RedisConnectionFailedException,
+  RedisConnectionTimeoutException,
+  RedisConnectionUnauthorizedException,
+  RedisConnectionUnavailableException,
+  RedisConnectionSentinelMasterRequiredException,
+  RedisConnectionIncorrectCertificateException,
+} from 'src/modules/redis/exceptions/connection';
 
 export const isCertError = (error: ReplyError): boolean => {
   try {
     const errorCodesArray: string[] = Object.values(CertificatesErrorCodes);
-    return errorCodesArray.includes(error.code)
-      || error.code?.includes(CertificatesErrorCodes.OSSLError)
-      || error.message.includes('SSL')
-      || error.message.includes(CertificatesErrorCodes.OSSLError)
-      || error.message.includes(CertificatesErrorCodes.IncorrectCertificates)
-      || error.message.includes('ERR unencrypted connection is prohibited');
+    return (
+      errorCodesArray.includes(error.code) ||
+      error.code?.includes(CertificatesErrorCodes.OSSLError) ||
+      error.message.includes('SSL') ||
+      error.message.includes(CertificatesErrorCodes.OSSLError) ||
+      error.message.includes(CertificatesErrorCodes.IncorrectCertificates) ||
+      error.message.includes('ERR unencrypted connection is prohibited')
+    );
   } catch (e) {
     return false;
   }
@@ -30,7 +42,7 @@ export const isCertError = (error: ReplyError): boolean => {
 
 export const getRedisConnectionException = (
   error: ReplyError,
-  connectionOptions: { host: string, port: number },
+  connectionOptions: { host: string; port: number },
   errorPlaceholder: string = '',
 ): HttpException => {
   const { host, port } = connectionOptions;
@@ -41,70 +53,70 @@ export const getRedisConnectionException = (
 
   if (error?.message) {
     if (error.message.includes(RedisErrorCodes.SentinelParamsRequired)) {
-      return new HttpException(
-        {
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: RedisErrorCodes.SentinelParamsRequired,
-          message: ERROR_MESSAGES.SENTINEL_MASTER_NAME_REQUIRED,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      return new RedisConnectionSentinelMasterRequiredException(undefined, {
+        cause: error,
+      });
     }
 
     if (
-      error.message.includes(RedisErrorCodes.Timeout)
-      || error.message.includes('timed out')
+      error.message.includes(RedisErrorCodes.Timeout) ||
+      error.message.includes('timed out')
     ) {
-      return new GatewayTimeoutException(ERROR_MESSAGES.CONNECTION_TIMEOUT);
+      return new RedisConnectionTimeoutException(undefined, { cause: error });
     }
 
     if (
-      error.message.includes(RedisErrorCodes.InvalidPassword)
-      || error.message.includes(RedisErrorCodes.AuthRequired)
-      || error.message === 'ERR invalid password'
+      error.message.includes(RedisErrorCodes.InvalidPassword) ||
+      error.message.includes(RedisErrorCodes.AuthRequired) ||
+      error.message === 'ERR invalid password'
     ) {
-      return new UnauthorizedException(ERROR_MESSAGES.AUTHENTICATION_FAILED());
+      return new RedisConnectionUnauthorizedException(undefined, {
+        cause: error,
+      });
     }
 
     if (error.message === "ERR unknown command 'auth'") {
-      return new MethodNotAllowedException(
-        ERROR_MESSAGES.COMMAND_NOT_SUPPORTED('auth'),
-      );
+      return new RedisConnectionAuthUnsupportedException(undefined, {
+        cause: error,
+      });
+    }
+
+    if (error.message.includes(RedisErrorCodes.ClusterAllFailedError)) {
+      return new RedisConnectionClusterNodesUnavailableException(undefined, {
+        cause: error,
+      });
     }
 
     if (
-      error.message.includes(RedisErrorCodes.ConnectionRefused)
-      || error.message.includes(RedisErrorCodes.ConnectionNotFound)
-      || error.message.includes(RedisErrorCodes.DNSTimeoutError)
-      || error.message.includes('Failed to refresh slots cache')
-      || error?.code === RedisErrorCodes.ConnectionReset
+      error.message.includes(RedisErrorCodes.ConnectionRefused) ||
+      error.message.includes(RedisErrorCodes.ConnectionNotFound) ||
+      error.message.includes(RedisErrorCodes.DNSTimeoutError) ||
+      error?.code === RedisErrorCodes.ConnectionReset
     ) {
-      return new ServiceUnavailableException(
+      return new RedisConnectionUnavailableException(
         ERROR_MESSAGES.INCORRECT_DATABASE_URL(
           errorPlaceholder || `${host}:${port}`,
         ),
+        { cause: error },
       );
     }
+
     if (isCertError(error)) {
-      const message = ERROR_MESSAGES.INCORRECT_CERTIFICATES(errorPlaceholder || `${host}:${port}`);
-      return new BadRequestException(message);
+      return new RedisConnectionIncorrectCertificateException(
+        ERROR_MESSAGES.INCORRECT_CERTIFICATES(
+          errorPlaceholder || `${host}:${port}`,
+        ),
+        { cause: error },
+      );
     }
   }
 
-  // todo: Move to other place after refactoring
-  if (error instanceof EncryptionServiceErrorException) {
-    return error;
-  }
-
-  if (error?.message) {
-    return new BadRequestException(error.message);
-  }
-  return new InternalServerErrorException();
+  return new RedisConnectionFailedException(error?.message, { cause: error });
 };
 
 export const catchRedisConnectionError = (
   error: ReplyError,
-  connectionOptions: { host: string, port: number },
+  connectionOptions: { host: string; port: number },
   errorPlaceholder: string = '',
 ): HttpException => {
   throw getRedisConnectionException(error, connectionOptions, errorPlaceholder);
@@ -112,7 +124,7 @@ export const catchRedisConnectionError = (
 
 export const catchAclError = (error: ReplyError): HttpException => {
   // todo: Move to other place after refactoring
-  if (error instanceof EncryptionServiceErrorException) {
+  if (error instanceof HttpException) {
     throw error;
   }
 
@@ -120,9 +132,9 @@ export const catchAclError = (error: ReplyError): HttpException => {
     throw new ForbiddenException(error.message);
   }
   if (error?.previousErrors?.length) {
-    const noPermError: ReplyError = error.previousErrors.find((
-      errorItem,
-    ) => errorItem?.message?.includes(RedisErrorCodes.NoPermission));
+    const noPermError: ReplyError = error.previousErrors.find((errorItem) =>
+      errorItem?.message?.includes(RedisErrorCodes.NoPermission),
+    );
 
     if (noPermError) {
       throw new ForbiddenException(noPermError.message);
@@ -144,4 +156,54 @@ export const catchTransactionError = (
   if (previousErrors.length) {
     throw previousErrors[0];
   }
+};
+
+export const catchMultiTransactionError = (
+  transactionResults: [Error, RedisClientCommandReply][],
+): void => {
+  transactionResults.forEach(([err]) => {
+    if (err) throw err;
+  });
+};
+
+const REDISEARCH_CLIENT_ERROR_PATTERNS = [
+  RedisearchErrorCodes.Invalid,
+  RedisearchErrorCodes.BadArguments,
+  RedisearchErrorCodes.Duplicate,
+  RedisearchErrorCodes.Missing,
+  RedisearchErrorCodes.WrongNumberOfArguments,
+];
+
+export const catchRedisSearchError = (
+  error: ReplyError,
+  options?: { searchLimit?: number },
+): HttpException => {
+  if (error instanceof HttpException) {
+    throw error;
+  }
+
+  if (error.message?.includes(RedisErrorCodes.RedisearchLimit)) {
+    throw new BadRequestException(
+      ERROR_MESSAGES.INCREASE_MINIMUM_LIMIT(options?.searchLimit),
+    );
+  }
+
+  if (
+    error.message?.toLowerCase()?.includes('unknown index') ||
+    error.message?.toLowerCase()?.includes('no such index')
+  ) {
+    throw new NotFoundException(error.message);
+  }
+
+  // Check for client-side errors (invalid input, bad arguments, etc.)
+  // These should return 400 Bad Request, not 500 Internal Server Error
+  if (
+    REDISEARCH_CLIENT_ERROR_PATTERNS.some((pattern) =>
+      error.message?.startsWith(pattern),
+    )
+  ) {
+    throw new BadRequestException(error.message);
+  }
+
+  throw catchAclError(error);
 };

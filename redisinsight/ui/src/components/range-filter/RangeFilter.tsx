@@ -1,9 +1,41 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react'
 import cx from 'classnames'
+import styled from 'styled-components'
 
-import { getFormatTime } from 'uiSrc/utils/streamUtils'
-
+import { FormatedDate } from '../formated-date'
 import styles from './styles.module.scss'
+import { Theme } from 'uiSrc/components/base/theme/types'
+
+const SliderRange = styled.div<
+  React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>
+>`
+  background-color: ${({ theme }: { theme: Theme }) =>
+    theme.semantic.color.background.primary400};
+  height: 1px;
+  z-index: 2;
+  transform: translateY(2px);
+
+  &:before {
+    content: '';
+    width: 1px;
+    height: 6px;
+    position: absolute;
+    top: -5px;
+    left: -1px;
+    background-color: ${({ theme }: { theme: Theme }) =>
+      theme.semantic.color.background.primary400};
+  }
+
+  &:after {
+    content: '';
+    width: 1px;
+    height: 6px;
+    position: absolute;
+    right: -1px;
+    background-color: ${({ theme }: { theme: Theme }) =>
+      theme.semantic.color.background.primary400};
+  }
+`
 
 const buttonString = 'Reset Filter'
 
@@ -39,7 +71,7 @@ const RangeFilter = (props: Props) => {
     handleChangeEnd,
     handleUpdateRangeMax,
     handleUpdateRangeMin,
-    handleResetFilter
+    handleResetFilter,
   } = props
 
   const [startVal, setStartVal] = useState(start)
@@ -47,7 +79,7 @@ const RangeFilter = (props: Props) => {
 
   const getPercent = useCallback(
     (value) => Math.round(((value - min) / (max - min)) * 100),
-    [min, max]
+    [min, max],
   )
 
   const minValRef = useRef<HTMLInputElement>(null)
@@ -61,29 +93,23 @@ const RangeFilter = (props: Props) => {
       const newValue = Math.min(+value, endVal - 1)
       setStartVal(newValue)
     },
-    [endVal]
+    [endVal],
   )
 
-  const onMouseUpStart = useCallback(
-    ({ target: { value } }) => {
-      handleChangeStart(value, true)
-    },
-    []
-  )
+  const onMouseUpStart = useCallback(({ target: { value } }) => {
+    handleChangeStart(value, true)
+  }, [])
 
-  const onMouseUpEnd = useCallback(
-    ({ target: { value } }) => {
-      handleChangeEnd(value, true)
-    },
-    []
-  )
+  const onMouseUpEnd = useCallback(({ target: { value } }) => {
+    handleChangeEnd(value, true)
+  }, [])
 
   const onChangeEnd = useCallback(
     ({ target: { value } }) => {
       const newValue = Math.max(+value, startVal + 1)
       setEndVal(newValue)
     },
-    [startVal]
+    [startVal],
   )
 
   useEffect(() => {
@@ -137,10 +163,20 @@ const RangeFilter = (props: Props) => {
   if (start === end) {
     return (
       <div data-testid="mock-fill-range" className={styles.rangeWrapper}>
-        <div className={cx(styles.sliderRange, styles.mockRange)}>
-          <div className={styles.sliderLeftValue} data-testid="range-left-timestamp">{getFormatTime(start?.toString())}</div>
-          <div className={styles.sliderRightValue} data-testid="range-right-timestamp">{getFormatTime(end?.toString())}</div>
-        </div>
+        <SliderRange className={cx(styles.sliderRange, styles.mockRange)}>
+          <div
+            className={styles.sliderLeftValue}
+            data-testid="range-left-timestamp"
+          >
+            <FormatedDate date={start?.toString()} />
+          </div>
+          <div
+            className={styles.sliderRightValue}
+            data-testid="range-right-timestamp"
+          >
+            <FormatedDate date={end?.toString()} />
+          </div>
+        </SliderRange>
       </div>
     )
   }
@@ -174,37 +210,30 @@ const RangeFilter = (props: Props) => {
         />
         <div className={styles.slider}>
           <div className={styles.sliderTrack} />
-          <div
+          <SliderRange
             ref={range}
-            className={
-              cx(styles.sliderRange,
-                {
-                  [styles.leftPosition]: max - startVal < (max - min) / 2,
-                  [styles.disabled]: disabled
-                })
-            }
+            className={cx(styles.sliderRange, {
+              [styles.leftPosition]: max - startVal < (max - min) / 2,
+              [styles.disabled]: disabled,
+            })}
           >
-            <div className={
-              cx(styles.sliderLeftValue,
-                {
-                  [styles.leftPosition]: max - startVal < (max - min) / 2,
-                  [styles.disabled]: disabled
-                })
-              }
+            <div
+              className={cx(styles.sliderLeftValue, {
+                [styles.leftPosition]: max - startVal < (max - min) / 2,
+                [styles.disabled]: disabled,
+              })}
             >
-              {getFormatTime(startVal?.toString())}
+              <FormatedDate date={startVal?.toString()} />
             </div>
-            <div className={
-              cx(styles.sliderRightValue,
-                {
-                  [styles.rightPosition]: max - endVal > (max - min) / 2,
-                  [styles.disabled]: disabled
-                })
-              }
+            <div
+              className={cx(styles.sliderRightValue, {
+                [styles.rightPosition]: max - endVal > (max - min) / 2,
+                [styles.disabled]: disabled,
+              })}
             >
-              {getFormatTime(endVal?.toString())}
+              <FormatedDate date={endVal?.toString()} />
             </div>
-          </div>
+          </SliderRange>
         </div>
       </div>
       {(start !== min || end !== max) && (

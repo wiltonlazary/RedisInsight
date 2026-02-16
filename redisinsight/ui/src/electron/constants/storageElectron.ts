@@ -6,6 +6,8 @@ enum ElectronStorageItem {
   isDisplayAppInTray = 'isDisplayAppInTray',
   updatePreviousVersion = 'updatePreviousVersion',
   zoomFactor = 'zoomFactor',
+  themeSource = 'themeSource',
+  bounds = 'bounds',
 }
 
 export default ElectronStorageItem

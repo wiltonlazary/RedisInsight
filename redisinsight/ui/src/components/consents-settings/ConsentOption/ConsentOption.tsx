@@ -1,16 +1,14 @@
 import React from 'react'
-import {
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiSwitch,
-  EuiText,
-  EuiSpacer,
-} from '@elastic/eui'
 import parse from 'html-react-parser'
 
-import { IConsent } from '../ConsentsSettings'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { Spacer } from 'uiSrc/components/base/layout/spacer'
 
-import styles from '../styles.module.scss'
+import { Text } from 'uiSrc/components/base/text'
+import { SwitchInput } from 'uiSrc/components/base/inputs'
+
+import { ItemDescription } from './components'
+import { IConsent } from '../ConsentsSettings'
 
 interface Props {
   consent: IConsent
@@ -26,53 +24,54 @@ const ConsentOption = (props: Props) => {
     onChangeAgreement,
     checked,
     isSettingsPage = false,
-    withoutSpacer = false
+    withoutSpacer = false,
   } = props
+
   return (
-    <EuiFlexItem key={consent.agreementName}>
+    <FlexItem key={consent.agreementName} grow>
       {isSettingsPage && consent.description && (
         <>
-          <EuiText
-            size="s"
-            className={styles.smallText}
-            color="subdued"
-            style={{ marginTop: '12px' }}
-          >
-            {parse(consent.description)}
-          </EuiText>
-          <EuiSpacer size="m" />
+          <Spacer size="s" />
+          <Text size="M" color="primary">
+            <ItemDescription
+              description={consent.description}
+              withLink={consent.linkToPrivacyPolicy}
+            />
+          </Text>
+          <Spacer size="m" />
         </>
       )}
-      <EuiFlexGroup gutterSize="s">
-        <EuiFlexItem grow={false}>
-          <EuiSwitch
-            showLabel={false}
-            label=""
+      <Row gap="m">
+        <FlexItem>
+          <Spacer size="xs" />
+          <SwitchInput
             checked={checked}
-            onChange={(e) => onChangeAgreement(e.target.checked, consent.agreementName)}
-            className={styles.switchOption}
+            onCheckedChange={(checked) =>
+              onChangeAgreement(checked, consent.agreementName)
+            }
             data-testid={`switch-option-${consent.agreementName}`}
             disabled={consent?.disabled}
           />
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiText className={styles.smallText}>
+        </FlexItem>
+        <FlexItem>
+          <Text size="M" color="primary">
             {parse(consent.label)}
-          </EuiText>
+          </Text>
           {!isSettingsPage && consent.description && (
-            <EuiText
-              size="s"
-              className={styles.smallText}
-              color="subdued"
-              style={{ marginTop: '12px' }}
-            >
-              {parse(consent.description)}
-            </EuiText>
+            <>
+              <Spacer size="xs" />
+              <Text size="s" color="secondary">
+                <ItemDescription
+                  description={consent.description}
+                  withLink={consent.linkToPrivacyPolicy}
+                />
+              </Text>
+            </>
           )}
-        </EuiFlexItem>
-      </EuiFlexGroup>
-      {!withoutSpacer && (<EuiSpacer size="l" />)}
-    </EuiFlexItem>
+        </FlexItem>
+      </Row>
+      {!withoutSpacer && <Spacer />}
+    </FlexItem>
   )
 }
 

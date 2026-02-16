@@ -1,63 +1,60 @@
 import React from 'react'
-import { EuiIcon, EuiText } from '@elastic/eui'
+import { FeatureFlagComponent } from 'uiSrc/components'
+import {
+  EXTERNAL_LINKS,
+  UTM_CAMPAINGS,
+  UTM_MEDIUMS,
+} from 'uiSrc/constants/links'
 
-import styles from 'uiSrc/pages/browser/components/popover-delete/styles.module.scss'
-
-const tryFreeHref = 'https://redis.com/try-free/'
+import { CloudLink } from 'uiSrc/components/markdown'
+import { getUtmExternalLink } from 'uiSrc/utils/links'
+import { OAuthSocialSource } from 'uiSrc/slices/interfaces'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { FeatureFlags } from './featureFlags'
+import { Row } from 'uiSrc/components/base/layout/flex'
 
 export default {
   REJSON_SHOULD_BE_LOADED: (
     <>
-      RedisJSON module should be loaded to add this key. Find&nbsp;
+      This database does not support the JSON data structure. Learn more about
+      JSON support{' '}
       <a
-        href="https://oss.redis.com/redisjson/"
-        className="link-underline"
+        href="https://redis.io/docs/latest/operate/oss_and_stack/stack-with-enterprise/json/"
         target="_blank"
         rel="noreferrer"
       >
-        more information
+        here
       </a>
-      &nbsp;
-      about RedisJSON or create your&nbsp;
-      <a href={`${tryFreeHref}?utm_source=redis&utm_medium=app&utm_campaign=redisinsight_redisjson`} className="link-underline" target="_blank" rel="noreferrer">
-        free Redis database
-      </a>
-      &nbsp;
-      with RedisJSON on Redis Cloud.
+      .{' '}
+      <FeatureFlagComponent name={FeatureFlags.cloudAds}>
+        <>
+          You can also create a{' '}
+          <CloudLink
+            text="free Redis Cloud database"
+            url={getUtmExternalLink(EXTERNAL_LINKS.tryFree, {
+              source: UTM_MEDIUMS.App,
+              campaign: UTM_CAMPAINGS.RedisJson,
+            })}
+            source={OAuthSocialSource.BrowserRedisJSON}
+          />{' '}
+          with built-in JSON support.
+        </>
+      </FeatureFlagComponent>
     </>
   ),
-  REMOVE_LAST_ELEMENT: (fieldType: string) => (
-    <div className={styles.appendInfo}>
-      <EuiIcon type="alert" style={{ marginRight: '1rem', marginTop: '4px' }} />
-      <EuiText size="s">
-        If you remove the single
-        {' '}
-        {fieldType}
-        , the whole Key will be deleted.
-      </EuiText>
-    </div>
-  ),
-  FILTER_UNSUPPORTED: (
-    <>
-      Filtering per Key types is available for Redis databases v. 6.0 or later.
-      Update your Redis database or create a new&nbsp;
-      <a
-        href={`${tryFreeHref}?utm_source=redis&utm_medium=app&utm_campaign=redisinsight_redis_latest`}
-        target="_blank"
-        className="link-underline"
-        rel="noreferrer"
-      >
-        free up-to-date
-      </a>
-      &nbsp;Redis database.
-    </>
+  REMOVE_LAST_ELEMENT: () => (
+    <Row align="center">
+      <RiIcon size="s" type="ToastDangerIcon" style={{ marginRight: '1rem' }} />
+      <Text size="s">Removing the last item deletes the entire key.</Text>
+    </Row>
   ),
   REMOVING_MULTIPLE_ELEMENTS_NOT_SUPPORT: (
     <>
       Removing multiple elements is available for Redis databases v. 6.2 or
       later. Update your Redis database or create a new&nbsp;
       <a
-        href={`${tryFreeHref}?utm_source=redis&utm_medium=app&utm_campaign=redisinsight_redis_latest`}
+        href={`${EXTERNAL_LINKS.tryFree}?utm_source=redis&utm_medium=app&utm_campaign=redisinsight_redis_latest`}
         target="_blank"
         className="link-underline"
         rel="noreferrer"
@@ -66,5 +63,5 @@ export default {
       </a>
       &nbsp;Redis database.
     </>
-  )
+  ),
 }

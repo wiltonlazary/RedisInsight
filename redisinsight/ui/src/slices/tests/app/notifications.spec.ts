@@ -30,7 +30,9 @@ import reducer, {
   getNotificationsFailed,
   unreadNotificationsAction,
   unreadNotifications,
-  setNewNotificationAction
+  setNewNotificationAction,
+  addInfiniteNotification,
+  removeInfiniteNotification,
 } from '../../app/notifications'
 
 jest.mock('uiSrc/services', () => ({
@@ -63,9 +65,9 @@ const notificationsResponse: any = {
       title: 'string',
       body: 'string',
       read: false,
-    }
+    },
   ],
-  totalUnread: 3
+  totalUnread: 3,
 }
 
 describe('slices', () => {
@@ -96,7 +98,10 @@ describe('slices', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, addErrorNotification(responsePayload as IAddInstanceErrorPayload))
+      const nextState = reducer(
+        initialState,
+        addErrorNotification(responsePayload as IAddInstanceErrorPayload),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -105,11 +110,13 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        errors: [{
-          ...responsePayload,
-          id: errorsSelector(rootState)[0].id,
-          message: responsePayload.response.data.message,
-        }]
+        errors: [
+          {
+            ...responsePayload,
+            id: errorsSelector(rootState)[0].id,
+            message: responsePayload.response.data.message,
+          },
+        ],
       }
 
       expect(errorsSelector(rootState)).toEqual(state.errors)
@@ -123,16 +130,16 @@ describe('slices', () => {
         // @ts-ignore
         { id: '1', message: '' },
         // @ts-ignore
-        { id: '2', message: '' }
+        { id: '2', message: '' },
       ]
 
       // Act
       const nextState = reducer(
         {
           ...initialState,
-          errors: stateWithErrors
+          errors: stateWithErrors,
         },
-        removeError('1')
+        removeError('1'),
       )
 
       // Assert
@@ -142,7 +149,7 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        errors: [{ id: '2', message: '' }]
+        errors: [{ id: '2', message: '' }],
       }
 
       expect(errorsSelector(rootState)).toEqual(state.errors)
@@ -156,16 +163,16 @@ describe('slices', () => {
         // @ts-ignore
         { id: '1', message: '' },
         // @ts-ignore
-        { id: '2', message: '' }
+        { id: '2', message: '' },
       ]
 
       // Act
       const nextState = reducer(
         {
           ...initialState,
-          errors: stateWithErrors
+          errors: stateWithErrors,
         },
-        resetErrors()
+        resetErrors(),
       )
 
       // Assert
@@ -175,7 +182,7 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        errors: []
+        errors: [],
       }
 
       expect(errorsSelector(rootState)).toEqual(state.errors)
@@ -194,7 +201,10 @@ describe('slices', () => {
       }
 
       // Act
-      const nextState = reducer(initialState, addMessageNotification(responsePayload))
+      const nextState = reducer(
+        initialState,
+        addMessageNotification(responsePayload),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
@@ -203,10 +213,12 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        messages: [{
-          ...responsePayload,
-          id: messagesSelector(rootState)[0].id
-        }]
+        messages: [
+          {
+            ...responsePayload,
+            id: messagesSelector(rootState)[0].id,
+          },
+        ],
       }
 
       expect(messagesSelector(rootState)).toEqual(state.messages)
@@ -225,9 +237,9 @@ describe('slices', () => {
       const nextState = reducer(
         {
           ...initialState,
-          messages: stateWithMessages
+          messages: stateWithMessages,
         },
-        removeMessage('1')
+        removeMessage('1'),
       )
 
       // Assert
@@ -237,7 +249,7 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        messages: [{ id: '2', message: '', title: '' }]
+        messages: [{ id: '2', message: '', title: '' }],
       }
 
       expect(messagesSelector(rootState)).toEqual(state.messages)
@@ -256,9 +268,9 @@ describe('slices', () => {
       const nextState = reducer(
         {
           ...initialState,
-          messages: stateWithMessages
+          messages: stateWithMessages,
         },
-        resetMessages()
+        resetMessages(),
       )
 
       // Assert
@@ -268,7 +280,7 @@ describe('slices', () => {
 
       const state = {
         ...initialState,
-        messages: []
+        messages: [],
       }
 
       expect(messagesSelector(rootState)).toEqual(state.messages)
@@ -281,8 +293,8 @@ describe('slices', () => {
         ...initialState,
         notificationCenter: {
           ...initialState.notificationCenter,
-          isCenterOpen: true
-        }
+          isCenterOpen: true,
+        },
       }
       // Act
       const nextState = reducer(initialState, setIsCenterOpen())
@@ -292,7 +304,9 @@ describe('slices', () => {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -302,8 +316,8 @@ describe('slices', () => {
         ...initialState,
         notificationCenter: {
           ...initialState.notificationCenter,
-          isNotificationOpen: true
-        }
+          isNotificationOpen: true,
+        },
       }
       // Act
       const nextState = reducer(initialState, setIsNotificationOpen())
@@ -313,7 +327,9 @@ describe('slices', () => {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -324,18 +340,23 @@ describe('slices', () => {
         notificationCenter: {
           ...initialState.notificationCenter,
           totalUnread: notificationsResponse.totalUnread,
-          isNotificationOpen: true
-        }
+          isNotificationOpen: true,
+        },
       }
       // Act
-      const nextState = reducer(initialState, setNewNotificationReceived(notificationsResponse))
+      const nextState = reducer(
+        initialState,
+        setNewNotificationReceived(notificationsResponse),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -346,17 +367,22 @@ describe('slices', () => {
         notificationCenter: {
           ...initialState.notificationCenter,
           lastReceivedNotification: notificationsResponse.notifications[0],
-        }
+        },
       }
       // Act
-      const nextState = reducer(initialState, setLastReceivedNotification(notificationsResponse.notifications[0]))
+      const nextState = reducer(
+        initialState,
+        setLastReceivedNotification(notificationsResponse.notifications[0]),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -366,8 +392,8 @@ describe('slices', () => {
         ...initialState,
         notificationCenter: {
           ...initialState.notificationCenter,
-          loading: true
-        }
+          loading: true,
+        },
       }
       // Act
       const nextState = reducer(initialState, getNotifications())
@@ -377,7 +403,9 @@ describe('slices', () => {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -389,18 +417,119 @@ describe('slices', () => {
           ...initialState.notificationCenter,
           loading: false,
           notifications: notificationsResponse.notifications,
-          totalUnread: notificationsResponse.totalUnread
-        }
+          totalUnread: notificationsResponse.totalUnread,
+        },
       }
       // Act
-      const nextState = reducer(initialState, getNotificationsSuccess(notificationsResponse))
+      const nextState = reducer(
+        initialState,
+        getNotificationsSuccess(notificationsResponse),
+      )
 
       // Assert
       const rootState = Object.assign(initialStateDefault, {
         app: { notifications: nextState },
       })
 
-      expect(notificationCenterSelector(rootState)).toEqual(state.notificationCenter)
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
+    })
+  })
+
+  describe('addInfiniteNotification', () => {
+    it('should properly set state with new notification', () => {
+      const notification = {
+        id: 'id',
+        Inner: 'message text',
+      }
+      const state = {
+        ...initialState,
+        infiniteMessages: [notification],
+      }
+      // Act
+      const nextState = reducer(
+        initialState,
+        addInfiniteNotification(notification),
+      )
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        app: { notifications: nextState },
+      })
+
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
+    })
+
+    it('should properly set state with updated notification', () => {
+      const notification = {
+        id: 'id',
+        Inner: 'updated text',
+      }
+
+      const currentState = {
+        ...initialState,
+        infiniteMessages: [
+          {
+            id: 'id',
+            Inner: 'message text',
+          },
+        ],
+      }
+
+      const state = {
+        ...initialState,
+        infiniteMessages: [notification],
+      }
+
+      // Act
+      const nextState = reducer(
+        currentState,
+        addInfiniteNotification(notification),
+      )
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        app: { notifications: nextState },
+      })
+
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
+    })
+  })
+
+  describe('removeInfiniteNotification', () => {
+    it('should properly remove notification', () => {
+      const notification = {
+        id: 'id',
+        Inner: 'message text',
+      }
+
+      const currentState = {
+        ...initialState,
+        infiniteMessages: [notification],
+      }
+
+      const state = {
+        ...initialState,
+      }
+      // Act
+      const nextState = reducer(
+        currentState,
+        removeInfiniteNotification(notification.id),
+      )
+
+      // Assert
+      const rootState = Object.assign(initialStateDefault, {
+        app: { notifications: nextState },
+      })
+
+      expect(notificationCenterSelector(rootState)).toEqual(
+        state.notificationCenter,
+      )
     })
   })
 
@@ -442,10 +571,7 @@ describe('slices', () => {
         await store.dispatch<any>(fetchNotificationsAction())
 
         // Assert
-        const expectedActions = [
-          getNotifications(),
-          getNotificationsFailed()
-        ]
+        const expectedActions = [getNotifications(), getNotificationsFailed()]
 
         expect(store.getActions()).toEqual(expectedActions)
       })
@@ -463,9 +589,7 @@ describe('slices', () => {
         await store.dispatch<any>(unreadNotificationsAction(data.totalUnread))
 
         // Assert
-        const expectedActions = [
-          unreadNotifications(data.totalUnread),
-        ]
+        const expectedActions = [unreadNotifications(data.totalUnread)]
 
         expect(store.getActions()).toEqual(expectedActions)
       })
@@ -478,7 +602,7 @@ describe('slices', () => {
 
         const expectedActions = [
           setNewNotificationReceived(data),
-          setLastReceivedNotification(null)
+          setLastReceivedNotification(null),
         ]
 
         expect(store.getActions()).toEqual(expectedActions)

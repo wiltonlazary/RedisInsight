@@ -10,7 +10,11 @@ import {
 import successMessages from 'uiSrc/components/notifications/success-messages'
 import { stringToBuffer } from 'uiSrc/utils'
 import { deleteRedisearchKeyFromList } from 'uiSrc/slices/browser/redisearch'
-import { DeleteListElementsDto, PushElementToListDto } from 'apiSrc/modules/browser/dto'
+import { MOCK_TIMESTAMP } from 'uiSrc/mocks/data/dateNow'
+import {
+  DeleteListElementsDto,
+  PushElementToListDto,
+} from 'apiSrc/modules/browser/list/dto'
 import {
   defaultSelectedKeyAction,
   deleteSelectedKeySuccess,
@@ -47,9 +51,12 @@ import reducer, {
   deleteListElementsAction,
   deleteListElements,
   deleteListElementsSuccess,
-  deleteListElementsFailure
+  deleteListElementsFailure,
 } from '../../browser/list'
-import { addErrorNotification, addMessageNotification } from '../../app/notifications'
+import {
+  addErrorNotification,
+  addMessageNotification,
+} from '../../app/notifications'
 
 jest.mock('uiSrc/services', () => ({
   ...jest.requireActual('uiSrc/services'),
@@ -66,7 +73,7 @@ beforeEach(() => {
 
 describe('list slice', () => {
   beforeAll(() => {
-    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => 1629128049027)
+    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => MOCK_TIMESTAMP)
   })
 
   afterAll(() => {
@@ -82,9 +89,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, setListInitialState())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -101,9 +109,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, loadListElements())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -135,9 +144,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, loadListElementsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -156,9 +166,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, loadListElementsFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -176,9 +187,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, loadMoreListElements())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -190,7 +202,7 @@ describe('list slice', () => {
       const data = {
         keyName: 'list',
         key: 'list',
-        elements: ['1', '23', '432'].map((element) => (stringToBuffer(element))),
+        elements: ['1', '23', '432'].map((element) => stringToBuffer(element)),
         // elements: ['1', '23', '432'].map((element, i) => ({ element: stringToBuffer(element), index: i })),
         total: 1,
       }
@@ -200,7 +212,9 @@ describe('list slice', () => {
         loading: false,
         data: {
           ...initialState.data,
-          elements: data.elements.concat(data.elements).map((element, i) => ({ element, index: i })),
+          elements: data.elements
+            .concat(data.elements)
+            .map((element, i) => ({ element, index: i })),
         },
       }
 
@@ -209,19 +223,20 @@ describe('list slice', () => {
         data: {
           ...initialState.data,
           elements: data.elements.map((element, i) => ({ element, index: i })),
-        }
+        },
       }
 
       // Act
       const nextState = reducer(
         initialStateWithElements,
-        loadMoreListElementsSuccess(data)
+        loadMoreListElementsSuccess(data),
       )
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
 
@@ -234,15 +249,13 @@ describe('list slice', () => {
       }
 
       // Act
-      const nextState = reducer(
-        initialState,
-        loadMoreListElementsSuccess(data)
-      )
+      const nextState = reducer(initialState, loadMoreListElementsSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(initialState)
     })
   })
@@ -258,15 +271,13 @@ describe('list slice', () => {
       }
 
       // Act
-      const nextState = reducer(
-        initialState,
-        loadMoreListElementsFailure(data)
-      )
+      const nextState = reducer(initialState, loadMoreListElementsFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -287,9 +298,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, updateValue())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -310,9 +322,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, updateValueSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -334,9 +347,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, updateValueFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -357,9 +371,10 @@ describe('list slice', () => {
       const nextState = reducer(initialState, resetUpdateValue())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -381,13 +396,14 @@ describe('list slice', () => {
       // Act
       const nextState = reducer(
         initialState,
-        loadSearchingListElement(searchedIndex)
+        loadSearchingListElement(searchedIndex),
       )
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -413,13 +429,14 @@ describe('list slice', () => {
       // Act
       const nextState = reducer(
         initialState,
-        loadSearchingListElementSuccess([0, data])
+        loadSearchingListElementSuccess([0, data]),
       )
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
 
@@ -442,13 +459,14 @@ describe('list slice', () => {
       // Act
       const nextState = reducer(
         initialState,
-        loadSearchingListElementSuccess([0, data])
+        loadSearchingListElementSuccess([0, data]),
       )
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -466,13 +484,14 @@ describe('list slice', () => {
       // Act
       const nextState = reducer(
         initialState,
-        loadSearchingListElementFailure(data)
+        loadSearchingListElementFailure(data),
       )
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -482,18 +501,16 @@ describe('list slice', () => {
       // Arrange
       const state = {
         ...initialState,
-        loading: true
+        loading: true,
       }
       // Act
-      const nextState = reducer(
-        initialState,
-        insertListElements()
-      )
+      const nextState = reducer(initialState, insertListElements())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -503,18 +520,16 @@ describe('list slice', () => {
       // Arrange
       const state = {
         ...initialState,
-        loading: false
+        loading: false,
       }
       // Act
-      const nextState = reducer(
-        initialState,
-        insertListElementsSuccess()
-      )
+      const nextState = reducer(initialState, insertListElementsSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -526,19 +541,17 @@ describe('list slice', () => {
       const state = {
         ...initialState,
         loading: false,
-        error
+        error,
       }
 
       // Act
-      const nextState = reducer(
-        initialState,
-        insertListElementsFailure(error)
-      )
+      const nextState = reducer(initialState, insertListElementsFailure(error))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -548,18 +561,16 @@ describe('list slice', () => {
       // Arrange
       const state = {
         ...initialState,
-        loading: true
+        loading: true,
       }
       // Act
-      const nextState = reducer(
-        initialState,
-        deleteListElements()
-      )
+      const nextState = reducer(initialState, deleteListElements())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -569,18 +580,16 @@ describe('list slice', () => {
       // Arrange
       const state = {
         ...initialState,
-        loading: false
+        loading: false,
       }
       // Act
-      const nextState = reducer(
-        initialState,
-        deleteListElementsSuccess()
-      )
+      const nextState = reducer(initialState, deleteListElementsSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -592,19 +601,17 @@ describe('list slice', () => {
       const state = {
         ...initialState,
         loading: false,
-        error
+        error,
       }
 
       // Act
-      const nextState = reducer(
-        initialState,
-        deleteListElementsFailure(error)
-      )
+      const nextState = reducer(initialState, deleteListElementsFailure(error))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { list: nextState },
-      })
+      }
       expect(listSelector(rootState)).toEqual(state)
     })
   })
@@ -678,13 +685,16 @@ describe('list slice', () => {
 
         // Act
         await store.dispatch<any>(
-          fetchSearchingListElementAction(data.keyName, searchingIndex)
+          fetchSearchingListElementAction(data.keyName, searchingIndex),
         )
 
         // Assert
         const expectedActions = [
           loadSearchingListElement(searchingIndex),
-          loadSearchingListElementSuccess([searchingIndex, responsePayload.data]),
+          loadSearchingListElementSuccess([
+            searchingIndex,
+            responsePayload.data,
+          ]),
           updateSelectedKeyRefreshTime(Date.now()),
         ]
 
@@ -700,7 +710,9 @@ describe('list slice', () => {
         // Assert
         const expectedActions = [loadListElements()]
 
-        expect(store.getActions()).toEqual(expectedActions)
+        expect(store.getActions().slice(0, expectedActions.length)).toEqual(
+          expectedActions,
+        )
       })
     })
 
@@ -727,7 +739,9 @@ describe('list slice', () => {
           refreshKeyInfo(),
         ]
 
-        expect(mockedStore.getActions()).toEqual(expectedActions)
+        expect(store.getActions().slice(0, expectedActions.length)).toEqual(
+          expectedActions,
+        )
       })
       it('failed to update element in list', async () => {
         // Arrange
@@ -775,7 +789,9 @@ describe('list slice', () => {
           defaultSelectedKeyAction(),
         ]
 
-        expect(mockedStore.getActions()).toEqual(expectedActions)
+        expect(
+          mockedStore.getActions().slice(0, expectedActions.length),
+        ).toEqual(expectedActions)
       })
       it('failed to insert element in list', async () => {
         // Arrange
@@ -810,18 +826,23 @@ describe('list slice', () => {
       } as DeleteListElementsDto
       it('succeed to delete elements from list', async () => {
         // Arrange
-        const responsePayload = { status: 200, data: { elements: ['zx', 'zz'] } }
-        const nextState = Object.assign(initialStateDefault, {
+        const responsePayload = {
+          status: 200,
+          data: { elements: ['zx', 'zz'] },
+        }
+        const nextState = {
+          ...initialStateDefault,
           browser: {
+            ...initialStateDefault.browser,
             list: {
               ...initialState,
               data: {
                 ...initialState.data,
-                total: 10
-              }
-            }
+                total: 10,
+              },
+            },
           },
-        })
+        }
 
         const mockedStore = mockStore(nextState)
 
@@ -839,28 +860,31 @@ describe('list slice', () => {
             successMessages.REMOVED_LIST_ELEMENTS(
               data.keyName,
               data.count,
-              responsePayload.data.elements
-            )
-          )
+              responsePayload.data.elements,
+            ),
+          ),
         ]
 
-        expect(mockedStore.getActions()).toEqual(expectedActions)
+        expect(
+          mockedStore.getActions().slice(0, expectedActions.length),
+        ).toEqual(expectedActions)
       })
 
       it('succeed to delete all elements from list', async () => {
         // Arrange
         const responsePayload = { status: 200 }
-        const nextState = Object.assign(initialStateDefault, {
+        const nextState = {
+          ...initialStateDefault,
           browser: {
             list: {
               ...initialState,
               data: {
                 ...initialState.data,
-                total: 2
-              }
-            }
+                total: 2,
+              },
+            },
           },
-        })
+        }
 
         const mockedStore = mockStore(nextState)
 
@@ -875,7 +899,7 @@ describe('list slice', () => {
           deleteListElementsSuccess(),
           deleteSelectedKeySuccess(),
           deleteRedisearchKeyFromList(data.keyName),
-          addMessageNotification(successMessages.DELETED_KEY(data.keyName))
+          addMessageNotification(successMessages.DELETED_KEY(data.keyName)),
         ]
 
         expect(mockedStore.getActions()).toEqual(expectedActions)

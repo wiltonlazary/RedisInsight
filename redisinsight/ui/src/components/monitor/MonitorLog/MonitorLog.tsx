@@ -1,12 +1,25 @@
-import { EuiButton, EuiFlexGroup, EuiFlexItem, EuiIcon, EuiText } from '@elastic/eui'
 import { format, formatDuration, intervalToDuration } from 'date-fns'
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import { ApiEndpoints } from 'uiSrc/constants'
-import { monitorSelector, resetProfiler, stopMonitor } from 'uiSrc/slices/cli/monitor'
-import { cutDurationText, getBaseApiUrl } from 'uiSrc/utils'
 
+import {
+  monitorSelector,
+  resetProfiler,
+  stopMonitor,
+} from 'uiSrc/slices/cli/monitor'
+import { cutDurationText } from 'uiSrc/utils'
+import { downloadFile } from 'uiSrc/utils/dom/downloadFile'
+import { fetchMonitorLog } from 'uiSrc/slices/cli/cli-output'
+
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from 'uiSrc/components/base/forms/buttons'
+import { RefreshIcon, DownloadIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
 
 const PADDINGS_OUTSIDE = 12
@@ -22,15 +35,13 @@ const MonitorLog = () => {
     formatDuration(
       intervalToDuration({
         end: timestamp.duration,
-        start: 0
-      })
-    )
+        start: 0,
+      }),
+    ),
   )
-  const baseApiUrl = getBaseApiUrl()
-  const linkToDownload = `${baseApiUrl}/api/${ApiEndpoints.PROFILER_LOGS}/${logFileId}`
 
   const downloadBtnProps: any = {
-    target: DOWNLOAD_IFRAME_NAME
+    target: DOWNLOAD_IFRAME_NAME,
   }
 
   const onResetProfiler = () => {
@@ -44,64 +55,73 @@ const MonitorLog = () => {
     return 18
   }
 
+  const handleDownloadLog = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+
+    dispatch(fetchMonitorLog(logFileId || '', downloadFile))
+  }
+
   return (
     <div className={styles.monitorLogWrapper}>
-      <iframe title="downloadIframeTarget" name={DOWNLOAD_IFRAME_NAME} style={{ display: 'none' }} />
+      <iframe
+        title="downloadIframeTarget"
+        name={DOWNLOAD_IFRAME_NAME}
+        style={{ display: 'none' }}
+      />
       <AutoSizer disableHeight>
-        {({ width }) => (
+        {({ width = 0 }) => (
           <div
             className={styles.container}
-            style={{ width, paddingLeft: getPaddingByWidth(width), paddingRight: getPaddingByWidth(width) }}
+            style={{
+              width,
+              paddingLeft: getPaddingByWidth(width),
+              paddingRight: getPaddingByWidth(width),
+            }}
             data-testid="download-log-panel"
           >
-            <EuiText size="xs" color="subdued" className={styles.time} data-testid="profiler-running-time">
-              <EuiIcon type="clock" />
+            <Text
+              size="xs"
+              color="subdued"
+              className={styles.time}
+              data-testid="profiler-running-time"
+            >
+              <RiIcon size="s" color="informative400" type="TimeIconIcon" />
               {format(timestamp.start, 'hh:mm:ss')}
               &nbsp;&#8211;&nbsp;
               {format(timestamp.paused, 'hh:mm:ss')}
               &nbsp;(
               {duration}
-              {width > SMALL_SCREEN_RESOLUTION && ' Running time'}
-              )
-            </EuiText>
-            <EuiFlexGroup
-              className={styles.actions}
-              gutterSize="none"
-              justifyContent="spaceBetween"
-              alignItems="center"
-              responsive={false}
-            >
-              <EuiFlexItem grow={false}>
+              {width > SMALL_SCREEN_RESOLUTION && ' Running time'})
+            </Text>
+            <Row className={styles.actions} justify="between" align="center">
+              <FlexItem>
                 {isSaveToFile && (
-                  <EuiButton
-                    size="s"
-                    color="secondary"
-                    href={linkToDownload}
-                    iconType="download"
+                  <SecondaryButton
+                    size="small"
+                    icon={DownloadIcon}
                     className={styles.btn}
                     data-testid="download-log-btn"
+                    onClick={handleDownloadLog}
                     {...downloadBtnProps}
                   >
                     {width > SMALL_SCREEN_RESOLUTION && ' Download '}
                     Log
-                  </EuiButton>
+                  </SecondaryButton>
                 )}
-              </EuiFlexItem>
-              <EuiFlexItem grow={false}>
-                <EuiButton
-                  fill
-                  size="s"
-                  color="secondary"
+              </FlexItem>
+              <FlexItem>
+                <PrimaryButton
+                  size="small"
                   onClick={onResetProfiler}
-                  iconType="refresh"
+                  icon={RefreshIcon}
                   className={styles.btn}
                   data-testid="reset-profiler-btn"
                 >
                   Reset
                   {width > SMALL_SCREEN_RESOLUTION && ' Profiler'}
-                </EuiButton>
-              </EuiFlexItem>
-            </EuiFlexGroup>
+                </PrimaryButton>
+              </FlexItem>
+            </Row>
           </div>
         )}
       </AutoSizer>

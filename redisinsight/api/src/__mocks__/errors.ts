@@ -1,4 +1,5 @@
 import { ReplyError } from 'src/models';
+import { AxiosError } from 'axios';
 
 export const mockRedisNoAuthError: ReplyError = {
   name: 'ReplyError',
@@ -24,6 +25,12 @@ export const mockRedisUnknownIndexName: ReplyError = {
   message: 'Unknown Index name',
 };
 
+export const mockRedisUnknownIndexNameV8: ReplyError = {
+  name: 'ReplyError',
+  command: 'FT.INFO',
+  message: 'idx: no such index',
+};
+
 export const mockRedisWrongNumberOfArgumentsError: ReplyError = {
   name: 'ReplyError',
   command: 'GET',
@@ -46,4 +53,19 @@ export const mockRedisAskError: ReplyError = {
   name: 'ReplyError',
   command: 'GET',
   message: 'ASK 7008 127.0.0.1:7002',
+};
+
+export const mockAxiosBadRequestError: AxiosError = {
+  name: '',
+  message: 'Bad Request',
+  isAxiosError: true,
+  config: null,
+  response: {
+    statusText: 'BadRequest',
+    data: null,
+    headers: {},
+    config: null,
+    status: 400,
+  },
+  toJSON: () => null,
 };

@@ -1,22 +1,14 @@
-import IORedis from 'ioredis';
 import {
   mockSocket,
+  mockBulkActionsAnalytics,
+  mockStandaloneRedisClient,
 } from 'src/__mocks__';
-import {
-  DeleteBulkActionSimpleRunner,
-} from 'src/modules/bulk-actions/models/runners/simple/delete.bulk-action.simple.runner';
+import { DeleteBulkActionSimpleRunner } from 'src/modules/bulk-actions/models/runners/simple/delete.bulk-action.simple.runner';
 import { BulkAction } from 'src/modules/bulk-actions/models/bulk-action';
 import { BulkActionType } from 'src/modules/bulk-actions/constants';
 import { BulkActionFilter } from 'src/modules/bulk-actions/models/bulk-action-filter';
 import { BulkActionProgress } from 'src/modules/bulk-actions/models/bulk-action-progress';
 import { BulkActionSummary } from 'src/modules/bulk-actions/models/bulk-action-summary';
-
-const mockExec = jest.fn();
-const nodeClient = Object.create(IORedis.prototype);
-nodeClient.sendCommand = jest.fn();
-nodeClient.pipeline = jest.fn(() => ({
-  exec: mockExec,
-}));
 
 const mockBulkActionFilter = new BulkActionFilter();
 
@@ -29,6 +21,7 @@ const mockCreateBulkActionDto = {
 let bulkAction;
 
 describe('AbstractBulkActionRunner', () => {
+  const client = mockStandaloneRedisClient;
   let deleteRunner: DeleteBulkActionSimpleRunner;
 
   beforeEach(() => {
@@ -38,9 +31,10 @@ describe('AbstractBulkActionRunner', () => {
       mockCreateBulkActionDto.type,
       mockBulkActionFilter,
       mockSocket,
+      mockBulkActionsAnalytics as any,
     );
 
-    deleteRunner = new DeleteBulkActionSimpleRunner(bulkAction, nodeClient);
+    deleteRunner = new DeleteBulkActionSimpleRunner(bulkAction, client);
   });
 
   describe('getProgress + getSummary', () => {

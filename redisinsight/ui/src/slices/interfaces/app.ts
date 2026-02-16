@@ -1,32 +1,68 @@
 import { AxiosError } from 'axios'
+import { EuiComboBoxOptionOption } from '@elastic/eui'
 import { RelativeWidthSizes } from 'uiSrc/components/virtual-table/interfaces'
 import { Nullable } from 'uiSrc/utils'
-import { DurationUnits, ICommands } from 'uiSrc/constants'
-import { IKeyPropTypes } from 'uiSrc/constants/prop-types/keys'
+import {
+  BrowserColumns,
+  BrowserStorageItem,
+  DurationUnits,
+  FeatureFlags,
+  ICommands,
+  SortOrder,
+} from 'uiSrc/constants'
+import { ConfigDBStorageItem } from 'uiSrc/constants/storage'
 import { GetServerInfoResponse } from 'apiSrc/modules/server/dto/server.dto'
 import { RedisString as RedisStringAPI } from 'apiSrc/common/constants/redis-string'
+import { RiToastType } from 'uiSrc/components/base/display/toast/RiToast'
+import { ToastVariant } from '@redis-ui/components'
+
+export interface CustomError {
+  details?: any[]
+  error: string
+  message: string
+  statusCode: number
+  errorCode?: number
+  resourceId?: string
+}
+
+export interface ErrorOptions {
+  message: string | JSX.Element
+  code?: string
+  config?: object
+  request?: object
+  response?: object
+}
+
+export interface EnhancedAxiosError extends AxiosError<CustomError> {}
 
 export interface IError extends AxiosError {
   id: string
   instanceId?: string
+  title?: string
+  additionalInfo?: Record<string, any>
 }
 
 export interface IMessage {
   id: string
   title: string
-  message: string
+  message: string | JSX.Element
+  variant?: ToastVariant
   group?: string
+  className?: string
+  showCloseButton?: boolean
+  actions?: RiToastType['actions']
+}
+
+export enum AppWorkspace {
+  Databases = 'databases',
+  RDI = 'redisDataIntegration',
 }
 
 export interface StateAppInfo {
   loading: boolean
   error: string
   server: Nullable<GetServerInfoResponse>
-  encoding: RedisResponseEncoding,
-  analytics: {
-    segmentWriteKey: string
-    identified: boolean
-  }
+  encoding: RedisResponseEncoding
   electron: {
     isUpdateAvailable: Nullable<boolean>
     updateDownloadedVersion: string
@@ -35,12 +71,22 @@ export interface StateAppInfo {
   isShortcutsFlyoutOpen: boolean
 }
 
+export interface StateAppConnectivity {
+  loading: boolean
+  error?: string
+}
+
 export interface StateAppContext {
+  workspace: AppWorkspace
   contextInstanceId: string
+  contextRdiInstanceId: string
   lastPage: string
   dbConfig: {
-    treeViewDelimiter: string
+    treeViewDelimiter: EuiComboBoxOptionOption[]
+    treeViewSort: SortOrder
     slowLogDurationUnit: DurationUnits
+    showHiddenRecommendations: boolean
+    shownColumns: BrowserColumns[]
   }
   dbIndex: {
     disabled: boolean
@@ -53,50 +99,46 @@ export interface StateAppContext {
       scrollRedisearchTopPosition: number
       isNotRendered: boolean
       selectedKey: Nullable<RedisResponseBuffer>
-    },
-    panelSizes: {
-      [key: string]: number
-    },
+    }
+    panelSizes: number[]
     tree: {
-      delimiter: string
-      panelSizes: {
-        [key: string]: number
-      },
       openNodes: {
         [key: string]: boolean
-      },
-      selectedLeaf: {
-        [key: string]: {
-          [key: string]: IKeyPropTypes
-        }
-      },
-    },
+      }
+      selectedLeaf: Nullable<string>
+    }
     bulkActions: {
       opened: boolean
-    },
+    }
     keyDetailsSizes: {
       [key: string]: Nullable<RelativeWidthSizes>
     }
-  },
+  }
   workbench: {
     script: string
-    enablementArea: {
-      isMinimized: boolean
-      search: string
-      itemScrollTop: number
-    },
+    panelSizes: number[]
+  }
+  searchAndQuery: {
+    script: string
     panelSizes: {
       vertical: {
         [key: string]: number
       }
     }
-  },
+  }
   pubsub: {
     channel: string
     message: string
-  },
+  }
   analytics: {
     lastViewedPage: string
+  }
+  capability: {
+    source: string
+  }
+  pipelineManagement: {
+    lastViewedPage: string
+    isOpenDialog: boolean
   }
 }
 
@@ -106,6 +148,25 @@ export interface StateAppRedisCommands {
   spec: ICommands
   commandsArray: string[]
   commandGroups: string[]
+}
+
+export interface DatabaseSettingsData {
+  [ConfigDBStorageItem.notShowConfirmationRunTutorial]?: boolean
+  [BrowserStorageItem.treeViewDelimiter]?: {
+    label: string
+  }[]
+  [BrowserStorageItem.treeViewSort]?: SortOrder
+  [BrowserStorageItem.showHiddenRecommendations]?: boolean
+
+  [key: string]: any
+}
+
+export interface DatabaseSettings {
+  loading: boolean
+  error: string
+  data: {
+    [instanceId: string]: DatabaseSettingsData
+  }
 }
 
 export interface IPluginVisualization {
@@ -145,6 +206,12 @@ export interface StateAppSocketConnection {
   isConnected: boolean
 }
 
+export interface FeatureFlagComponent {
+  flag: boolean
+  variant?: string
+  data?: any
+}
+
 export interface StateAppFeatures {
   highlighting: {
     version: string
@@ -158,9 +225,15 @@ export interface StateAppFeatures {
     totalSteps: number
     isActive: boolean
   }
+  featureFlags: {
+    loading: boolean
+    features: {
+      [key in FeatureFlags]?: FeatureFlagComponent
+    }
+  }
 }
 export enum NotificationType {
-  Global = 'global'
+  Global = 'global',
 }
 
 export interface IGlobalNotification {
@@ -168,14 +241,28 @@ export interface IGlobalNotification {
   timestamp: number
   title: string
   body: string
-  read: boolean
+  read?: boolean
   category?: string
   categoryColor?: string
+}
+
+export interface InfiniteMessage {
+  id: string
+  variation?: string
+  variant?: ToastVariant
+  className?: string
+  message?: RiToastType['message']
+  description?: RiToastType['description']
+  actions?: RiToastType['actions']
+  customIcon?: RiToastType['customIcon']
+  showCloseButton?: boolean
+  onClose?: () => void
 }
 
 export interface StateAppNotifications {
   errors: IError[]
   messages: IMessage[]
+  infiniteMessages: InfiniteMessage[]
   notificationCenter: {
     loading: boolean
     lastReceivedNotification: Nullable<IGlobalNotification>
@@ -187,6 +274,13 @@ export interface StateAppNotifications {
   }
 }
 
+export enum ActionBarStatus {
+  Progress = 'progress',
+  Success = 'success',
+  Default = 'default',
+  Close = 'close',
+}
+
 export enum RedisResponseEncoding {
   UTF8 = 'utf8',
   ASCII = 'ascii',
@@ -194,7 +288,7 @@ export enum RedisResponseEncoding {
 }
 
 export enum RedisResponseBufferType {
-  Buffer = 'Buffer'
+  Buffer = 'Buffer',
 }
 
 export type RedisResponseBuffer = {

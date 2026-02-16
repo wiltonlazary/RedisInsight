@@ -1,5 +1,6 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { get } from 'lodash';
+import { resetAllWhenMocks } from 'jest-when';
 import {
   mockCommonClientMetadata,
   mockDatabase,
@@ -7,28 +8,39 @@ import {
   mockDatabaseInfoProvider,
   mockDatabaseRepository,
   mockDatabaseService,
-  mockIORedisClient, mockRedisConnectionFactory,
-  mockRedisNoAuthError,
-  mockRedisService,
+  mockDatabaseRecommendationService,
   MockType,
+  mockRedisGeneralInfo,
+  mockRedisClientListResult,
+  mockDatabaseClientFactory,
+  mockFeatureService,
+  mockSessionMetadata,
 } from 'src/__mocks__';
 import { DatabaseAnalytics } from 'src/modules/database/database.analytics';
 import { DatabaseService } from 'src/modules/database/database.service';
+import { DatabaseRecommendationService } from 'src/modules/database-recommendation/database-recommendation.service';
 import { DatabaseRepository } from 'src/modules/database/repositories/database.repository';
-import { RedisService } from 'src/modules/redis/redis.service';
 import { DatabaseInfoProvider } from 'src/modules/database/providers/database-info.provider';
 import { DatabaseConnectionService } from 'src/modules/database/database-connection.service';
-import ERROR_MESSAGES from 'src/constants/error-messages';
-import { RedisConnectionFactory } from 'src/modules/redis/redis-connection.factory';
+import { RECOMMENDATION_NAMES } from 'src/constants';
+import { DatabaseClientFactory } from 'src/modules/database/providers/database.client.factory';
+import { FeatureService } from 'src/modules/feature/feature.service';
+import { getHostingProvider } from 'src/utils/hosting-provider-helper';
+import { HostingProvider } from 'src/modules/database/entities/database.entity';
+
+jest.mock('src/utils/hosting-provider-helper');
 
 describe('DatabaseConnectionService', () => {
   let service: DatabaseConnectionService;
-  let redisService: MockType<RedisService>;
-  let redisConnectionFactory: MockType<RedisConnectionFactory>;
   let analytics: MockType<DatabaseAnalytics>;
+  let recommendationService: MockType<DatabaseRecommendationService>;
+  let databaseInfoProvider: MockType<DatabaseInfoProvider>;
+  let featureService: MockType<FeatureService>;
+  let repository: MockType<DatabaseRepository>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    resetAllWhenMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,12 +50,8 @@ describe('DatabaseConnectionService', () => {
           useFactory: mockDatabaseRepository,
         },
         {
-          provide: RedisService,
-          useFactory: mockRedisService,
-        },
-        {
-          provide: RedisConnectionFactory,
-          useFactory: mockRedisConnectionFactory,
+          provide: DatabaseClientFactory,
+          useFactory: mockDatabaseClientFactory,
         },
         {
           provide: DatabaseInfoProvider,
@@ -57,47 +65,136 @@ describe('DatabaseConnectionService', () => {
           provide: DatabaseAnalytics,
           useFactory: mockDatabaseAnalytics,
         },
+        {
+          provide: DatabaseRecommendationService,
+          useFactory: mockDatabaseRecommendationService,
+        },
+        {
+          provide: FeatureService,
+          useFactory: mockFeatureService,
+        },
       ],
     }).compile();
 
     service = await module.get(DatabaseConnectionService);
-    redisService = await module.get(RedisService);
-    redisConnectionFactory = await module.get(RedisConnectionFactory);
     analytics = await module.get(DatabaseAnalytics);
+    recommendationService = module.get(DatabaseRecommendationService);
+    databaseInfoProvider = module.get(DatabaseInfoProvider);
+    featureService = module.get(FeatureService);
+    repository = module.get(DatabaseRepository);
+
+    featureService.getByName.mockResolvedValue({
+      flag: false,
+    });
   });
 
   describe('connect', () => {
     it('should connect to database', async () => {
-      expect(await service.connect(mockCommonClientMetadata)).toEqual(undefined);
-      expect(redisConnectionFactory.createRedisConnection).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getOrCreateClient', () => {
-    it('should get existing client', async () => {
-      expect(await service.getOrCreateClient(mockCommonClientMetadata)).toEqual(mockIORedisClient);
-      expect(redisConnectionFactory.createRedisConnection).not.toHaveBeenCalled();
-    });
-    it('should create new and save it client', async () => {
-      redisService.getClientInstance.mockResolvedValue(null);
-
-      expect(await service.getOrCreateClient(mockCommonClientMetadata)).toEqual(mockIORedisClient);
-      expect(redisConnectionFactory.createRedisConnection).toHaveBeenCalled();
-      expect(redisService.setClientInstance).toHaveBeenCalled();
-    });
-  });
-
-  describe('createClient', () => {
-    it('should create client for standalone datbaase', async () => {
-      expect(await service.createClient(mockCommonClientMetadata)).toEqual(mockIORedisClient);
-    });
-    it('should throw Unauthorized error in case of NOAUTH', async () => {
-      redisConnectionFactory.createRedisConnection.mockRejectedValueOnce(mockRedisNoAuthError);
-      await expect(service.createClient(mockCommonClientMetadata)).rejects.toThrow(UnauthorizedException);
-      expect(analytics.sendConnectionFailedEvent).toHaveBeenCalledWith(
-        mockDatabase,
-        new UnauthorizedException(ERROR_MESSAGES.AUTHENTICATION_FAILED()),
+      expect(await service.connect(mockCommonClientMetadata)).toEqual(
+        undefined,
       );
+    });
+
+    it('should call recommendationService', async () => {
+      expect(await service.connect(mockCommonClientMetadata)).toEqual(
+        undefined,
+      );
+
+      expect(recommendationService.checkMulti).toHaveBeenCalledTimes(1);
+
+      expect(recommendationService.checkMulti).toBeCalledWith(
+        mockCommonClientMetadata,
+        [
+          RECOMMENDATION_NAMES.REDIS_VERSION,
+          RECOMMENDATION_NAMES.LUA_SCRIPT,
+          RECOMMENDATION_NAMES.BIG_AMOUNT_OF_CONNECTED_CLIENTS,
+        ],
+        mockRedisGeneralInfo,
+      );
+    });
+
+    it('should recalculate provider if not available in the list of providers', async () => {
+      const testHost = 'localhost';
+      repository.get.mockResolvedValue({
+        host: testHost,
+        provider: 'not-in-providers-enum',
+      });
+
+      (getHostingProvider as jest.Mock).mockResolvedValue(
+        HostingProvider.REDIS_STACK,
+      );
+
+      await service.connect(mockCommonClientMetadata);
+
+      expect(getHostingProvider).toHaveBeenCalledWith(
+        expect.any(Object),
+        testHost,
+      );
+
+      expect(repository.update).toHaveBeenCalledWith(
+        mockCommonClientMetadata.sessionMetadata,
+        mockCommonClientMetadata.databaseId,
+        expect.objectContaining({
+          provider: HostingProvider.REDIS_STACK,
+        }),
+      );
+    });
+
+    it('should call check try rdi recommendation', async () => {
+      featureService.getByName.mockResolvedValueOnce({
+        flag: true,
+      });
+
+      expect(await service.connect(mockCommonClientMetadata)).toEqual(
+        undefined,
+      );
+
+      expect(recommendationService.check).toHaveBeenCalledTimes(1);
+      expect(recommendationService.checkMulti).toHaveBeenCalledTimes(1);
+
+      expect(recommendationService.checkMulti).toBeCalledWith(
+        mockCommonClientMetadata,
+        [
+          RECOMMENDATION_NAMES.REDIS_VERSION,
+          RECOMMENDATION_NAMES.LUA_SCRIPT,
+          RECOMMENDATION_NAMES.BIG_AMOUNT_OF_CONNECTED_CLIENTS,
+        ],
+        mockRedisGeneralInfo,
+      );
+
+      expect(recommendationService.check).toBeCalledWith(
+        mockCommonClientMetadata,
+        RECOMMENDATION_NAMES.TRY_RDI,
+        { connectionType: 'STANDALONE', provider: undefined },
+      );
+    });
+
+    it('should call databaseInfoProvider', async () => {
+      expect(await service.connect(mockCommonClientMetadata)).toEqual(
+        undefined,
+      );
+
+      expect(databaseInfoProvider.determineDatabaseServer).toHaveBeenCalled();
+      expect(databaseInfoProvider.determineDatabaseModules).toHaveBeenCalled();
+    });
+
+    it('should call getClientListInfo', async () => {
+      expect(await service.connect(mockCommonClientMetadata)).toEqual(
+        undefined,
+      );
+
+      expect(databaseInfoProvider.getClientListInfo).toHaveBeenCalled();
+      expect(
+        analytics.sendDatabaseConnectedClientListEvent,
+      ).toHaveBeenCalledWith(mockSessionMetadata, {
+        databaseId: mockDatabase.id,
+        clients: mockRedisClientListResult.map((c) => ({
+          version: mockRedisGeneralInfo.version,
+          resp: get(c, 'resp', 'n/a'),
+          libVer: get(c, 'lib-ver', 'n/a'),
+          libName: get(c, 'lib-name', 'n/a'),
+        })),
+      });
     });
   });
 });

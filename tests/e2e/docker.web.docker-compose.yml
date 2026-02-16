@@ -2,22 +2,25 @@ version: "3.4"
 
 services:
   e2e:
+    profiles:
+      - e2e
+    shm_size: 2gb
     build:
       context: .
       dockerfile: e2e.Dockerfile
     tty: true
     volumes:
-      - ./results:/usr/src/app/results
-      - ./report:/usr/src/app/report
+      - ${E2E_VOLUME_PATH:-.}/results:/usr/src/app/results
+      - ${E2E_VOLUME_PATH:-.}/report:/usr/src/app/report
       - ./plugins:/usr/src/app/plugins
-      - .redisinsight-v2:/root/.redisinsight-v2
-      - .ritmp:/tmp
-      - ./test-data/certs:/root/certs
-      - ./test-data/ssh:/root/ssh
+      - rihomedir:/root/.redis-insight
+      - tmp:/tmp
+      - ./remote:/root/remote
+      # - ./rdi:/root/rdi
     env_file:
       - ./.env
     entrypoint: [
-        './upload-custom-plugins.sh',
+      './upload-custom-plugins.sh',
     ]
     environment:
       TEST_FILES: $TEST_FILES
@@ -26,22 +29,36 @@ services:
       E2E_CLOUD_DATABASE_PASSWORD: $E2E_CLOUD_DATABASE_PASSWORD
       E2E_CLOUD_DATABASE_USERNAME: $E2E_CLOUD_DATABASE_USERNAME
       E2E_CLOUD_DATABASE_NAME: $E2E_CLOUD_DATABASE_NAME
+      E2E_CLOUD_API_ACCESS_KEY: $E2E_CLOUD_API_ACCESS_KEY
+      E2E_CLOUD_API_SECRET_KEY: $E2E_CLOUD_API_SECRET_KEY
+      REMOTE_FOLDER_PATH: "/root/remote"
     command: [
-        './wait-for-it.sh', 'redis-enterprise:12000', '-s', '-t', '120',
-        '--',
-        'npx', 'yarn', 'test:chrome:ci'
+      './wait-for-it.sh', "${E2E_SLOWEST_SERVICE:-oss-standalone:6379}", '-s', '-t', '240',
+      '--',
+      'npm', 'run', 'test:chrome:ci'
     ]
 
   # Built image
   app:
-    cap_add:
-      - ipc_lock
-    image: riv2:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: none
+    image: redisinsight:amd64
     env_file:
       - ./.env
+    environment:
+      RI_ENCRYPTION_KEY: $E2E_RI_ENCRYPTION_KEY
+      RI_SERVER_TLS_CERT: $RI_SERVER_TLS_CERT
+      RI_SERVER_TLS_KEY: $RI_SERVER_TLS_KEY
+      RI_STDOUT_LOGGER: 'false'
     volumes:
-      - .redisinsight-v2:/root/.redisinsight-v2
-      - .ritmp:/tmp
-      - ./test-data/certs:/root/certs
-      - ./test-data/ssh:/root/ssh
+      - rihomedir:/data
+      - tmp:/tmp
+      - ./test-data:/test-data
+    ports:
+      - 5540:5540
 
+volumes:
+  tmp:
+  rihomedir:

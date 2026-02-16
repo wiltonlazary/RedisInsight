@@ -1,12 +1,17 @@
 import {
   Body,
   ClassSerializerInterceptor,
-  Controller, Delete, Get, HttpCode, Param, Post,
-  UseInterceptors, UsePipes, ValidationPipe,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
-import {
-  ApiConsumes, ApiExtraModels, ApiTags,
-} from '@nestjs/swagger';
+import { ApiConsumes, ApiExtraModels, ApiTags } from '@nestjs/swagger';
 import { CustomTutorialService } from 'src/modules/custom-tutorial/custom-tutorial.service';
 import { UploadCustomTutorialDto } from 'src/modules/custom-tutorial/dto/upload.custom-tutorial.dto';
 import { ApiEndpoint } from 'src/decorators/api-endpoint.decorator';
@@ -18,11 +23,16 @@ import { UseClientCertificateDto } from 'src/modules/certificate/dto/use.client-
 import { CreateBasicSshOptionsDto } from 'src/modules/ssh/dto/create.basic-ssh-options.dto';
 import { CreateCertSshOptionsDto } from 'src/modules/ssh/dto/create.cert-ssh-options.dto';
 import { RootCustomTutorialManifest } from 'src/modules/custom-tutorial/models/custom-tutorial.manifest';
+import { RequestSessionMetadata } from 'src/common/decorators';
+import { SessionMetadata } from 'src/common/models';
 
 @ApiExtraModels(
-  CreateCaCertificateDto, UseCaCertificateDto,
-  CreateClientCertificateDto, UseClientCertificateDto,
-  CreateBasicSshOptionsDto, CreateCertSshOptionsDto,
+  CreateCaCertificateDto,
+  UseCaCertificateDto,
+  CreateClientCertificateDto,
+  UseClientCertificateDto,
+  CreateBasicSshOptionsDto,
+  CreateCertSshOptionsDto,
 )
 @UsePipes(new ValidationPipe({ transform: true }))
 @UseInterceptors(ClassSerializerInterceptor)
@@ -46,8 +56,9 @@ export class CustomTutorialController {
   })
   async create(
     @Body() dto: UploadCustomTutorialDto,
+    @RequestSessionMetadata() sessionMetadata: SessionMetadata,
   ): Promise<RootCustomTutorialManifest> {
-    return this.service.create(dto);
+    return this.service.create(sessionMetadata, dto);
   }
 
   @Get('manifest')
@@ -69,9 +80,7 @@ export class CustomTutorialController {
     statusCode: 200,
     description: 'Delete custom tutorial and its files',
   })
-  async delete(
-    @Param('id') id: string,
-  ): Promise<void> {
+  async delete(@Param('id') id: string): Promise<void> {
     return this.service.delete(id);
   }
 }

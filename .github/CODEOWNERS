@@ -1,3 +1,1 @@
-# Add reviewers for the most sensitive folders
-/.github/ egor.zalenski@softeq.com artem.horuzhenko@softeq.com
-/.circleci/ egor.zalenski@softeq.com artem.horuzhenko@softeq.com
+* krum.tyukenov@redis.com pavel.angelov@redis.com dijana.antovska@redis.com artem.horuzhenko@redis.com petar.dzhambazov@redis.com dimo.georgiev@redis.com valentin.kirilov@redis.com

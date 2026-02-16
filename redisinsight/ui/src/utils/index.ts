@@ -8,6 +8,7 @@ export * from './statuses'
 export * from './instance'
 export * from './apiResponse'
 export * from './parseResponse'
+export * from './parseRedisUrl'
 export * from './comparisons'
 export * from './longNames'
 export * from './cliHelper'
@@ -24,12 +25,12 @@ export * from './pubSubUtils'
 export * from './formatters'
 export * from './groupTypes'
 export * from './modules'
-export * from './optimizations'
 export * from './events'
+export * from './telemetry'
+export * from './errors'
+export * from './redisearch'
+export * from './capability'
+export * from './rdi'
+export * from './bigString'
 
-export {
-  Maybe,
-  Nullable,
-  RouterWithSubRoutes,
-  getLetterByIndex
-}
+export { Maybe, Nullable, RouterWithSubRoutes, getLetterByIndex }

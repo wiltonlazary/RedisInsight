@@ -1,35 +1,90 @@
 import React from 'react'
-import { EuiTextColor } from '@elastic/eui'
-import { Toast } from '@elastic/eui/src/components/toast/global_toast_list'
-import { EncryptionErrorContent, DefaultErrorContent } from './components'
 
-// TODO: use i18n file for texts
+import { InfoIcon, ToastDangerIcon } from 'uiSrc/components/base/icons'
+
+import RdiDeployErrorContent from './components/rdi-deploy-error-content'
+import { EncryptionErrorContent, DefaultErrorContent } from './components'
+import CloudCapiUnAuthorizedErrorContent from './components/cloud-capi-unauthorized'
+import { AzureTokenExpiredErrorContent } from './components/azure-token-expired'
+import { NotificationTextLengthThreshold } from 'uiSrc/components/notifications/constants'
+import { handleDownloadButton } from 'uiSrc/utils'
+
 export default {
-  DEFAULT: (id: string, text: any, onClose = () => {}, title: string = 'Error'): Toast => ({
-    id,
-    'data-test-subj': 'toast-error',
-    color: 'danger',
-    iconType: 'alert',
-    onClose,
-    title: (
-      <EuiTextColor color="ghost">
-        <b>{title}</b>
-      </EuiTextColor>
+  DEFAULT: (text: any, onClose = () => {}, title: string = 'Error') => {
+    const isSafeMessage =
+      text.length < NotificationTextLengthThreshold || typeof text !== 'string'
+
+    return {
+      'data-testid': 'toast-error',
+      customIcon: ToastDangerIcon,
+      message: title,
+      description: isSafeMessage ? (
+        <DefaultErrorContent text={text} />
+      ) : undefined,
+      actions: {
+        secondary: !isSafeMessage
+          ? {
+              label: 'Download full log',
+              closes: true,
+              onClick: () =>
+                handleDownloadButton(text, 'error-log.txt', onClose),
+            }
+          : undefined,
+      },
+    }
+  },
+  ENCRYPTION: (onClose = () => {}, instanceId = '') => ({
+    'data-testid': 'toast-error-encryption',
+    customIcon: InfoIcon,
+    message: 'Unable to decrypt',
+    description: (
+      <EncryptionErrorContent instanceId={instanceId} onClose={onClose} />
     ),
-    text: <DefaultErrorContent text={text} onClose={onClose} />,
+    showCloseButton: false,
   }),
-  ENCRYPTION: (id: string, onClose = () => {}, instanceId = ''): Toast => ({
-    id,
-    'data-test-subj': 'toast-error-encryption',
-    color: 'danger',
-    iconType: 'iInCircle',
-    onClose,
-    toastLifeTimeMs: 1000 * 60 * 60 * 12, // 12hr,
-    title: (
-      <EuiTextColor color="ghost">
-        <b>Unable to decrypt</b>
-      </EuiTextColor>
+  CLOUD_CAPI_KEY_UNAUTHORIZED: (
+    {
+      message,
+      title,
+    }: {
+      message: string | JSX.Element
+      title?: string
+    },
+    additionalInfo: Record<string, any>,
+    onClose: () => void,
+  ) => ({
+    'data-testid': 'toast-error-cloud-capi-key-unauthorized',
+    customIcon: ToastDangerIcon,
+    message: title,
+    showCloseButton: false,
+    description: (
+      <CloudCapiUnAuthorizedErrorContent
+        text={message}
+        resourceId={additionalInfo.resourceId}
+        onClose={onClose}
+      />
     ),
-    text: <EncryptionErrorContent instanceId={instanceId} onClose={onClose} />,
+  }),
+  RDI_DEPLOY_PIPELINE: (
+    { title, message }: { title?: string; message: string },
+    onClose: () => void,
+  ) => ({
+    'data-testid': 'toast-error-deploy',
+    customIcon: ToastDangerIcon,
+    onClose,
+    message: title,
+    description: <RdiDeployErrorContent message={message} onClose={onClose} />,
+  }),
+  AZURE_TOKEN_EXPIRED: (
+    { message, title }: { message: string | JSX.Element; title?: string },
+    onClose: () => void,
+  ) => ({
+    'data-testid': 'toast-error-azure-token-expired',
+    customIcon: ToastDangerIcon,
+    message: title,
+    showCloseButton: false,
+    description: (
+      <AzureTokenExpiredErrorContent text={message} onClose={onClose} />
+    ),
   }),
 }

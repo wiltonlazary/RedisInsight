@@ -1,16 +1,28 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { capitalize } from 'lodash'
-import { EuiFlexGroup, EuiFlexItem, EuiIcon, EuiText } from '@elastic/eui'
 
-import { CONNECTION_TYPE_DISPLAY, ConnectionType } from 'uiSrc/slices/interfaces'
-import { Nullable } from 'uiSrc/utils'
+import {
+  CONNECTION_TYPE_DISPLAY,
+  ConnectionType,
+  DATABASE_LIST_MODULES_TEXT,
+  RedisDefaultModules,
+} from 'uiSrc/slices/interfaces'
+import { getModule, Nullable, truncateText } from 'uiSrc/utils'
 
-import { ReactComponent as ConnectionIcon } from 'uiSrc/assets/img/icons/connection.svg'
-import { ReactComponent as UserIcon } from 'uiSrc/assets/img/icons/user.svg'
-import { ReactComponent as VersionIcon } from 'uiSrc/assets/img/icons/version.svg'
-import MessageInfoIcon from 'uiSrc/assets/img/icons/help_illus.svg'
-
-import styles from './styles.module.scss'
+import { DEFAULT_MODULES_INFO } from 'uiSrc/constants/modules'
+import { Theme } from 'uiSrc/constants'
+import { ThemeContext } from 'uiSrc/contexts/themeContext'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+import { AllIconsType, RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
+import { RiImage } from 'uiSrc/components/base/display'
+import MessageInfoSvg from 'uiSrc/assets/img/icons/help_illus.svg'
+import {
+  DbIndexInfoWrapper,
+  SeparatorLine,
+  WordBreakWrapper,
+} from './ShortInstanceInfo.styles'
 
 export interface Props {
   info: {
@@ -23,57 +35,103 @@ export interface Props {
     user?: Nullable<string>
   }
   databases: number
+  modules: AdditionalRedisModule[]
 }
-const ShortInstanceInfo = ({ info, databases }: Props) => {
+const ShortInstanceInfo = ({ info, databases, modules }: Props) => {
   const { name, host, port, connectionType, version, user } = info
+  const { theme } = useContext(ThemeContext)
+
+  const getIcon = (name: string) => {
+    const icon: AllIconsType =
+      DEFAULT_MODULES_INFO[name as RedisDefaultModules]?.icon
+    if (icon) {
+      return icon
+    }
+
+    return theme === Theme.Dark ? 'UnknownDarkIcon' : 'UnknownLightIcon'
+  }
+
   return (
-    <div data-testid="db-info-tooltip">
-      <div className={styles.tooltipItem}>
-        <b style={{ fontSize: 13 }}>{name}</b>
-      </div>
-      <div className={styles.tooltipItem}>
-        <span>
-          {host}
-          :
-          {port}
-        </span>
-      </div>
-      {databases > 1 && (
-        <EuiFlexGroup className={styles.dbIndexInfo} alignItems="center" gutterSize="none">
-          <EuiFlexItem grow={false} style={{ marginRight: 16 }}>
-            <EuiIcon className={styles.messageInfoIcon} size="xxl" type={MessageInfoIcon} />
-          </EuiFlexItem>
-          <EuiFlexItem>
-            <EuiText size="s">Logical Databases</EuiText>
-            <EuiText color="subdued" size="xs">
-              Select logical databases to work with in Browser, Workbench, and Database Analysis.
-            </EuiText>
-          </EuiFlexItem>
-        </EuiFlexGroup>
+    <Col gap="l" data-testid="db-info-tooltip">
+      <Col gap="m">
+        <Col gap="m">
+          <Text color="primary" size="L" component="div" variant="semiBold">
+            {name}
+          </Text>
+          <Text color="primary" size="s">
+            {host}:{port}
+          </Text>
+        </Col>
+        {databases > 1 && (
+          <DbIndexInfoWrapper align="center" gap="l">
+            <Col>
+              <RiImage src={MessageInfoSvg} alt="Database Info" $size="xs" />
+            </Col>
+            <Col gap="xs">
+              <Text size="m">Logical databases</Text>
+              <Text color="secondary" size="s">
+                <WordBreakWrapper>
+                  Select logical databases to work with in Browser, Workbench,
+                  and Database Analysis.
+                </WordBreakWrapper>
+              </Text>
+            </Col>
+          </DbIndexInfoWrapper>
+        )}
+        <Row align="center" gap="l">
+          <Row align="center" grow={false}>
+            <RiIcon type="ConnectionIcon" size="M" />
+            <span>
+              {connectionType
+                ? CONNECTION_TYPE_DISPLAY[connectionType]
+                : capitalize(connectionType)}
+            </span>
+          </Row>
+          <Row align="center" grow={false}>
+            <RiIcon type="VersionIcon" size="M" />
+            <span>{version}</span>
+          </Row>
+          <Row align="center" grow={false}>
+            <RiIcon type="UserIcon" size="S" />
+            <span>{user || 'Default'}</span>
+          </Row>
+        </Row>
+      </Col>
+      {!!modules?.length && (
+        <>
+          <SeparatorLine />
+          <Text color="primary" size="L" component="div" variant="semiBold">
+            Database modules
+          </Text>
+          <Col gap="s">
+            {modules?.map(
+              ({ name = '', semanticVersion = '', version = '' }) => (
+                <Row
+                  gap="s"
+                  align="center"
+                  key={name}
+                  data-testid={`module_${name}`}
+                >
+                  <RiIcon type={getIcon(name)} size="M" />
+                  <Text size="S" color="secondary">
+                    {truncateText(
+                      getModule(name)?.name ||
+                        DATABASE_LIST_MODULES_TEXT[
+                          name as RedisDefaultModules
+                        ] ||
+                        name,
+                      50,
+                    )}{' '}
+                    v.
+                    {semanticVersion || version}
+                  </Text>
+                </Row>
+              ),
+            )}
+          </Col>
+        </>
       )}
-      <EuiFlexGroup
-        className={styles.tooltipItem}
-        gutterSize="none"
-        alignItems="center"
-        justifyContent="flexStart"
-        responsive={false}
-      >
-        <EuiFlexItem className={styles.rowTooltipItem} grow={false}>
-          <EuiIcon type={ConnectionIcon} />
-          <span className={styles.tooltipItemValue}>
-            {connectionType ? CONNECTION_TYPE_DISPLAY[connectionType] : capitalize(connectionType)}
-          </span>
-        </EuiFlexItem>
-        <EuiFlexItem className={styles.rowTooltipItem} grow={false}>
-          <EuiIcon type={VersionIcon} />
-          <span className={styles.tooltipItemValue}>{version}</span>
-        </EuiFlexItem>
-        <EuiFlexItem className={styles.rowTooltipItem} grow={false}>
-          <EuiIcon type={UserIcon} />
-          <span className={styles.tooltipItemValue}>{user || 'Default'}</span>
-        </EuiFlexItem>
-      </EuiFlexGroup>
-    </div>
+    </Col>
   )
 }
 

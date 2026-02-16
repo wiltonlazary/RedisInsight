@@ -1,24 +1,21 @@
 {
-  "productName": "RedisInsight-v2",
+  "productName": "Redis Insight",
   "appId": "org.RedisLabs.RedisInsight-V2",
-  "copyright": "Copyright © 2023 Redis Ltd.",
-  "files": [
-    "dist/",
-    "node_modules/",
-    "index.html",
-    "splash.html",
-    "main.prod.js",
-    "main.prod.js.map",
-    "package.json"
-  ],
-  "afterSign": "electron-builder-notarize",
-  "artifactName": "${productName}-${os}-${arch}.${ext}",
+  "copyright": "Copyright © 2026 Redis Ltd.",
+  "files": ["dist", "node_modules", "package.json"],
+  "artifactName": "Redis-Insight-${os}-${arch}.${ext}",
   "compression": "normal",
-  "asarUnpack": [
-    "node_modules/keytar",
-    "node_modules/sqlite3",
-    "node_modules/cpu-features"
+  "asarUnpack": ["node_modules/keytar", "node_modules/sqlite3"],
+  "protocols": [
+    {
+      "name": "RedisInsight",
+      "role": "Viewer",
+      "schemes": ["redisinsight"]
+    }
   ],
+  "electronFuses": {
+    "runAsNode": false
+  },
   "mac": {
     "target": [
       {
@@ -30,12 +27,12 @@
         "arch": ["x64", "arm64"]
       }
     ],
+    "notarize": true,
     "type": "distribution",
     "hardenedRuntime": true,
     "darkModeSupport": true,
-    "bundleVersion": "3",
-    "icon": "resources/icon.icns",
-    "artifactName": "${productName}-${os}-${arch}.${ext}",
+    "icon": "resources/icons/1024x1024.png",
+    "artifactName": "Redis-Insight-${os}-${arch}.${ext}",
     "entitlements": "resources/entitlements.mac.plist",
     "entitlementsInherit": "resources/entitlements.mac.plist",
     "gatekeeperAssess": false
@@ -49,16 +46,12 @@
     "asarUnpack": ["node_modules"],
     "provisioningProfile": "embedded.provisionprofile",
     "binaries": [
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-arm64/node_sqlite3.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-x64/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-arm64/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-x64/node_sqlite3.node",
+      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
       "Contents/Resources/app-arm64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/cpu-features/build/Release/cpufeatures.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/cpu-features/build/Release/cpufeatures.node"
+      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
     ],
-    "artifactName": "${productName}-${os}-${arch}-mas.${ext}"
+    "artifactName": "Redis-Insight-${os}-${arch}-mas.${ext}"
   },
   "masDev": {
     "mergeASARs": false,
@@ -69,16 +62,12 @@
     "asarUnpack": ["node_modules"],
     "provisioningProfile": "dev.provisionprofile",
     "binaries": [
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-arm64/node_sqlite3.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-x64/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-arm64/node_sqlite3.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/lib/binding/napi-v6-darwin-unknown-x64/node_sqlite3.node",
+      "Contents/Resources/app-x64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "Contents/Resources/app-arm64.asar.unpacked/node_modules/sqlite3/build/Release/node_sqlite3.node",
       "Contents/Resources/app-arm64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node",
-      "Contents/Resources/app-arm64.asar.unpacked/node_modules/cpu-features/build/Release/cpufeatures.node",
-      "Contents/Resources/app-x64.asar.unpacked/node_modules/cpu-features/build/Release/cpufeatures.node"
+      "Contents/Resources/app-x64.asar.unpacked/node_modules/keytar/build/Release/keytar.node"
     ],
-    "artifactName": "${productName}-${os}-${arch}-masDev.${ext}"
+    "artifactName": "Redis-Insight-${os}-${arch}-masDev.${ext}"
   },
   "dmg": {
     "contents": [
@@ -96,12 +85,14 @@
   },
   "win": {
     "target": ["nsis"],
-    "artifactName": "${productName}-${os}-installer.${ext}",
+    "artifactName": "Redis-Insight-${os}-installer.${ext}",
     "icon": "resources/icon.ico",
-    "publisherName": [
-      "Redis Inc.",
-      "Redis Labs Inc."
-    ]
+    "legalTrademarks": "Redis Inc., Redis Labs Inc."
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true
   },
   "linux": {
     "icon": "./resources/icons",
@@ -125,18 +116,21 @@
     ],
     "synopsis": "Redis GUI by Redis Ltd.",
     "category": "Development",
-    "artifactName": "${productName}-${os}-${arch}.${ext}",
+    "artifactName": "Redis-Insight-${os}-${arch}.${ext}",
     "desktop": {
-      "Name": "RedisInsight",
-      "Type": "Application",
-      "Comment": "Redis GUI by Redis Ltd"
+      "entry": {
+        "Name": "Redis Insight",
+        "Type": "Application",
+        "Comment": "Redis GUI by Redis Ltd"
+      }
     }
   },
+  "deb": {
+    "afterInstall": "scripts/deb-after-install.sh",
+    "afterRemove": "scripts/deb-before-remove.sh"
+  },
   "snap": {
-    "plugs": [
-      "default",
-      "password-manager-service"
-    ],
+    "plugs": ["default", "password-manager-service"],
     "confinement": "strict",
     "stagePackages": ["default"]
   },
@@ -190,6 +184,11 @@
     {
       "from": "./redisinsight/api/defaults",
       "to": "defaults",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "./redisinsight/api/data",
+      "to": "data",
       "filter": ["**/*"]
     },
     {

@@ -1,10 +1,12 @@
-import cx from 'classnames'
 import React from 'react'
-import { EuiBadge, EuiButtonIcon, EuiText } from '@elastic/eui'
-import { CommandGroup, KeyTypes, GROUP_TYPES_COLORS } from 'uiSrc/constants'
+
+import { CommandGroup, GROUP_TYPES_COLORS, KeyTypes } from 'uiSrc/constants'
 import { getGroupTypeDisplay } from 'uiSrc/utils'
 
-import styles from './styles.module.scss'
+import { CancelSlimIcon } from 'uiSrc/components/base/icons'
+import { Text } from 'uiSrc/components/base/text'
+
+import { DeleteButton, StyledGroupBadge } from './GroupBadge.styles'
 
 export interface Props {
   type: KeyTypes | CommandGroup | string
@@ -14,34 +16,48 @@ export interface Props {
   onDelete?: (type: string) => void
 }
 
-const GroupBadge = ({ type, name = '', className = '', onDelete, compressed }: Props) => (
-  <EuiBadge
-    style={{ backgroundColor: GROUP_TYPES_COLORS[type] ?? 'var(--defaultTypeColor)' }}
-    className={cx(
-      styles.badgeWrapper,
-      className,
-      { [styles.withDeleteBtn]: onDelete, [styles.compressed]: compressed }
-    )}
-    title={undefined}
-    data-testid={`badge-${type}_${name}`}
-  >
-    {!compressed && (
-      <EuiText style={{ color: 'var(--euiTextSubduedColorHover)' }} className="text-uppercase" size="xs">
-        {getGroupTypeDisplay(type)}
-      </EuiText>
-    )}
-    {onDelete && (
-      <EuiButtonIcon
-        size="xs"
-        iconType="cross"
-        color="primary"
-        aria-label="Delete"
-        onClick={() => onDelete(type)}
-        className={styles.deleteIcon}
-        data-testid={`${type}-delete-btn`}
-      />
-    )}
-  </EuiBadge>
-)
+// TODO: Replace GroupBadge with RiChip component and implement new custom colors for different key types as part of the Redis UI migration.
+const GroupBadge = ({
+  type,
+  name = '',
+  className = '',
+  onDelete,
+  compressed,
+}: Props) => {
+  // @ts-ignore
+  const backgroundColor = GROUP_TYPES_COLORS[type] ?? 'var(--defaultTypeColor)'
+  return (
+    <StyledGroupBadge
+      $withDeleteBtn={!!onDelete}
+      $compressed={!!compressed}
+      variant="light"
+      $color={backgroundColor}
+      className={className}
+      title={undefined}
+      data-testid={`badge-${type}_${name}`}
+    >
+      {!compressed && (
+        <Text
+          color="#ffffff"
+          className="text-uppercase"
+          variant="semiBold"
+          size="S"
+          component="span"
+        >
+          {getGroupTypeDisplay(type)}
+        </Text>
+      )}
+      {onDelete && (
+        <DeleteButton
+          size="XS"
+          icon={CancelSlimIcon}
+          aria-label="Delete"
+          onClick={() => onDelete(type)}
+          data-testid={`${type}-delete-btn`}
+        />
+      )}
+    </StyledGroupBadge>
+  )
+}
 
 export default GroupBadge

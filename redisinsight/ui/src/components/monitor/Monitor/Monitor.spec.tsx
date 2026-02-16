@@ -1,7 +1,13 @@
 import { cloneDeep } from 'lodash'
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
-import { cleanup, fireEvent, mockedStore, render, screen } from 'uiSrc/utils/test-utils'
+import {
+  cleanup,
+  fireEvent,
+  mockedStore,
+  render,
+  screen,
+} from 'uiSrc/utils/test-utils'
 import Monitor, { Props } from './Monitor'
 
 const mockedProps = mock<Props>()
@@ -35,15 +41,17 @@ describe('Monitor', () => {
   })
 
   it('Default text component should not be in the Document when some items exists', () => {
-    const items = [{
-      time: '1',
-      args: ['test'],
-      source: '1',
-      database: 0,
-      shardOptions: { host: '127.0.0.1', port: 6379 }
-    }]
+    const items = [
+      {
+        time: '1',
+        args: ['test'],
+        source: '1',
+        database: 0,
+        shardOptions: { host: '127.0.0.1', port: 6379 },
+      },
+    ]
     const { queryByTestId, unmount } = render(
-      <Monitor {...instance(mockedProps)} isStarted isRunning items={items} />
+      <Monitor {...instance(mockedProps)} isStarted isRunning items={items} />,
     )
 
     const monitorDefault = queryByTestId('monitor-not-started')
@@ -52,14 +60,22 @@ describe('Monitor', () => {
     unmount()
   })
 
-  it('Monitor should start after click on the play button', () => {
+  it('Monitor should start after click on the start button', () => {
     const handleRunMonitorMock = jest.fn()
     render(
-      <Monitor {...instance(mockedProps)} handleRunMonitor={handleRunMonitorMock} />
+      <Monitor
+        {...instance(mockedProps)}
+        handleRunMonitor={handleRunMonitorMock}
+      />,
     )
 
     fireEvent.click(screen.getByTestId('start-monitor') ?? {})
 
     expect(handleRunMonitorMock).toBeCalled()
+  })
+
+  it('should show warning banner', () => {
+    render(<Monitor {...instance(mockedProps)} />)
+    expect(screen.getByTestId('monitor-warning-message')).toBeInTheDocument()
   })
 })

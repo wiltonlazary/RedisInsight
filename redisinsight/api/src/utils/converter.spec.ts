@@ -1,24 +1,8 @@
-import { flatMap } from 'lodash';
 import {
-  convertStringsArrayToObject,
   convertIntToSemanticVersion,
   convertStringToNumber,
+  convertAnyStringToPositiveInteger,
 } from './converter';
-
-describe('convertStringsArrayToObject', () => {
-  it('should return appropriate value', () => {
-    const input = ['key1', 'value1', 'key2', 'value2'];
-
-    const output = convertStringsArrayToObject(input);
-
-    expect(flatMap(Object.entries(output))).toEqual(input);
-  });
-  it('should return empty object', () => {
-    const output = convertStringsArrayToObject([]);
-
-    expect({}).toEqual(output);
-  });
-});
 
 const convertIntToSemanticVersionTests: Record<string, any>[] = [
   { input: 1, output: '0.0.1' },
@@ -65,4 +49,28 @@ describe('convertStringToNumber', () => {
       expect(result).toEqual(test.output);
     });
   });
+});
+
+const convertAnyStringToPositiveIntegerTests = [
+  [undefined, -1],
+  [null, -1],
+  [123123, -1],
+  [[], -1],
+  [{}, -1],
+  [{ length: 12 }, -1],
+  ['', -1],
+  ['1', 49],
+  ['4f5daa5e-6139-4e95-8e7c-3283287f4218', 1347108680],
+  [
+    new Array(1000).fill('4f5daa5e-6139-4e95-8e7c-3283287f4218').join(),
+    229890988,
+  ],
+] as [string, number][];
+describe('convertAnyStringToPositiveInteger', () => {
+  it.each(convertAnyStringToPositiveIntegerTests)(
+    'for input: %s, should return: %s',
+    (input, result) => {
+      expect(convertAnyStringToPositiveInteger(input)).toEqual(result);
+    },
+  );
 });

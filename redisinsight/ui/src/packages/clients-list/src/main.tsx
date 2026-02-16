@@ -1,25 +1,45 @@
 /* eslint-disable react/jsx-filename-extension */
 import React from 'react'
 import { render } from 'react-dom'
+import { ThemeProvider } from 'uiSrc/components/base/utils/pluginsThemeContext'
 import App, { CommonPlugin, RawMode } from './App'
+import './styles/styles.scss'
 
 interface Props {
   command?: string
   mode: RawMode
-  data?: { response: any, status: string }[]
+  data?: { response: any; status: string }[]
 }
 
-const renderClientsList = (props:Props) => {
+const renderClientsList = (props: Props) => {
   const { command = '', data: result = [], mode } = props
-  render(<App plugin={CommonPlugin.ClientList} command={command} result={result} mode={mode} />,
-    document.getElementById('app'))
+  render(
+    <ThemeProvider>
+      <App
+        plugin={CommonPlugin.ClientList}
+        command={command}
+        result={result}
+        mode={mode}
+      />
+    </ThemeProvider>,
+    document.getElementById('app'),
+  )
 }
 
-const renderJSON = (props:Props) => {
+const renderJSON = (props: Props) => {
   const { command = '', data: result = [], mode } = props
 
-  render(<App plugin={CommonPlugin.JSON} command={command} result={result} mode={mode} />,
-    document.getElementById('app'))
+  render(
+    <ThemeProvider>
+      <App
+        plugin={CommonPlugin.JSON}
+        command={command}
+        result={result}
+        mode={mode}
+      />
+    </ThemeProvider>,
+    document.getElementById('app'),
+  )
 }
 
 if (process.env.NODE_ENV === 'development') {
@@ -31,7 +51,8 @@ if (process.env.NODE_ENV === 'development') {
       status: 'success',
       // response: ['{\\"test\\":\\"test\\"}', '{\\"foo\\":\\"bar\\"}']
       response: '[{"about":"test\\r\\n"}]',
-    }]
+    },
+  ]
 
   renderJSON({ command: '', data, mode })
 }

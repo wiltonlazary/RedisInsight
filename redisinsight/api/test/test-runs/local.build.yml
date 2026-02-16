@@ -1,5 +1,5 @@
 # Base compose file that includes all BE, RTE builds
-version: "3.4"
+version: '3.4'
 
 x-constants:
   - &apiRoot ./../../
@@ -18,13 +18,18 @@ services:
     depends_on:
       - redis
     environment:
-      CERTS_FOLDER: "/root/.redisinsight-v2.0"
-      TEST_REDIS_HOST: "redis"
-      NOTIFICATION_UPDATE_URL: "https://s3.amazonaws.com/redisinsight.test/public/tests/notifications.json"
+      RI_REDIS_CLIENTS_FORCE_STRATEGY: ${RI_REDIS_CLIENTS_FORCE_STRATEGY}
+      CERTS_FOLDER: '/root/.redisinsight-v2.0'
+      RI_PRE_SETUP_DATABASES_PATH: '/root/.redisinsight-v2.0/databases.json'
+      TEST_REDIS_HOST: 'redis'
+      NODE_ENV: 'test'
+      RI_REQUEST_TIMEOUT: '25000'
+      RI_DATA_DIR: '/usr/src/app/coverage/data'
+      TEST_DATA_DIR: '/usr/src/app/coverage/data'
 
   # dummy service to prevent docker validation errors
   app:
-    image: node:16.15.1-alpine
+    image: node:20.14-alpine
 
 networks:
   default:

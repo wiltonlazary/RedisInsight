@@ -1,41 +1,36 @@
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { ClientMetadata } from 'src/common/models';
-import { unknownCommand } from 'src/constants';
+import { RECOMMENDATION_NAMES, unknownCommand } from 'src/constants';
 import { CommandsService } from 'src/modules/commands/commands.service';
 import {
-  ClusterNodeRole,
-  ClusterSingleNodeOptions,
   CommandExecutionStatus,
   CreateCliClientResponse,
   DeleteClientResponse,
-  SendClusterCommandDto,
-  SendClusterCommandResponse,
   SendCommandDto,
   SendCommandResponse,
 } from 'src/modules/cli/dto/cli.dto';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import {
   checkHumanReadableCommands,
-  checkRedirectionError,
-  parseRedirectionError,
   splitCliCommandLine,
 } from 'src/utils/cli-helper';
 import {
   CommandNotSupportedError,
   CommandParsingError,
-  ClusterNodeNotFoundError,
-  WrongDatabaseTypeError,
 } from 'src/modules/cli/constants/errors';
 import { CliAnalyticsService } from 'src/modules/cli/services/cli-analytics/cli-analytics.service';
 import { EncryptionServiceErrorException } from 'src/modules/encryption/exceptions';
-import { RedisToolService } from 'src/modules/redis/redis-tool.service';
 import { getUnsupportedCommands } from 'src/modules/cli/utils/getUnsupportedCommands';
 import { ClientNotFoundErrorException } from 'src/modules/redis/exceptions/client-not-found-error.exception';
+import { DatabaseRecommendationService } from 'src/modules/database-recommendation/database-recommendation.service';
+import { RedisClient } from 'src/modules/redis/client';
+import { DatabaseClientFactory } from 'src/modules/database/providers/database.client.factory';
+import { v4 as uuidv4 } from 'uuid';
+import { getAnalyticsDataFromIndexInfo } from 'src/utils';
 import { OutputFormatterManager } from './output-formatter/output-formatter-manager';
 import { CliOutputFormatterTypes } from './output-formatter/output-formatter.interface';
 import { TextFormatterStrategy } from './output-formatter/strategies/text-formatter.strategy';
@@ -48,9 +43,10 @@ export class CliBusinessService {
   private outputFormatterManager: OutputFormatterManager;
 
   constructor(
-    private cliTool: RedisToolService,
     private cliAnalyticsService: CliAnalyticsService,
+    private recommendationService: DatabaseRecommendationService,
     private readonly commandsService: CommandsService,
+    private databaseClientFactory: DatabaseClientFactory,
   ) {
     this.outputFormatterManager = new OutputFormatterManager();
     this.outputFormatterManager.addStrategy(
@@ -67,16 +63,37 @@ export class CliBusinessService {
    * Method to create new redis client and return uuid
    * @param clientMetadata
    */
-  public async getClient(clientMetadata: ClientMetadata): Promise<CreateCliClientResponse> {
-    this.logger.log('Create Redis client for CLI.');
+  public async getClient(
+    clientMetadata: ClientMetadata,
+  ): Promise<CreateCliClientResponse> {
+    this.logger.debug('Create Redis client for CLI.', clientMetadata);
     try {
-      const uuid = await this.cliTool.createNewToolClient(clientMetadata);
-      this.logger.log('Succeed to create Redis client for CLI.');
-      this.cliAnalyticsService.sendClientCreatedEvent(clientMetadata.databaseId);
+      const uuid = uuidv4();
+      await this.databaseClientFactory.getOrCreateClient({
+        ...clientMetadata,
+        uniqueId: uuid,
+      });
+
+      this.logger.debug(
+        'Succeed to create Redis client for CLI.',
+        clientMetadata,
+      );
+      this.cliAnalyticsService.sendClientCreatedEvent(
+        clientMetadata.sessionMetadata,
+        clientMetadata.databaseId,
+      );
       return { uuid };
     } catch (error) {
-      this.logger.error('Failed to create redis client for CLI.', error);
-      this.cliAnalyticsService.sendClientCreationFailedEvent(clientMetadata.databaseId, error);
+      this.logger.error(
+        'Failed to create redis client for CLI.',
+        error,
+        clientMetadata,
+      );
+      this.cliAnalyticsService.sendClientCreationFailedEvent(
+        clientMetadata.sessionMetadata,
+        clientMetadata.databaseId,
+        error,
+      );
       throw error;
     }
   }
@@ -85,16 +102,39 @@ export class CliBusinessService {
    * Method to close exist client and create a new one
    * @param clientMetadata
    */
-  public async reCreateClient(clientMetadata: ClientMetadata): Promise<CreateCliClientResponse> {
-    this.logger.log('re-create Redis client for CLI.');
+  public async reCreateClient(
+    clientMetadata: ClientMetadata,
+  ): Promise<CreateCliClientResponse> {
+    this.logger.debug('re-create Redis client for CLI.', clientMetadata);
     try {
-      const clientUuid = await this.cliTool.reCreateToolClient(clientMetadata);
-      this.logger.log('Succeed to re-create Redis client for CLI.');
-      this.cliAnalyticsService.sendClientRecreatedEvent(clientMetadata.databaseId);
-      return { uuid: clientUuid };
+      await this.databaseClientFactory.deleteClient(clientMetadata);
+
+      const uuid = uuidv4();
+      await this.databaseClientFactory.getOrCreateClient({
+        ...clientMetadata,
+        uniqueId: uuid,
+      });
+
+      this.logger.debug(
+        'Succeed to re-create Redis client for CLI.',
+        clientMetadata,
+      );
+      this.cliAnalyticsService.sendClientRecreatedEvent(
+        clientMetadata.sessionMetadata,
+        clientMetadata.databaseId,
+      );
+      return { uuid };
     } catch (error) {
-      this.logger.error('Failed to re-create redis client for CLI.', error);
-      this.cliAnalyticsService.sendClientCreationFailedEvent(clientMetadata.databaseId, error);
+      this.logger.error(
+        'Failed to re-create redis client for CLI.',
+        error,
+        clientMetadata,
+      );
+      this.cliAnalyticsService.sendClientCreationFailedEvent(
+        clientMetadata.sessionMetadata,
+        clientMetadata.databaseId,
+        error,
+      );
       throw error;
     }
   }
@@ -106,16 +146,30 @@ export class CliBusinessService {
   public async deleteClient(
     clientMetadata: ClientMetadata,
   ): Promise<DeleteClientResponse> {
-    this.logger.log('Deleting Redis client for CLI.');
+    this.logger.debug('Deleting Redis client for CLI.', clientMetadata);
     try {
-      const affected = await this.cliTool.deleteToolClient(clientMetadata);
-      this.logger.log('Succeed to delete Redis client for CLI.');
+      const affected = (await this.databaseClientFactory.deleteClient(
+        clientMetadata,
+      )) as unknown as number;
+      this.logger.debug(
+        'Succeed to delete Redis client for CLI.',
+        clientMetadata,
+      );
+
       if (affected) {
-        this.cliAnalyticsService.sendClientDeletedEvent(affected, clientMetadata.databaseId);
+        this.cliAnalyticsService.sendClientDeletedEvent(
+          clientMetadata.sessionMetadata,
+          affected,
+          clientMetadata.databaseId,
+        );
       }
       return { affected };
     } catch (error) {
-      this.logger.error('Failed to delete Redis client for CLI.', error);
+      this.logger.error(
+        'Failed to delete Redis client for CLI.',
+        error,
+        clientMetadata,
+      );
       throw new InternalServerErrorException(error.message);
     }
   }
@@ -129,235 +183,109 @@ export class CliBusinessService {
     clientMetadata: ClientMetadata,
     dto: SendCommandDto,
   ): Promise<SendCommandResponse> {
-    this.logger.log('Executing redis CLI command.');
+    this.logger.debug('Executing redis CLI command.', clientMetadata);
     const { command: commandLine } = dto;
+    const outputFormat = dto.outputFormat || CliOutputFormatterTypes.Raw;
     let command: string = unknownCommand;
     let args: string[] = [];
 
-    const outputFormat = dto.outputFormat || CliOutputFormatterTypes.Raw;
     try {
+      const client: RedisClient =
+        await this.databaseClientFactory.getOrCreateClient(clientMetadata);
+
       const formatter = this.outputFormatterManager.getStrategy(outputFormat);
       [command, ...args] = splitCliCommandLine(commandLine);
-      const replyEncoding = checkHumanReadableCommands(`${command} ${args[0]}`) ? 'utf8' : undefined;
+      const replyEncoding = checkHumanReadableCommands(`${command} ${args[0]}`)
+        ? 'utf8'
+        : undefined;
       this.checkUnsupportedCommands(`${command} ${args[0]}`);
 
-      const reply = await this.cliTool.execCommand(clientMetadata, command, args, replyEncoding);
+      this.recommendationService.check(
+        clientMetadata,
+        RECOMMENDATION_NAMES.SEARCH_VISUALIZATION,
+        command,
+      );
 
-      this.logger.log('Succeed to execute redis CLI command.');
+      const reply = await client.sendCommand([command, ...args], {
+        replyEncoding,
+      });
 
       this.cliAnalyticsService.sendCommandExecutedEvent(
+        clientMetadata.sessionMetadata,
         clientMetadata.databaseId,
         {
           command,
           outputFormat,
         },
       );
+
+      if (command.toLowerCase() === 'ft.info') {
+        this.cliAnalyticsService.sendIndexInfoEvent(
+          clientMetadata.sessionMetadata,
+          clientMetadata.databaseId,
+          getAnalyticsDataFromIndexInfo(reply as string[]),
+        );
+      }
+
+      this.logger.debug(
+        'Succeed to execute redis CLI command.',
+        clientMetadata,
+      );
+
       return {
         response: formatter.format(reply),
         status: CommandExecutionStatus.Success,
       };
     } catch (error) {
-      this.logger.error('Failed to execute redis CLI command.', error);
+      this.logger.error(
+        'Failed to execute redis CLI command.',
+        error,
+        clientMetadata,
+      );
 
       if (
-        error instanceof CommandParsingError
-        || error instanceof CommandNotSupportedError
-        || error?.name === 'ReplyError'
+        error instanceof CommandParsingError ||
+        error instanceof CommandNotSupportedError ||
+        error?.name === 'ReplyError'
       ) {
-        this.cliAnalyticsService.sendCommandErrorEvent(clientMetadata.databaseId, error, {
-          command,
-          outputFormat,
-        });
-
-        return { response: error.message, status: CommandExecutionStatus.Fail };
-      }
-      this.cliAnalyticsService.sendConnectionErrorEvent(clientMetadata.databaseId, error, {
-        command,
-        outputFormat,
-      });
-
-      if (error instanceof EncryptionServiceErrorException || error instanceof ClientNotFoundErrorException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  /**
-   * Method to execute cli command for redis.cluster client and return result
-   * @param clientOptions
-   * @param dto
-   */
-  public async sendClusterCommand(
-    clientMetadata: ClientMetadata,
-    dto: SendClusterCommandDto,
-  ): Promise<SendClusterCommandResponse[]> {
-    this.logger.log('Executing redis.cluster CLI command.');
-    const {
-      command, role, nodeOptions, outputFormat,
-    } = dto;
-    if (nodeOptions) {
-      const result = await this.sendCommandForSingleNode(
-        clientMetadata,
-        command,
-        role,
-        nodeOptions,
-        outputFormat,
-      );
-      return [result];
-    }
-    return this.sendCommandForNodes(clientMetadata, command, role, outputFormat);
-  }
-
-  public async sendCommandForNodes(
-    clientMetadata: ClientMetadata,
-    commandLine: string,
-    role: ClusterNodeRole,
-    outputFormat: CliOutputFormatterTypes = CliOutputFormatterTypes.Raw,
-  ): Promise<SendClusterCommandResponse[]> {
-    this.logger.log(`Executing redis.cluster CLI command for [${role}] nodes.`);
-    let command: string = unknownCommand;
-    let args: string[] = [];
-
-    try {
-      const formatter = this.outputFormatterManager.getStrategy(outputFormat);
-      [command, ...args] = splitCliCommandLine(commandLine);
-      const replyEncoding = checkHumanReadableCommands(`${command} ${args[0]}`) ? 'utf8' : undefined;
-      this.checkUnsupportedCommands(`${command} ${args[0]}`);
-
-      const result = await this.cliTool.execCommandForNodes(
-        clientMetadata,
-        command,
-        args,
-        role,
-        replyEncoding,
-      );
-
-      return result.map((nodeExecReply) => {
-        this.cliAnalyticsService.sendClusterCommandExecutedEvent(
+        this.cliAnalyticsService.sendCommandErrorEvent(
+          clientMetadata.sessionMetadata,
           clientMetadata.databaseId,
-          nodeExecReply,
-          { command, outputFormat },
+          error,
+          {
+            command,
+            outputFormat,
+          },
         );
-        const {
-          response, status, host, port,
-        } = nodeExecReply;
-        return {
-          response: formatter.format(response),
-          status,
-          node: { host, port },
-        };
-      });
-    } catch (error) {
-      this.logger.error('Failed to execute redis.cluster CLI command.', error);
 
-      if (error instanceof CommandParsingError || error instanceof CommandNotSupportedError) {
-        this.cliAnalyticsService.sendCommandErrorEvent(clientMetadata.databaseId, error, {
-          command,
-          outputFormat,
-        });
-        return [
-          { response: error.message, status: CommandExecutionStatus.Fail },
-        ];
-      }
-
-      this.cliAnalyticsService.sendConnectionErrorEvent(clientMetadata.databaseId, error, {
-        command,
-        outputFormat,
-      });
-
-      if (error instanceof EncryptionServiceErrorException || error instanceof ClientNotFoundErrorException) {
-        throw error;
-      }
-
-      if (error instanceof WrongDatabaseTypeError) {
-        throw new BadRequestException(error.message);
-      }
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  public async sendCommandForSingleNode(
-    clientMetadata: ClientMetadata,
-    commandLine: string,
-    role: ClusterNodeRole,
-    nodeOptions: ClusterSingleNodeOptions,
-    outputFormat: CliOutputFormatterTypes = CliOutputFormatterTypes.Raw,
-  ): Promise<SendClusterCommandResponse> {
-    this.logger.log(`Executing redis.cluster CLI command for single node ${JSON.stringify(nodeOptions)}`);
-    let command: string = unknownCommand;
-    let args: string[] = [];
-
-    try {
-      const formatter = this.outputFormatterManager.getStrategy(outputFormat);
-      [command, ...args] = splitCliCommandLine(commandLine);
-      const replyEncoding = checkHumanReadableCommands(`${command} ${args[0]}`) ? 'utf8' : undefined;
-      this.checkUnsupportedCommands(`${command} ${args[0]}`);
-      const nodeAddress = `${nodeOptions.host}:${nodeOptions.port}`;
-      let result = await this.cliTool.execCommandForNode(
-        clientMetadata,
-        command,
-        args,
-        role,
-        nodeAddress,
-        replyEncoding,
-      );
-      if (result?.error && checkRedirectionError(result.error) && nodeOptions.enableRedirection) {
-        const { slot, address } = parseRedirectionError(result.error);
-        result = await this.cliTool.execCommandForNode(
-          clientMetadata,
-          command,
-          args,
-          role,
-          address,
-          replyEncoding,
-        );
-        result.response = formatter.format(result.response, { slot, address });
-        result.slot = parseInt(slot, 10);
-      } else {
-        result.response = formatter.format(result.response);
-      }
-      this.cliAnalyticsService.sendClusterCommandExecutedEvent(
-        clientMetadata.databaseId,
-        result,
-        { command, outputFormat },
-      );
-      const {
-        host, port, error, slot, ...rest
-      } = result;
-      return { ...rest, node: { host, port, slot } };
-    } catch (error) {
-      this.logger.error('Failed to execute redis.cluster CLI command.', error);
-
-      if (error instanceof CommandParsingError || error instanceof CommandNotSupportedError) {
-        this.cliAnalyticsService.sendCommandErrorEvent(clientMetadata.databaseId, error, {
-          command,
-          outputFormat,
-        });
         return { response: error.message, status: CommandExecutionStatus.Fail };
       }
 
-      this.cliAnalyticsService.sendConnectionErrorEvent(clientMetadata.databaseId, error, {
-        command,
-        outputFormat,
-      });
+      this.cliAnalyticsService.sendConnectionErrorEvent(
+        clientMetadata.sessionMetadata,
+        clientMetadata.databaseId,
+        error,
+        {
+          command,
+          outputFormat,
+        },
+      );
 
-      if (error instanceof EncryptionServiceErrorException || error instanceof ClientNotFoundErrorException) {
+      if (
+        error instanceof EncryptionServiceErrorException ||
+        error instanceof ClientNotFoundErrorException
+      ) {
         throw error;
       }
 
-      if (error instanceof WrongDatabaseTypeError || error instanceof ClusterNodeNotFoundError) {
-        throw new BadRequestException(error.message);
-      }
-      throw new InternalServerErrorException(error.message);
+      return { response: error.message, status: CommandExecutionStatus.Fail };
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
   private checkUnsupportedCommands(commandLine: string) {
-    const unsupportedCommand = getUnsupportedCommands()
-      .find((command) => commandLine.toLowerCase().startsWith(command));
+    const unsupportedCommand = getUnsupportedCommands().find((command) =>
+      commandLine.toLowerCase().startsWith(command),
+    );
     if (unsupportedCommand) {
       throw new CommandNotSupportedError(
         ERROR_MESSAGES.CLI_COMMAND_NOT_SUPPORTED(

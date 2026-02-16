@@ -1,70 +1,59 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import * as IORedis from 'ioredis';
-import {
-  IRedisClusterInfo,
-  IRedisClusterNodeAddress,
-  RedisClusterNodeLinkState,
-} from 'src/models';
+import { Injectable } from '@nestjs/common';
 import {
   calculateRedisHitRatio,
   catchAclError,
-  convertBulkStringsToObject,
   convertIntToSemanticVersion,
-  convertRedisInfoReplyToObject,
-  convertStringsArrayToObject,
-  parseClusterNodes,
+  getRangeForNumber,
+  TOTAL_KEYS_BREAKPOINTS,
 } from 'src/utils';
 import { AdditionalRedisModule } from 'src/modules/database/models/additional.redis.module';
 import { REDIS_MODULES_COMMANDS, SUPPORTED_REDIS_MODULES } from 'src/constants';
 import { get, isNil } from 'lodash';
-import { SentinelMaster, SentinelMasterStatus } from 'src/modules/redis-sentinel/models/sentinel-master';
-import ERROR_MESSAGES from 'src/constants/error-messages';
-import { Endpoint } from 'src/common/models';
 import { RedisDatabaseInfoResponse } from 'src/modules/database/dto/redis-info.dto';
+import { FeatureService } from 'src/modules/feature/feature.service';
+import { KnownFeatures } from 'src/modules/feature/constants';
+import {
+  convertArrayReplyToObject,
+  convertMultilineReplyToObject,
+} from 'src/modules/redis/utils';
+import {
+  RedisClient,
+  RedisClientConnectionType,
+} from 'src/modules/redis/client';
+import { SessionMetadata } from 'src/common/models';
 
 @Injectable()
 export class DatabaseInfoProvider {
-  /**
-   * Check weather current database is a cluster
-   * @param client
-   */
-  public async isCluster(client: IORedis.Redis): Promise<boolean> {
+  constructor(private readonly featureService: FeatureService) {}
+
+  public async filterRawModules(
+    sessionMetadata: SessionMetadata,
+    modules: any[],
+  ): Promise<any[]> {
+    let filteredModules = modules;
+
     try {
-      const reply = await client.cluster('INFO');
-      const clusterInfo: IRedisClusterInfo = convertBulkStringsToObject(reply);
-      return clusterInfo?.cluster_state === 'ok';
+      const filterModules = await this.featureService.getByName(
+        sessionMetadata,
+        KnownFeatures.RedisModuleFilter,
+      );
+
+      if (filterModules?.flag && filterModules.data?.hideByName?.length) {
+        filteredModules = modules.filter(({ name }) => {
+          const match = filterModules.data.hideByName.find(
+            (filter) =>
+              filter.expression &&
+              new RegExp(filter.expression, filter.options).test(name),
+          );
+
+          return !match;
+        });
+      }
     } catch (e) {
-      return false;
+      // ignore
     }
-  }
 
-  /**
-   * Check weather current database is a sentinel
-   * @param client
-   */
-  public async isSentinel(client: IORedis.Redis): Promise<boolean> {
-    try {
-      await client.call('sentinel', ['masters']);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /**
-   * Determine all cluster nodes for current connection (client)
-   * @param client
-   */
-  public async determineClusterNodes(
-    client: IORedis.Redis,
-  ): Promise<IRedisClusterNodeAddress[]> {
-    const nodes = parseClusterNodes(await client.call('cluster', ['nodes']) as string)
-      .filter((node) => node.linkState === RedisClusterNodeLinkState.Connected);
-
-    return nodes.map((node) => ({
-      host: node.host,
-      port: node.port,
-    }));
+    return filteredModules;
   }
 
   /**
@@ -72,10 +61,18 @@ export class DatabaseInfoProvider {
    * In case when "module" command is not available use "command info" approach
    * @param client
    */
-  public async determineDatabaseModules(client: any): Promise<AdditionalRedisModule[]> {
+  public async determineDatabaseModules(
+    client: RedisClient,
+  ): Promise<AdditionalRedisModule[]> {
     try {
-      const reply = await client.call('module', ['list']);
-      const modules = reply.map((module: any[]) => convertStringsArrayToObject(module));
+      const reply = (await client.call(['module', 'list'], {
+        replyEncoding: 'utf8',
+      })) as string[][];
+      const modules = await this.filterRawModules(
+        client.clientMetadata.sessionMetadata,
+        reply.map((module: any[]) => convertArrayReplyToObject(module)),
+      );
+
       return modules.map(({ name, ver }) => ({
         name: SUPPORTED_REDIS_MODULES[name] ?? name,
         version: ver,
@@ -89,151 +86,130 @@ export class DatabaseInfoProvider {
   }
 
   /**
+   * Determine database server version using "module list" command
+   * @param client
+   */
+  public async determineDatabaseServer(client: RedisClient): Promise<string> {
+    try {
+      const reply = await client.getInfo();
+      return reply['server']?.redis_version;
+    } catch (e) {
+      // continue regardless of error
+    }
+    return null;
+  }
+
+  /**
    * Determine database modules by using "command info" command for each listed (known/supported) module
    * @param client
    * @private
    */
-  public async determineDatabaseModulesUsingInfo(client: any): Promise<AdditionalRedisModule[]> {
+  public async determineDatabaseModulesUsingInfo(
+    client: RedisClient,
+  ): Promise<AdditionalRedisModule[]> {
     const modules: AdditionalRedisModule[] = [];
-    await Promise.all(Array.from(REDIS_MODULES_COMMANDS, async ([moduleName, commands]) => {
-      try {
-        let commandsInfo = await client.call('command', ['info', ...commands]);
-        commandsInfo = commandsInfo.filter((info) => !isNil(info));
-        if (commandsInfo.length) {
-          modules.push({ name: moduleName });
+    await Promise.all(
+      Array.from(REDIS_MODULES_COMMANDS, async ([moduleName, commands]) => {
+        try {
+          let commandsInfo = (await client.call(
+            ['command', 'info', ...commands],
+            { replyEncoding: 'utf8' },
+          )) as string[];
+          commandsInfo = commandsInfo.filter((info) => !isNil(info));
+          if (commandsInfo.length) {
+            modules.push({ name: moduleName });
+          }
+        } catch (e) {
+          // continue regardless of error
         }
-      } catch (e) {
-        // continue regardless of error
-      }
-    }));
-    return modules;
+      }),
+    );
+
+    return await this.filterRawModules(
+      client.clientMetadata.sessionMetadata,
+      modules,
+    );
   }
 
-  /**
-   * Get list of master groups for Sentinel instance using established connection (client)
-   * @param client
-   */
-  public async determineSentinelMasterGroups(client: IORedis.Redis): Promise<SentinelMaster[]> {
-    let result: SentinelMaster[];
-    try {
-      const reply = await client.call('sentinel', ['masters']);
-      // @ts-expect-error
-      // https://github.com/luin/ioredis/issues/1572
-      result = reply.map((item) => {
-        const {
-          ip,
-          port,
-          name,
-          'num-slaves': numberOfSlaves,
-          flags,
-        } = convertStringsArrayToObject(item);
-        return {
-          host: ip,
-          port: parseInt(port, 10),
-          name,
-          status: flags?.includes('down') ? SentinelMasterStatus.Down : SentinelMasterStatus.Active,
-          numberOfSlaves: parseInt(numberOfSlaves, 10),
-        };
-      });
-      await Promise.all(
-        result.map(async (master: SentinelMaster, index: number) => {
-          const nodes = await this.getMasterEndpoints(client, master.name);
-          result[index] = {
-            ...master,
-            nodes,
-          };
-        }),
+  public async getRedisDBSize(client: RedisClient): Promise<number> {
+    if (client.getConnectionType() === RedisClientConnectionType.CLUSTER) {
+      const nodesResult: number[] = await Promise.all(
+        (await client.nodes()).map(async (node) =>
+          this.getRedisNodeDBSize(node),
+        ),
       );
-
-      return result;
-    } catch (error) {
-      if (error.message.includes('unknown command `sentinel`')) {
-        throw new BadRequestException(ERROR_MESSAGES.WRONG_DISCOVERY_TOOL());
-      }
-
-      throw catchAclError(error);
+      return nodesResult.reduce((ac, cur) => ac + cur, 0);
     }
-  }
-
-  /**
-   * Get list of Sentinels for particular Sentinel master group
-   * @param client
-   * @param masterName
-   */
-  private async getMasterEndpoints(
-    client: IORedis.Redis,
-    masterName: string,
-  ): Promise<Endpoint[]> {
-    let result: Endpoint[];
-    try {
-      const reply = await client.call('sentinel', [
-        'sentinels',
-        masterName,
-      ]);
-      // @ts-expect-error
-      // https://github.com/luin/ioredis/issues/1572
-      result = reply.map((item) => {
-        const { ip, port } = convertStringsArrayToObject(item);
-        return { host: ip, port: parseInt(port, 10) };
-      });
-
-      return [
-        { host: client.options.host, port: client.options.port },
-        ...result,
-      ];
-    } catch (error) {
-      if (error.message.includes('unknown command `sentinel`')) {
-        throw new BadRequestException(ERROR_MESSAGES.WRONG_DATABASE_TYPE);
-      }
-
-      throw catchAclError(error);
-    }
+    return await this.getRedisNodeDBSize(client);
   }
 
   public async getRedisGeneralInfo(
-    client: IORedis.Redis | IORedis.Cluster,
+    client: RedisClient,
   ): Promise<RedisDatabaseInfoResponse> {
-    if (client.isCluster) {
+    if (client.getConnectionType() === RedisClientConnectionType.CLUSTER) {
       return this.getRedisMasterNodesGeneralInfo(client);
     }
-    return this.getRedisNodeGeneralInfo(client as IORedis.Redis);
+    return this.getRedisNodeGeneralInfo(client);
   }
 
   private async getRedisNodeGeneralInfo(
-    client: IORedis.Redis,
+    client: RedisClient,
   ): Promise<RedisDatabaseInfoResponse> {
-    const info = convertRedisInfoReplyToObject(
-      await client.info(),
-    );
-    const serverInfo = info['server'];
-    const memoryInfo = info['memory'];
-    const keyspaceInfo = info['keyspace'];
-    const clientsInfo = info['clients'];
-    const statsInfo = info['stats'];
-    const replicationInfo = info['replication'];
-    const databases = await this.getDatabasesCount(client, keyspaceInfo);
-    return {
-      version: serverInfo?.redis_version,
-      databases,
-      role: get(replicationInfo, 'role') || undefined,
-      totalKeys: this.getRedisNodeTotalKeysCount(keyspaceInfo),
-      usedMemory: parseInt(get(memoryInfo, 'used_memory'), 10) || undefined,
-      connectedClients:
-        parseInt(get(clientsInfo, 'connected_clients'), 10) || undefined,
-      uptimeInSeconds:
-        parseInt(get(serverInfo, 'uptime_in_seconds'), 10) || undefined,
-      hitRatio: this.getRedisHitRatio(statsInfo),
-      server: serverInfo,
-    };
+    try {
+      const info = await client.getInfo();
+      const serverInfo = info['server'];
+      const memoryInfo = info['memory'];
+      const keyspaceInfo = info['keyspace'];
+      const clientsInfo = info['clients'];
+      const statsInfo = info['stats'];
+      const replicationInfo = info['replication'];
+      const databases = await this.getDatabasesCount(client, keyspaceInfo);
+      const totalKeys = this.getRedisNodeTotalKeysCount(keyspaceInfo);
+      return {
+        version: serverInfo?.redis_version,
+        databases,
+        role: get(replicationInfo, 'role'),
+        totalKeys,
+        usedMemory: parseInt(get(memoryInfo, 'used_memory'), 10) || undefined,
+        connectedClients:
+          parseInt(get(clientsInfo, 'connected_clients'), 10) || undefined,
+        uptimeInSeconds:
+          parseInt(get(serverInfo, 'uptime_in_seconds'), 10) || undefined,
+        hitRatio: this.getRedisHitRatio(statsInfo),
+        cashedScripts:
+          parseInt(get(memoryInfo, 'number_of_cached_scripts'), 10) ||
+          undefined,
+        server: serverInfo,
+        stats: {
+          instantaneous_ops_per_sec: get(
+            statsInfo,
+            'instantaneous_ops_per_sec',
+          ),
+          instantaneous_input_kbps: get(statsInfo, 'instantaneous_input_kbps'),
+          instantaneous_output_kbps: get(
+            statsInfo,
+            'instantaneous_output_kbps',
+          ),
+          uptime_in_days: get(serverInfo, 'uptime_in_days', undefined),
+          maxmemory_policy: get(memoryInfo, 'maxmemory_policy', undefined),
+          numberOfKeysRange: getRangeForNumber(
+            totalKeys,
+            TOTAL_KEYS_BREAKPOINTS,
+          ),
+        },
+      };
+    } catch (error) {
+      throw catchAclError(error);
+    }
   }
 
   private async getRedisMasterNodesGeneralInfo(
-    client,
+    client: RedisClient,
   ): Promise<RedisDatabaseInfoResponse> {
     const nodesResult: RedisDatabaseInfoResponse[] = await Promise.all(
-      client
-        .nodes('all')
-        .map(async (node) => this.getRedisNodeGeneralInfo(node)),
+      (await client.nodes()).map(async (node) =>
+        this.getRedisNodeGeneralInfo(node),
+      ),
     );
     return nodesResult.reduce((prev, cur) => ({
       version: cur.version,
@@ -243,12 +219,32 @@ export class DatabaseInfoProvider {
     }));
   }
 
-  public async getDatabasesCount(client: any, keyspaceInfo?: object): Promise<number> {
+  public async getDatabasesCount(
+    client: RedisClient,
+    keyspaceInfo?: object,
+  ): Promise<number> {
     try {
-      const reply = await client.call('config', ['get', 'databases']);
+      const reply = (await client.call(['config', 'get', 'databases'], {
+        replyEncoding: 'utf8',
+      })) as string;
       return reply.length ? parseInt(reply[1], 10) : 1;
     } catch (e) {
       return this.getDatabaseCountFromKeyspace(keyspaceInfo);
+    }
+  }
+
+  public async getClientListInfo(client: RedisClient): Promise<any[]> {
+    try {
+      const clientListResponse = (await client.call(['client', 'list'], {
+        replyEncoding: 'utf8',
+      })) as string;
+
+      return clientListResponse
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((r) => convertMultilineReplyToObject(r, ' ', '='));
+    } catch (error) {
+      throw catchAclError(error);
     }
   }
 
@@ -276,7 +272,7 @@ export class DatabaseInfoProvider {
     try {
       return Object.values(keyspaceInfo).reduce<number>(
         (prev: number, cur: string) => {
-          const { keys } = convertBulkStringsToObject(cur, ',', '=');
+          const { keys } = convertMultilineReplyToObject(cur, ',', '=');
           return prev + parseInt(keys, 10);
         },
         0,
@@ -293,6 +289,17 @@ export class DatabaseInfoProvider {
       return calculateRedisHitRatio(keyspaceHits, keyspaceMisses);
     } catch (error) {
       return undefined;
+    }
+  }
+
+  private async getRedisNodeDBSize(client: RedisClient): Promise<number> {
+    try {
+      const total = (await client.sendCommand(['dbsize'], {
+        replyEncoding: 'utf8',
+      })) as string;
+      return parseInt(total, 10);
+    } catch (e) {
+      throw catchAclError(e);
     }
   }
 }

@@ -1,54 +1,130 @@
 import { format } from 'winston';
-import { pick, get, map } from 'lodash';
+import { isArray, isObject, isPlainObject, omit } from 'lodash';
+import { inspect } from 'util';
+import config, { Config } from 'src/utils/config';
+import { instanceToPlain } from 'class-transformer';
 
-const errorWhiteListFields = [
-  'message',
-  'command.name',
-];
+const LOGGER_CONFIG = config.get('logger') as Config['logger'];
 
-/**
- * Get only whitelisted fields from logs when omitSensitiveData option enabled
- */
-export const sensitiveDataFormatter = format((info, opts = {}) => {
-  let stack;
-  if (opts?.omitSensitiveData) {
-    stack = map(get(info, 'stack', []), (stackItem) => pick(stackItem, errorWhiteListFields));
-  } else {
-    stack = map(get(info, 'stack', []), (stackItem) => {
-      if (stackItem?.stack) {
-        return {
-          ...stackItem,
-          stack: stackItem.stack,
-        };
-      }
+type SanitizeOptions = {
+  omitSensitiveData?: boolean;
+};
 
-      return stackItem;
-    });
+type SanitizedError = {
+  type: string;
+  message: string;
+  stack?: string;
+  cause?: unknown;
+};
+
+export const getOriginalErrorCause = (cause: unknown): unknown => {
+  if (cause) {
+    return getOriginalErrorCause(cause['cause']) || cause;
+  }
+};
+
+export const sanitizeError = (
+  error?: Error,
+  opts: SanitizeOptions = {},
+): SanitizedError | undefined => {
+  if (!error) return undefined;
+
+  let cause = getOriginalErrorCause(error['cause']);
+
+  if (cause instanceof Error) {
+    cause = sanitizeError(cause, opts);
   }
 
   return {
-    ...info,
-    stack,
+    type: error.constructor?.name ?? 'UnknownError',
+    message: String(error.message ?? 'Unknown error'),
+    stack: opts.omitSensitiveData ? undefined : error.stack,
+    cause,
   };
+};
+
+export const sanitizeErrors = <T>(
+  obj: T,
+  opts: SanitizeOptions = {},
+  seen = new WeakMap<any, any>(),
+): T => {
+  if (obj instanceof Error) {
+    return sanitizeError(obj, opts) as unknown as T;
+  }
+
+  if (obj === null || typeof obj !== 'object') return obj;
+
+  if (seen.has(obj)) {
+    return '[Circular]' as unknown as T;
+  }
+
+  const clone: any = Array.isArray(obj) ? [] : {};
+  seen.set(obj, clone);
+
+  Object.keys(obj).forEach((key) => {
+    clone[key] = sanitizeErrors(obj[key], opts, seen);
+  });
+
+  return clone;
+};
+
+export const prepareLogsData = format((info, opts: SanitizeOptions = {}) => {
+  return sanitizeErrors(info, opts);
 });
 
-export const jsonFormat = format.printf((info) => {
-  const logData = {
-    level: info.level,
-    timestamp: new Date().toLocaleString(),
-    context: info.context,
-    message: info.message,
-    stack: info.stack,
-  };
-  return JSON.stringify(logData);
-});
-
-export const prettyFormat = format.printf((info) => {
+export const prettyFileFormat = format.printf((info) => {
   const separator = ' | ';
   const timestamp = new Date().toLocaleString();
-  const {
-    level, context, message, stack,
-  } = info;
-  const logData = [timestamp, `${level}`.toUpperCase(), context, message, JSON.stringify({ stack })];
+  const { level, context, message } = info;
+
+  const logData = [
+    timestamp,
+    `${level}`.toUpperCase(),
+    context,
+    message,
+    inspect(omit(info, ['timestamp', 'level', 'context', 'message', 'stack']), {
+      depth: LOGGER_CONFIG.logDepthLevel,
+    }),
+  ];
+
   return logData.join(separator);
 });
+
+const MAX_DEPTH = 10;
+export const logDataToPlain = (
+  value: any,
+  seen = new WeakSet(),
+  depth = 0,
+): any => {
+  if (depth > MAX_DEPTH) return '[MaxDepthExceeded]';
+
+  if (value === null || typeof value !== 'object' || value instanceof Error) {
+    return value;
+  }
+
+  if (isArray(value)) {
+    if (seen.has(value)) return '[Circular]';
+    seen.add(value);
+    return value.map((val) => logDataToPlain(val, seen, depth + 1));
+  }
+
+  if (isObject(value)) {
+    if (seen.has(value)) return '[Circular]';
+    seen.add(value);
+
+    if (!isPlainObject(value)) {
+      return instanceToPlain(value);
+    }
+
+    const plain = {};
+    Object.keys(value).forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        plain[key] = logDataToPlain(value[key], seen, depth + 1);
+      }
+    });
+
+    return plain;
+  }
+
+  return value;
+};

@@ -3,100 +3,127 @@
  * This module abstracts the exact service/framework used for tracking usage.
  */
 import isGlob from 'is-glob'
-import { cloneDeep } from 'lodash'
-import * as jsonpath from 'jsonpath'
-import { isRedisearchAvailable, Nullable } from 'uiSrc/utils'
-import { localStorageService } from 'uiSrc/services'
-import { ApiEndpoints, BrowserStorageItem, KeyTypes, StreamViews } from 'uiSrc/constants'
+import { cloneDeep, get } from 'lodash'
+import { Maybe, isRedisearchAvailable } from 'uiSrc/utils'
+import { ApiEndpoints, KeyTypes } from 'uiSrc/constants'
 import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
-import { StreamViewType } from 'uiSrc/slices/interfaces/stream'
-import { checkIsAnalyticsGranted, getAppType } from 'uiSrc/telemetry/checkAnalytics'
-import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
 import {
+  IModuleSummary,
   ITelemetrySendEvent,
   ITelemetrySendPageView,
-  ITelemetryService,
-  IRedisModulesSummary,
-  MatchType,
-  RedisModules,
-} from './interfaces'
+  RedisModulesKeyType,
+} from 'uiSrc/telemetry/interfaces'
+import { apiService } from 'uiSrc/services'
+import { store } from 'uiSrc/slices/store'
+import { getInstanceInfo } from 'uiSrc/services/database/instancesService'
+import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
+import { IRedisModulesSummary, MatchType, RedisModules } from './interfaces'
 import { TelemetryEvent } from './events'
-import { NON_TRACKING_ANONYMOUS_ID, SegmentTelemetryService } from './segment'
+import { checkIsAnalyticsGranted } from './checkAnalytics'
 
-let telemetryService: Nullable<ITelemetryService> = null
-
-/**
- * Returns the initialized telemetry service singleton.
- * @param apiKey The API key for the analytics backend. E.g. Google Analytics tracking ID, Segment write key.
- */
-const getTelemetryService = (apiKey: string): ITelemetryService => {
-  if (!telemetryService) {
-    telemetryService = new SegmentTelemetryService(apiKey)
-
-    telemetryService.initialize()
+export const getProviderData = (
+  dbId: string,
+): {
+  provider: Maybe<string>
+  serverName: Maybe<string>
+} => {
+  let provider
+  let serverName
+  const instance = get(
+    store.getState(),
+    'connections.instances.connectedInstance',
+  )
+  if (instance.id === dbId) {
+    provider = instance?.provider
+    const instanceOverview = get(
+      store.getState(),
+      'connections.instances.instanceOverview',
+    )
+    serverName = instanceOverview?.serverName || undefined
   }
-  return telemetryService
+  return { provider, serverName }
 }
 
-// Telemetry doesn't watch on sending anonymousId like arg of function. Only look at localStorage
-const setAnonymousId = (isAnalyticsGranted: boolean) => {
-  const anonymousId = isAnalyticsGranted
-    ? telemetryService?.anonymousId
-    : NON_TRACKING_ANONYMOUS_ID
+const FREE_DB_IDENTIFIER_TELEMETRY_EVENTS = [
+  TelemetryEvent.INSIGHTS_PANEL_OPENED,
+  TelemetryEvent.INSIGHTS_PANEL_CLOSED,
+  TelemetryEvent.EXPLORE_PANEL_TUTORIAL_OPENED,
+  TelemetryEvent.EXPLORE_PANEL_COMMAND_COPIED,
+  TelemetryEvent.EXPLORE_PANEL_COMMAND_RUN_CLICKED,
+  TelemetryEvent.EXPLORE_PANEL_LINK_CLICKED,
+]
 
-  localStorageService.set(BrowserStorageItem.segmentAnonymousId, JSON.stringify(anonymousId))
+const getFreeDbFlag = (
+  event: TelemetryEvent,
+  freeDbEvents: TelemetryEvent[] = FREE_DB_IDENTIFIER_TELEMETRY_EVENTS,
+): { isFree?: boolean } => {
+  if (freeDbEvents.includes(event)) {
+    const state = get(
+      store.getState(),
+      'connections.instances.connectedInstance',
+    )
+    return state ? { isFree: state.isFreeDb } : {}
+  }
+
+  return {}
 }
 
-const sendEventTelemetry = (payload: ITelemetrySendEvent) => {
-  // The event is reported only if the user's permission is granted.
-  // The anonymousId is also sent along with the event.
-  //
-  // The `nonTracking` argument can be set to True to mark an event that doesn't track the specific
-  // user in any way. When `nonTracking` is True, the event is sent regardless of whether the user's permission
-  // for analytics is granted or not.
-  // If permissions not granted anonymousId includes "UNSET" value without any user identifiers.
-  const { event, eventData = {}, nonTracking = false } = payload
+const TELEMETRY_EMPTY_VALUE = 'none'
 
-  const isAnalyticsGranted = checkIsAnalyticsGranted()
-  setAnonymousId(isAnalyticsGranted)
+const sendEventTelemetry = async ({
+  event,
+  eventData = {},
+  traits = {},
+}: ITelemetrySendEvent) => {
+  let providerData
+  try {
+    const isAnalyticsGranted = checkIsAnalyticsGranted()
+    if (!isAnalyticsGranted) {
+      return
+    }
 
-  const appType = getAppType()
+    if (eventData.databaseId) {
+      providerData = getProviderData(eventData.databaseId)
+    }
 
-  if (isAnalyticsGranted || nonTracking) {
-    return telemetryService?.event({
+    const freeDbIdentifier = getFreeDbFlag(event)
+
+    await apiService.post(`${ApiEndpoints.ANALYTICS_SEND_EVENT}`, {
       event,
-      properties: {
-        buildType: appType,
-        ...eventData,
-      },
+      eventData: { ...providerData, ...eventData, ...freeDbIdentifier },
+      traits,
     })
+  } catch (e) {
+    // continue regardless of error
   }
-  return null
 }
 
-const sendPageViewTelemetry = (payload: ITelemetrySendPageView) => {
-  // The event is reported only if the user's permission is granted.
-  // The anonymousId is also sent along with the event.
-  //
-  // The `nonTracking` argument can be set to True to mark an event that doesn't track the specific
-  // user in any way. When `nonTracking` is True, the event is sent regardless of whether the user's permission
-  // for analytics is granted or not.
-  // If permissions not granted anonymousId includes "UNSET" value without any user identifiers.
-  const { name, databaseId, nonTracking = false } = payload
-
-  const isAnalyticsGranted = checkIsAnalyticsGranted()
-  setAnonymousId(isAnalyticsGranted)
-  const appType = getAppType()
-
-  if (isAnalyticsGranted || nonTracking) {
-    telemetryService?.pageView(name, appType, databaseId)
+const sendPageViewTelemetry = async ({
+  name,
+  eventData = {},
+}: ITelemetrySendPageView) => {
+  try {
+    let providerData
+    const isAnalyticsGranted = checkIsAnalyticsGranted()
+    if (!isAnalyticsGranted) {
+      return
+    }
+    if (eventData.databaseId) {
+      providerData = getProviderData(eventData.databaseId)
+    }
+    await apiService.post(`${ApiEndpoints.ANALYTICS_SEND_PAGE}`, {
+      event: name,
+      eventData: { ...providerData, ...eventData },
+    })
+  } catch (e) {
+    // continue regardless of error
   }
 }
 
 const getBasedOnViewTypeEvent = (
   viewType: KeyViewType,
   browserEvent: TelemetryEvent,
-  treeViewEvent: TelemetryEvent
+  treeViewEvent: TelemetryEvent,
 ): TelemetryEvent => {
   switch (viewType) {
     case KeyViewType.Browser:
@@ -108,20 +135,17 @@ const getBasedOnViewTypeEvent = (
   }
 }
 
-const getJsonPathLevel = (path: string): string => {
+const getJsonPathLevel = (path: string): number => {
   try {
-    if (path === '.') {
-      return 'root'
-    }
-    const levelsLength = jsonpath.parse(
-      `$${path.startsWith('.') ? '' : '..'}${path}`,
-    ).length
-    if (levelsLength === 1) {
-      return 'root'
-    }
-    return `${levelsLength - 2}`
+    if (!path || path === '$') return 0
+
+    const stripped = path.startsWith('$.') ? path.slice(2) : path.slice(1)
+
+    const parts = stripped.split(/[.[\]]/).filter(Boolean)
+
+    return parts.length
   } catch (e) {
-    return 'root'
+    return 0
   }
 }
 
@@ -131,63 +155,52 @@ const getAdditionalAddedEventData = (endpoint: ApiEndpoints, data: any) => {
       return {
         keyType: KeyTypes.Hash,
         length: data.fields?.length,
-        TTL: data.expire || -1
+        TTL: data.expire || -1,
       }
     case ApiEndpoints.SET:
       return {
         keyType: KeyTypes.Set,
         length: data.members?.length,
-        TTL: data.expire || -1
+        TTL: data.expire || -1,
       }
     case ApiEndpoints.ZSET:
       return {
         keyType: KeyTypes.ZSet,
         length: data.members?.length,
-        TTL: data.expire || -1
+        TTL: data.expire || -1,
       }
     case ApiEndpoints.STRING:
       return {
         keyType: KeyTypes.String,
         length: data.value?.length,
-        TTL: data.expire || -1
+        TTL: data.expire || -1,
       }
     case ApiEndpoints.LIST:
       return {
         keyType: KeyTypes.List,
-        length: 1,
-        TTL: data.expire || -1
+        length: data.elements?.length,
+        TTL: data.expire || -1,
       }
     case ApiEndpoints.REJSON:
       return {
         keyType: KeyTypes.ReJSON,
-        TTL: -1
+        TTL: -1,
       }
     case ApiEndpoints.STREAMS:
       return {
         keyType: KeyTypes.Stream,
         length: 1,
-        TTL: data.expire || -1
+        TTL: data.expire || -1,
       }
     default:
       return {}
   }
 }
 
-const getMatchType = (match: string): MatchType => (
+const getMatchType = (match: string): MatchType =>
   !isGlob(match, { strict: false })
     ? MatchType.EXACT_VALUE_NAME
     : MatchType.PATTERN
-)
-
-export const getRefreshEventData = (eventData: any, type: string, streamViewType?: StreamViewType) => {
-  if (type === KeyTypes.Stream) {
-    return {
-      ...eventData,
-      streamView: StreamViews[streamViewType!]
-    }
-  }
-  return eventData
-}
 
 const SUPPORTED_REDIS_MODULES = Object.freeze({
   ai: RedisModules.RedisAI,
@@ -199,18 +212,16 @@ const SUPPORTED_REDIS_MODULES = Object.freeze({
   timeseries: RedisModules.RedisTimeSeries,
 })
 
-const DEFAULT_SUMMARY: IRedisModulesSummary = Object.freeze(
-  {
-    RediSearch: { loaded: false },
-    RedisAI: { loaded: false },
-    RedisGraph: { loaded: false },
-    RedisGears: { loaded: false },
-    RedisBloom: { loaded: false },
-    RedisJSON: { loaded: false },
-    RedisTimeSeries: { loaded: false },
-    customModules: [],
-  },
-)
+const DEFAULT_SUMMARY: IRedisModulesSummary = Object.freeze({
+  RediSearch: { loaded: false },
+  RedisAI: { loaded: false },
+  RedisGraph: { loaded: false },
+  RedisGears: { loaded: false },
+  RedisBloom: { loaded: false },
+  RedisJSON: { loaded: false },
+  RedisTimeSeries: { loaded: false },
+  customModules: [],
+})
 
 const getEnumKeyBValue = (myEnum: any, enumValue: number | string): string => {
   const keys = Object.keys(myEnum)
@@ -218,32 +229,60 @@ const getEnumKeyBValue = (myEnum: any, enumValue: number | string): string => {
   return index > -1 ? keys[index] : ''
 }
 
-const getRedisModulesSummary = (modules: AdditionalRedisModule[] = []): IRedisModulesSummary => {
+const getModuleSummaryToSent = (
+  module: AdditionalRedisModule,
+): IModuleSummary => ({
+  loaded: true,
+  version: module.version,
+  semanticVersion: module.semanticVersion,
+})
+const getRedisInfoSummary = async (id: string) => {
+  let infoData: any = {}
+  try {
+    const info = await getInstanceInfo(id)
+    infoData = {
+      redis_version: info?.version,
+      uptime_in_days: info?.stats?.uptime_in_days,
+      used_memory: info?.usedMemory,
+      connected_clients: info?.connectedClients,
+      maxmemory_policy: info?.stats?.maxmemory_policy,
+      instantaneous_ops_per_sec: info?.stats?.instantaneous_ops_per_sec,
+      instantaneous_input_kbps: info?.stats?.instantaneous_input_kbps,
+      instantaneous_output_kbps: info?.stats?.instantaneous_output_kbps,
+      numberOfKeysRange: info?.stats?.numberOfKeysRange,
+      totalKeys: info?.totalKeys,
+    }
+  } catch (e) {
+    // continue regardless of error
+  }
+
+  return infoData
+}
+const getRedisModulesSummary = (
+  modules: AdditionalRedisModule[] = [],
+): IRedisModulesSummary => {
   const summary = cloneDeep(DEFAULT_SUMMARY)
   try {
-    modules.forEach(((module) => {
+    modules.forEach((module) => {
       if (SUPPORTED_REDIS_MODULES[module.name]) {
         const moduleName = getEnumKeyBValue(RedisModules, module.name)
-        summary[moduleName] = {
-          loaded: true,
-          version: module.version,
-          semanticVersion: module.semanticVersion,
-        }
+        summary[moduleName as RedisModulesKeyType] =
+          getModuleSummaryToSent(module)
         return
       }
 
       if (isRedisearchAvailable([module])) {
-        const redisearchName = getEnumKeyBValue(RedisModules, RedisModules.RediSearch)
-        summary[redisearchName] = {
-          loaded: true,
-          version: module.version,
-          semanticVersion: module.semanticVersion,
-        }
+        const redisearchName = getEnumKeyBValue(
+          RedisModules,
+          RedisModules.RediSearch,
+        )
+        summary[redisearchName as RedisModulesKeyType] =
+          getModuleSummaryToSent(module)
         return
       }
 
       summary.customModules.push(module)
-    }))
+    })
   } catch (e) {
     // continue regardless of error
   }
@@ -251,13 +290,14 @@ const getRedisModulesSummary = (modules: AdditionalRedisModule[] = []): IRedisMo
 }
 
 export {
-  getTelemetryService,
+  TELEMETRY_EMPTY_VALUE,
   sendEventTelemetry,
   sendPageViewTelemetry,
-  checkIsAnalyticsGranted,
   getBasedOnViewTypeEvent,
   getJsonPathLevel,
   getAdditionalAddedEventData,
   getMatchType,
-  getRedisModulesSummary
+  getRedisModulesSummary,
+  getFreeDbFlag,
+  getRedisInfoSummary,
 }

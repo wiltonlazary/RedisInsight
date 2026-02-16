@@ -1,3 +1,17 @@
+export enum RedisEnterprisePersistencePolicy {
+  AofEveryOneSecond = 'aof-every-1-second',
+  AofEveryWrite = 'aof-every-write',
+  SnapshotEveryOneHour = 'snapshot-every-1-hour',
+  SnapshotEverySixHours = 'snapshot-every-6-hours',
+  SnapshotEveryTwelveHours = 'snapshot-every-12-hours',
+  None = 'none',
+}
+
+type IRedisEnterpriseDatabaseTag = {
+  key: string;
+  value: string;
+};
+
 export interface IRedisEnterpriseDatabase {
   gradual_src_mode: string;
   group_uid: number;
@@ -86,6 +100,7 @@ export interface IRedisEnterpriseDatabase {
   ssl: boolean;
   dns_address_master: string;
   import_progress: any;
+  tags: IRedisEnterpriseDatabaseTag[];
 }
 
 export interface IRedisEnterpriseModule {

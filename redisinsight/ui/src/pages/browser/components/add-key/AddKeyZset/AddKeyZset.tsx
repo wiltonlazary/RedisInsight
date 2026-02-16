@@ -1,31 +1,22 @@
-import React, { ChangeEvent, FormEvent, useState, useEffect, useRef } from 'react'
+import React, { FormEvent, useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toNumber } from 'lodash'
-import cx from 'classnames'
-import {
-  EuiButton,
-  EuiFieldText,
-  EuiFormRow,
-  EuiTextColor,
-  EuiForm,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPanel,
-} from '@elastic/eui'
 import { Maybe, stringToBuffer, validateScoreNumber } from 'uiSrc/utils'
 import { isNaNConvertedString } from 'uiSrc/utils/numbers'
-import { addZsetKey, addKeyStateSelector } from 'uiSrc/slices/browser/keys'
+import { addKeyStateSelector, addZsetKey } from 'uiSrc/slices/browser/keys'
 
-import AddItemsActions from 'uiSrc/pages/browser/components/add-items-actions/AddItemsActions'
-import styles from 'uiSrc/pages/browser/components/key-details-add-items/styles.module.scss'
-import { CreateZSetWithExpireDto } from 'apiSrc/modules/browser/dto/z-set.dto'
-import AddKeyFooter from '../AddKeyFooter/AddKeyFooter'
-import { AddZsetFormConfig as config } from '../constants/fields-config'
-
+import AddMultipleFields from 'uiSrc/pages/browser/components/add-multiple-fields'
+import { ISetMemberState } from 'uiSrc/pages/browser/components/add-key/AddKeySet/interfaces'
 import {
   INITIAL_ZSET_MEMBER_STATE,
-  IZsetMemberState
-} from '../../key-details-add-items/add-zset-members/AddZsetMembers'
+  IZsetMemberState,
+} from 'uiSrc/pages/browser/components/add-key/AddKeyZset/interfaces'
+import { ActionFooter } from 'uiSrc/pages/browser/components/action-footer'
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { FormField } from 'uiSrc/components/base/forms/FormField'
+import { TextInput } from 'uiSrc/components/base/inputs'
+import { CreateZSetWithExpireDto } from 'apiSrc/modules/browser/z-set/dto'
+import { AddZsetFormConfig as config } from '../constants/fields-config'
 
 export interface Props {
   keyName: string
@@ -36,7 +27,9 @@ export interface Props {
 const AddKeyZset = (props: Props) => {
   const { keyName = '', keyTTL, onCancel } = props
   const { loading } = useSelector(addKeyStateSelector)
-  const [members, setMembers] = useState<IZsetMemberState[]>([{ ...INITIAL_ZSET_MEMBER_STATE }])
+  const [members, setMembers] = useState<IZsetMemberState[]>([
+    { ...INITIAL_ZSET_MEMBER_STATE },
+  ])
   const [isFormValid, setIsFormValid] = useState<boolean>(false)
   const lastAddedMemberName = useRef<HTMLInputElement>(null)
   const prevCountMembers = useRef<number>(0)
@@ -61,7 +54,10 @@ const AddKeyZset = (props: Props) => {
   }, [keyName, members])
 
   useEffect(() => {
-    if (prevCountMembers.current !== 0 && prevCountMembers.current < members.length) {
+    if (
+      prevCountMembers.current !== 0 &&
+      prevCountMembers.current < members.length
+    ) {
       lastAddedMemberName.current?.focus()
     }
     prevCountMembers.current = members.length
@@ -73,8 +69,8 @@ const AddKeyZset = (props: Props) => {
       ...members,
       {
         ...INITIAL_ZSET_MEMBER_STATE,
-        id: lastMember.id + 1
-      }
+        id: lastMember.id + 1,
+      },
     ]
     setMembers(newState)
   }
@@ -85,20 +81,28 @@ const AddKeyZset = (props: Props) => {
   }
 
   const clearMemberValues = (id: number) => {
-    const newState = members.map((item) => (item.id === id
-      ? {
-        ...item,
-        name: '',
-        score: ''
-      } : item))
+    const newState = members.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            name: '',
+            score: '',
+          }
+        : item,
+    )
     setMembers(newState)
   }
 
-  const handleMemberChange = (
-    formField: string,
-    id: number,
-    value: any
-  ) => {
+  const onClickRemove = ({ id }: ISetMemberState) => {
+    if (members.length === 1) {
+      clearMemberValues(id)
+      return
+    }
+
+    removeMember(id)
+  }
+
+  const handleMemberChange = (formField: string, id: number, value: any) => {
     let validatedValue = value
     if (formField === 'score') {
       validatedValue = validateScore(value)
@@ -107,7 +111,7 @@ const AddKeyZset = (props: Props) => {
       if (item.id === id) {
         return {
           ...item,
-          [formField]: validatedValue
+          [formField]: validatedValue,
         }
       }
       return item
@@ -129,13 +133,13 @@ const AddKeyZset = (props: Props) => {
       if (isNaNConvertedString(score)) {
         return {
           ...currentItem,
-          score: ''
+          score: '',
         }
       }
       if (score.length) {
         return {
           ...currentItem,
-          score: (toNumber(score)).toString()
+          score: toNumber(score).toString(),
         }
       }
       return currentItem
@@ -156,7 +160,7 @@ const AddKeyZset = (props: Props) => {
       members: members.map((item) => ({
         name: stringToBuffer(item.name),
         score: toNumber(item.score),
-      }))
+      })),
     }
     if (keyTTL !== undefined) {
       data.expire = keyTTL
@@ -168,120 +172,65 @@ const AddKeyZset = (props: Props) => {
     members.length === 1 && !(item.name.length || item.score.length)
 
   return (
-    <EuiForm component="form" onSubmit={onFormSubmit}>
-      {
-        members.map((item, index) => (
-          <EuiFlexItem
-            className={cx('flexItemNoFullWidth', 'inlineFieldsNoSpace')}
-            grow
-            key={item.id}
-            style={{ marginBottom: '8px', marginTop: '16px' }}
-          >
-            <EuiFlexGroup gutterSize="m">
-              <EuiFlexItem grow>
-                <EuiFlexGroup gutterSize="none" alignItems="center">
-                  <EuiFlexItem grow>
-                    <EuiFormRow fullWidth>
-                      <EuiFieldText
-                        fullWidth
-                        name={`member-${item.id}`}
-                        id={`member-${item.id}`}
-                        placeholder={config.member.placeholder}
-                        value={item.name}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          handleMemberChange(
-                            'name',
-                            item.id,
-                            e.target.value
-                          )}
-                        inputRef={index === members.length - 1 ? lastAddedMemberName : null}
-                        disabled={loading}
-                        data-testid="member-name"
-                      />
-                    </EuiFormRow>
-                  </EuiFlexItem>
-                  <EuiFlexItem grow>
-                    <EuiFormRow fullWidth>
-                      <EuiFieldText
-                        fullWidth
-                        name={`score-${item.id}`}
-                        id={`score-${item.id}`}
-                        maxLength={200}
-                        placeholder={config.score.placeholder}
-                        value={item.score}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          handleMemberChange(
-                            'score',
-                            item.id,
-                            e.target.value
-                          )}
-                        onBlur={() => { handleScoreBlur(item) }}
-                        disabled={loading}
-                        data-testid="member-score"
-                      />
-                    </EuiFormRow>
-                  </EuiFlexItem>
-                </EuiFlexGroup>
-              </EuiFlexItem>
-              <AddItemsActions
-                id={item.id}
-                index={index}
-                length={members.length}
-                addItem={addMember}
-                removeItem={removeMember}
-                clearIsDisabled={isClearDisabled(item)}
-                addItemIsDisabled={(members.some((item) => !item.score.length))}
-                clearItemValues={clearMemberValues}
-                loading={loading}
-                anchorClassName={styles.refreshKeyTooltip}
-              />
-            </EuiFlexGroup>
-          </EuiFlexItem>
-        ))
-      }
-      <EuiButton type="submit" fill style={{ display: 'none' }}>
-        Submit
-      </EuiButton>
-      <AddKeyFooter>
-        <EuiPanel
-          className="flexItemNoFullWidth"
-          color="transparent"
-          hasShadow={false}
-          borderRadius="none"
-          style={{ border: 'none' }}
-        >
-          <EuiFlexGroup justifyContent="flexEnd">
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  color="secondary"
-                  onClick={() => onCancel(true)}
-                  className="btn-cancel btn-back"
-                >
-                  <EuiTextColor>Cancel</EuiTextColor>
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <div>
-                <EuiButton
-                  fill
-                  size="m"
-                  color="secondary"
-                  className="btn-add"
-                  isLoading={loading}
-                  onClick={submitData}
-                  disabled={!isFormValid || loading}
-                  data-testid="add-key-zset-btn"
-                >
-                  Add Key
-                </EuiButton>
-              </div>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiPanel>
-      </AddKeyFooter>
-    </EuiForm>
+    <form onSubmit={onFormSubmit}>
+      <AddMultipleFields
+        items={members}
+        isClearDisabled={isClearDisabled}
+        onClickRemove={onClickRemove}
+        onClickAdd={addMember}
+      >
+        {(item, index) => (
+          <Row align="center" gap="m">
+            <FlexItem grow>
+              <FormField>
+                <TextInput
+                  name={`member-${item.id}`}
+                  id={`member-${item.id}`}
+                  placeholder={config.member.placeholder}
+                  value={item.name}
+                  onChange={(value) =>
+                    handleMemberChange('name', item.id, value)
+                  }
+                  ref={
+                    index === members.length - 1 ? lastAddedMemberName : null
+                  }
+                  disabled={loading}
+                  data-testid="member-name"
+                />
+              </FormField>
+            </FlexItem>
+            <FlexItem grow>
+              <FormField>
+                <TextInput
+                  name={`score-${item.id}`}
+                  id={`score-${item.id}`}
+                  maxLength={200}
+                  placeholder={config.score.placeholder}
+                  value={item.score}
+                  onChange={(value) =>
+                    handleMemberChange('score', item.id, value)
+                  }
+                  onBlur={() => {
+                    handleScoreBlur(item)
+                  }}
+                  disabled={loading}
+                  data-testid="member-score"
+                />
+              </FormField>
+            </FlexItem>
+          </Row>
+        )}
+      </AddMultipleFields>
+
+      <ActionFooter
+        onCancel={() => onCancel(true)}
+        onAction={submitData}
+        actionText="Add Key"
+        loading={loading}
+        disabled={!isFormValid}
+        actionTestId="add-key-zset-btn"
+      />
+    </form>
   )
 }
 

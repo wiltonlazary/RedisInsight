@@ -25,6 +25,7 @@ import {
 } from '../interfaces'
 import { AppDispatch, RootState } from '../store'
 import { addErrorNotification } from '../app/notifications'
+import type { ActionStatus } from 'src/common/models'
 
 export const initialState: InitialStateSentinel = {
   loading: false,
@@ -39,7 +40,7 @@ export const initialState: InitialStateSentinel = {
 
 export const initialStateSentinelStatus: CreateSentinelDatabaseResponse = {
   name: '',
-  status: AddRedisDatabaseStatus.Success,
+  status: AddRedisDatabaseStatus.Success as unknown as ActionStatus,
   message: '',
 }
 
@@ -58,7 +59,7 @@ const sentinelSlice = createSlice({
     },
     loadMastersSentinelSuccess: (
       state,
-      { payload }: { payload: SentinelMaster[] }
+      { payload }: { payload: SentinelMaster[] },
     ) => {
       state.loading = false
       state.loaded[LoadedSentinel.Masters] = true
@@ -71,7 +72,7 @@ const sentinelSlice = createSlice({
 
     updateMastersSentinel: (
       state,
-      { payload }: { payload: ModifiedSentinelMaster[] }
+      { payload }: { payload: ModifiedSentinelMaster[] },
     ) => {
       state.data = payload
     },
@@ -83,7 +84,7 @@ const sentinelSlice = createSlice({
     },
     createMastersSentinelSuccess: (
       state,
-      { payload }: { payload: CreateSentinelDatabasesDto[] }
+      { payload }: { payload: CreateSentinelDatabasesDto[] },
     ) => {
       state.loading = false
 
@@ -103,7 +104,7 @@ const sentinelSlice = createSlice({
     // reset loaded field by LoadedSentinel for sentinel slice
     resetLoadedSentinel: (
       state,
-      { payload }: PayloadAction<LoadedSentinel>
+      { payload }: PayloadAction<LoadedSentinel>,
     ) => {
       state.loaded[payload] = false
     },
@@ -125,8 +126,7 @@ export const {
 } = sentinelSlice.actions
 
 // A selector
-export const sentinelSelector = (state: RootState) =>
-  state.connections.sentinel
+export const sentinelSelector = (state: RootState) => state.connections.sentinel
 
 // The reducer
 export default sentinelSlice.reducer
@@ -135,7 +135,7 @@ export default sentinelSlice.reducer
 export function fetchMastersSentinelAction(
   payload: Instance,
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(loadMastersSentinel())
@@ -143,7 +143,7 @@ export function fetchMastersSentinelAction(
     try {
       const { status, data } = await apiService.post<SentinelMaster[]>(
         `${ApiEndpoints.SENTINEL_GET_DATABASES}`,
-        payload
+        payload,
       )
 
       if (isStatusSuccessful(status)) {
@@ -165,9 +165,15 @@ export function fetchMastersSentinelAction(
 
 // Asynchronous thunk action
 export function createMastersSentinelAction(
-  payload: CreateSentinelDatabasesDto,
+  payload: {
+    alias: string
+    name: string
+    username?: string
+    password?: string
+    db?: number
+  }[],
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     dispatch(createMastersSentinel())
@@ -176,14 +182,17 @@ export function createMastersSentinelAction(
     try {
       const { instance } = state.connections.sentinel
       const { data, status } = await apiService.post<
-      CreateSentinelDatabaseResponse[]
+        CreateSentinelDatabaseResponse[]
       >(`${ApiEndpoints.SENTINEL_DATABASES}`, {
         ...instance,
         masters: payload,
       })
 
       if (isStatusSuccessful(status)) {
-        const encryptionErrors = getApiErrorsFromBulkOperation(data, ...ApiEncryptionErrors)
+        const encryptionErrors = getApiErrorsFromBulkOperation(
+          data,
+          ...ApiEncryptionErrors,
+        )
         if (encryptionErrors.length) {
           dispatch(addErrorNotification(encryptionErrors[0]))
         }

@@ -1,78 +1,60 @@
-import React, { useContext, useEffect } from 'react'
-import {
-  EuiOverlayMask,
-  EuiModal,
-  EuiModalBody,
-  EuiModalHeader,
-  EuiIcon,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiTitle,
-} from '@elastic/eui'
+import React, { useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { useHistory } from 'react-router-dom'
-import cx from 'classnames'
 
 import { BuildType } from 'uiSrc/constants/env'
 import { appInfoSelector } from 'uiSrc/slices/app/info'
-import { Pages, Theme } from 'uiSrc/constants'
+import { Pages } from 'uiSrc/constants'
 import { ConsentsSettings } from 'uiSrc/components'
-import { ThemeContext } from 'uiSrc/contexts/themeContext'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
 
-import darkLogo from 'uiSrc/assets/img/dark_logo.svg'
-import lightLogo from 'uiSrc/assets/img/light_logo.svg'
-
+import { FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Modal } from 'uiSrc/components/base/display'
 import styles from '../styles.module.scss'
 
 const ConsentsSettingsPopup = () => {
   const history = useHistory()
   const { server } = useSelector(appInfoSelector)
-  const { theme } = useContext(ThemeContext)
 
   const handleSubmitted = () => {
-    if (server && server.buildType === BuildType.RedisStack && server?.fixedDatabaseId) {
+    if (
+      server &&
+      server.buildType === BuildType.RedisStack &&
+      server?.fixedDatabaseId
+    ) {
       history.push(Pages.browser(server.fixedDatabaseId))
     }
   }
 
   useEffect(() => {
     sendEventTelemetry({
-      event: TelemetryEvent.CONSENT_MENU_VIEWED
+      event: TelemetryEvent.CONSENT_MENU_VIEWED,
     })
   }, [])
 
   return (
-    <EuiOverlayMask
-      className={cx(
-        styles.overlay,
-        theme === Theme.Dark
-          ? styles.overlay_dark
-          : styles.overlay_light
-      )}
-    >
-      <EuiModal className={styles.consentsPopup} onClose={() => {}} data-testid="consents-settings-popup">
-        <EuiModalHeader className={styles.modalHeader}>
-          <EuiFlexGroup justifyContent="spaceBetween">
-            <EuiFlexItem grow={false}>
-              <EuiTitle size="s">
-                <h3 className={styles.consentsPopupTitle}>EULA and Privacy Settings</h3>
-              </EuiTitle>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiIcon
-                className={styles.redisIcon}
-                size="original"
-                type={theme === Theme.Dark ? darkLogo : lightLogo}
-              />
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </EuiModalHeader>
-        <EuiModalBody className={styles.modalBody}>
-          <ConsentsSettings onSubmitted={handleSubmitted} />
-        </EuiModalBody>
-      </EuiModal>
-    </EuiOverlayMask>
+    <Modal
+      open
+      persistent
+      width="600px"
+      className={styles.consentsPopup}
+      data-testid="consents-settings-popup"
+      title={
+        <Row justify="between">
+          <FlexItem>
+            <Title size="XL" variant="semiBold" color="primary">
+              EULA and Privacy settings
+            </Title>
+          </FlexItem>
+          <FlexItem>
+            <RiIcon className={styles.redisIcon} type="RedisLogoFullIcon" />
+          </FlexItem>
+        </Row>
+      }
+      content={<ConsentsSettings onSubmitted={handleSubmitted} />}
+    />
   )
 }
 

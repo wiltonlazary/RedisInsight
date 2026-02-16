@@ -1,17 +1,17 @@
 import {
-  BadRequestException, HttpException,
+  BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import ERROR_MESSAGES from 'src/constants/error-messages';
-import {
-  EncryptionServiceErrorException,
-} from 'src/modules/encryption/exceptions';
+import { EncryptionServiceErrorException } from 'src/modules/encryption/exceptions';
 import { ClientCertificateRepository } from 'src/modules/certificate/repositories/client-certificate.repository';
 import { ClientCertificate } from 'src/modules/certificate/models/client-certificate';
 import { CreateClientCertificateDto } from 'src/modules/certificate/dto/create.client-certificate.dto';
 import { classToClass } from 'src/utils';
+import { RedisClientStorage } from 'src/modules/redis/redis.client.storage';
 
 @Injectable()
 export class ClientCertificateService {
@@ -19,6 +19,7 @@ export class ClientCertificateService {
 
   constructor(
     private readonly repository: ClientCertificateRepository,
+    private redisClientStorage: RedisClientStorage,
   ) {}
 
   /**
@@ -26,7 +27,7 @@ export class ClientCertificateService {
    * @param id
    */
   async get(id: string): Promise<ClientCertificate> {
-    this.logger.log(`Getting client certificate with id: ${id}.`);
+    this.logger.debug(`Getting client certificate with id: ${id}.`);
     const model = await this.repository.get(id);
 
     if (!model) {
@@ -41,13 +42,13 @@ export class ClientCertificateService {
    * Get list of shortened CA certificates (id, name only)
    */
   async list(): Promise<ClientCertificate[]> {
-    this.logger.log('Getting client certificates list.');
+    this.logger.debug('Getting client certificates list.');
 
     return this.repository.list();
   }
 
   async create(dto: CreateClientCertificateDto): Promise<ClientCertificate> {
-    this.logger.log('Creating client certificate.');
+    this.logger.debug('Creating client certificate.');
 
     try {
       return await this.repository.create(classToClass(ClientCertificate, dto));
@@ -64,10 +65,17 @@ export class ClientCertificateService {
   }
 
   async delete(id: string): Promise<void> {
-    this.logger.log(`Deleting client certificate. id: ${id}`);
+    this.logger.debug(`Deleting client certificate. id: ${id}`);
 
     try {
-      await this.repository.delete(id);
+      const { affectedDatabases } = await this.repository.delete(id);
+
+      await Promise.all(
+        affectedDatabases.map(async (databaseId) => {
+          // If the certificate is used by the database, remove the client
+          await this.redisClientStorage.removeManyByMetadata({ databaseId });
+        }),
+      );
     } catch (error) {
       this.logger.error(`Failed to delete certificate ${id}`, error);
 

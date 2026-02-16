@@ -10,35 +10,44 @@ import { NextFunction, Request, Response } from 'express';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import { RedisErrorCodes } from 'src/constants';
 import { DatabaseService } from 'src/modules/database/database.service';
-import { plainToClass } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
+import { sessionMetadataFromRequest } from 'src/common/decorators';
 import { Database } from '../models/database';
 
 @Injectable()
 export class ConnectionMiddleware implements NestMiddleware {
   private logger = new Logger('ConnectionMiddleware');
 
-  constructor(
-    private databaseService: DatabaseService,
-  ) {}
+  constructor(private databaseService: DatabaseService) {}
 
   async use(req: Request, res: Response, next: NextFunction): Promise<any> {
-    let { timeout, instanceIdFromReq } = ConnectionMiddleware.getConnectionConfigFromReq(req);
+    let { timeout, instanceIdFromReq } =
+      ConnectionMiddleware.getConnectionConfigFromReq(req);
 
-    if(instanceIdFromReq) {
-      timeout = plainToClass(Database, await this.databaseService.get(instanceIdFromReq))?.timeout
+    const sessionMetadata = sessionMetadataFromRequest(req);
+
+    if (instanceIdFromReq) {
+      timeout = plainToInstance(
+        Database,
+        await this.databaseService.get(sessionMetadata, instanceIdFromReq),
+      )?.timeout;
     }
 
     const cb = (err?: any) => {
-      if (err?.code === RedisErrorCodes.Timeout
-        || err?.message?.includes('timeout')) {
-
+      if (
+        err?.code === RedisErrorCodes.Timeout ||
+        err?.message?.includes('timeout')
+      ) {
         next(
-          this.returnError(req, new BadGatewayException(ERROR_MESSAGES.CONNECTION_TIMEOUT))
+          this.returnError(
+            req,
+            new BadGatewayException(ERROR_MESSAGES.DB_CONNECTION_TIMEOUT),
+          ),
         );
       } else {
-        next()
+        next();
       }
-    }
+    };
 
     connectTimeout?.(timeout)?.(req, res, cb);
   }
@@ -47,7 +56,7 @@ export class ConnectionMiddleware implements NestMiddleware {
     return {
       timeout: req.body?.timeout,
       instanceIdFromReq: req.params?.id,
-     };
+    };
   }
 
   private returnError(req: Request, err: Error) {

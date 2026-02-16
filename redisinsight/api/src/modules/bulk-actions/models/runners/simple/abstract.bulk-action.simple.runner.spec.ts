@@ -1,23 +1,20 @@
-import IORedis from 'ioredis';
+import { mockRedisKeysUtilModule } from 'src/__mocks__/redis-utils';
+
+jest.doMock('src/modules/redis/utils/keys.util', mockRedisKeysUtilModule);
+
 import {
   mockSocket,
+  mockBulkActionsAnalytics,
+  mockRedisKeysUtil,
+  mockBulkActionFilter,
+  mockStandaloneRedisClient,
 } from 'src/__mocks__';
-import {
-  DeleteBulkActionSimpleRunner,
-} from 'src/modules/bulk-actions/models/runners/simple/delete.bulk-action.simple.runner';
+import { DeleteBulkActionSimpleRunner } from 'src/modules/bulk-actions/models/runners/simple/delete.bulk-action.simple.runner';
 import { BulkAction } from 'src/modules/bulk-actions/models/bulk-action';
-import { BulkActionStatus, BulkActionType } from 'src/modules/bulk-actions/constants';
-import * as Utils from 'src/modules/database/utils/database.total.util';
-import { BulkActionFilter } from 'src/modules/bulk-actions/models/bulk-action-filter';
-
-const mockExec = jest.fn();
-const nodeClient = Object.create(IORedis.prototype);
-nodeClient.sendCommand = jest.fn();
-nodeClient.pipeline = jest.fn(() => ({
-  exec: mockExec,
-}));
-nodeClient.options = { db: 1 };
-const mockBulkActionFilter = new BulkActionFilter();
+import {
+  BulkActionStatus,
+  BulkActionType,
+} from 'src/modules/bulk-actions/constants';
 
 const mockCreateBulkActionDto = {
   id: 'bulk-action-id',
@@ -34,7 +31,7 @@ const mockCursorNumber = parseInt(mockCursorString, 10);
 const mockCursorBuffer = Buffer.from(mockCursorString);
 const mockZeroCursorBuffer = Buffer.from('0');
 const mockRESPError = 'Reply Error: NOPERM for delete.';
-const mockRESPErrorBuffer = Buffer.from(mockRESPError);
+const mockReplyError = new Error(mockRESPError);
 
 describe('AbstractBulkActionSimpleRunner', () => {
   let deleteRunner: DeleteBulkActionSimpleRunner;
@@ -48,14 +45,18 @@ describe('AbstractBulkActionSimpleRunner', () => {
       mockCreateBulkActionDto.type,
       mockBulkActionFilter,
       mockSocket,
+      mockBulkActionsAnalytics as any,
     );
 
-    deleteRunner = new DeleteBulkActionSimpleRunner(bulkAction, nodeClient);
+    deleteRunner = new DeleteBulkActionSimpleRunner(
+      bulkAction,
+      mockStandaloneRedisClient,
+    );
   });
 
   describe('prepareToStart', () => {
     it('should get total before start', async () => {
-      jest.spyOn(Utils, 'getTotal').mockResolvedValue(100);
+      mockRedisKeysUtil.getTotalKeys.mockResolvedValue(100);
 
       expect(deleteRunner['progress']['total']).toEqual(0);
       expect(deleteRunner['progress']['scanned']).toEqual(0);
@@ -76,9 +77,18 @@ describe('AbstractBulkActionSimpleRunner', () => {
     });
 
     it('Should get keys to process and change cursor', async () => {
-      nodeClient.sendCommand.mockResolvedValueOnce([mockCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
-      nodeClient.sendCommand.mockResolvedValueOnce([mockCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
-      nodeClient.sendCommand.mockResolvedValueOnce([mockZeroCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockZeroCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
 
       expect(deleteRunner['progress']['cursor']).toEqual(0);
       expect(deleteRunner['progress']['total']).toEqual(1_000_000);
@@ -100,7 +110,7 @@ describe('AbstractBulkActionSimpleRunner', () => {
 
       await deleteRunner.getKeysToProcess();
 
-      expect(nodeClient.sendCommand).toHaveBeenCalledTimes(3);
+      expect(mockStandaloneRedisClient.sendCommand).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -111,12 +121,21 @@ describe('AbstractBulkActionSimpleRunner', () => {
     });
 
     it('Should get keys to process and change cursor', async () => {
-      nodeClient.sendCommand.mockResolvedValueOnce([mockCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
-      nodeClient.sendCommand.mockResolvedValueOnce([mockCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
-      nodeClient.sendCommand.mockResolvedValueOnce([mockZeroCursorBuffer, [mockKeyBuffer, mockKeyBuffer]]);
-      mockExec.mockResolvedValue([
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
+      mockStandaloneRedisClient.sendCommand.mockResolvedValueOnce([
+        mockZeroCursorBuffer,
+        [mockKeyBuffer, mockKeyBuffer],
+      ]);
+      mockStandaloneRedisClient.sendPipeline.mockResolvedValue([
         [null, 1],
-        [mockRESPErrorBuffer, null],
+        [mockReplyError, null],
       ]);
 
       expect(deleteRunner['progress']['cursor']).toEqual(0);
@@ -126,7 +145,6 @@ describe('AbstractBulkActionSimpleRunner', () => {
       expect(deleteRunner['summary']['processed']).toEqual(0);
       expect(deleteRunner['summary']['succeed']).toEqual(0);
       expect(deleteRunner['summary']['failed']).toEqual(0);
-      expect(deleteRunner['summary']['errors']).toEqual([]);
 
       await deleteRunner.runIteration();
 
@@ -137,12 +155,6 @@ describe('AbstractBulkActionSimpleRunner', () => {
       expect(deleteRunner['summary']['processed']).toEqual(2);
       expect(deleteRunner['summary']['succeed']).toEqual(1);
       expect(deleteRunner['summary']['failed']).toEqual(1);
-      expect(deleteRunner['summary']['errors']).toEqual([
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-      ]);
 
       await deleteRunner.runIteration();
 
@@ -153,16 +165,6 @@ describe('AbstractBulkActionSimpleRunner', () => {
       expect(deleteRunner['summary']['processed']).toEqual(4);
       expect(deleteRunner['summary']['succeed']).toEqual(2);
       expect(deleteRunner['summary']['failed']).toEqual(2);
-      expect(deleteRunner['summary']['errors']).toEqual([
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-      ]);
 
       await deleteRunner.runIteration();
 
@@ -173,20 +175,6 @@ describe('AbstractBulkActionSimpleRunner', () => {
       expect(deleteRunner['summary']['processed']).toEqual(6);
       expect(deleteRunner['summary']['succeed']).toEqual(3);
       expect(deleteRunner['summary']['failed']).toEqual(3);
-      expect(deleteRunner['summary']['errors']).toEqual([
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-        {
-          key: mockKeyBuffer,
-          error: mockRESPErrorBuffer,
-        },
-      ]);
     });
   });
 
@@ -205,7 +193,9 @@ describe('AbstractBulkActionSimpleRunner', () => {
 
     it('should should run if cursor 0 and status is Running and stop on status change', async () => {
       expect(deleteRunner['progress']['cursor']).toEqual(0);
-      expect(deleteRunner['bulkAction']['status']).toEqual(BulkActionStatus.Running);
+      expect(deleteRunner['bulkAction']['status']).toEqual(
+        BulkActionStatus.Running,
+      );
       setTimeout(() => {
         deleteRunner['bulkAction']['status'] = BulkActionStatus.Aborted;
       }, 90);
@@ -216,13 +206,75 @@ describe('AbstractBulkActionSimpleRunner', () => {
 
     it('should should run if cursor 0 and status is Running and stop on wen cursor -1', async () => {
       expect(deleteRunner['progress']['cursor']).toEqual(0);
-      expect(deleteRunner['bulkAction']['status']).toEqual(BulkActionStatus.Running);
+      expect(deleteRunner['bulkAction']['status']).toEqual(
+        BulkActionStatus.Running,
+      );
       setTimeout(() => {
         deleteRunner['progress']['cursor'] = -1;
       }, 90);
       await deleteRunner.run();
 
       expect(runIterationSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('processIterationResults', () => {
+    let addProcessedSpy;
+    let addSuccessSpy;
+    let addFailedSpy;
+    let writeToReportSpy;
+
+    beforeEach(() => {
+      addProcessedSpy = jest.spyOn(deleteRunner['summary'], 'addProcessed');
+      addSuccessSpy = jest.spyOn(deleteRunner['summary'], 'addSuccess');
+      addFailedSpy = jest.spyOn(deleteRunner['summary'], 'addFailed');
+      writeToReportSpy = jest.spyOn(bulkAction, 'writeToReport');
+    });
+
+    it('should correctly process results and update summary counters', () => {
+      const keys = [
+        Buffer.from('key1'),
+        Buffer.from('key2'),
+        Buffer.from('key3'),
+      ];
+      const results: [Error | null, number | null][] = [
+        [null, 1], // Success
+        [mockReplyError, null], // Error
+        [null, 1], // Success
+      ];
+
+      deleteRunner.processIterationResults(keys, results);
+
+      expect(addProcessedSpy).toHaveBeenCalledWith(3);
+
+      expect(addSuccessSpy).toHaveBeenNthCalledWith(1, 1); // first call
+      expect(addSuccessSpy).toHaveBeenNthCalledWith(2, 1); // second call
+      expect(addFailedSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should call writeToReport for each key result', () => {
+      const keys = [
+        Buffer.from('key1'),
+        Buffer.from('key2'),
+        Buffer.from('key3'),
+      ];
+      const results: [Error | null, number | null][] = [
+        [null, 1], // Success
+        [mockReplyError, null], // Error
+        [null, 1], // Success
+      ];
+
+      deleteRunner.processIterationResults(keys, results);
+
+      expect(writeToReportSpy).toHaveBeenCalledTimes(3);
+      expect(writeToReportSpy).toHaveBeenNthCalledWith(1, keys[0], true);
+      expect(writeToReportSpy).toHaveBeenNthCalledWith(
+        2,
+        keys[1],
+        false,
+        mockRESPError,
+      );
+      expect(writeToReportSpy).toHaveBeenNthCalledWith(3, keys[2], true);
     });
   });
 });

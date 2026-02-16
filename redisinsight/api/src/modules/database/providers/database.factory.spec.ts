@@ -1,29 +1,46 @@
+import {
+  mockRedisSentinelUtilModule,
+  mockRedisClusterUtilModule,
+  mockRedisClusterUtil,
+  mockRedisSentinelUtil,
+} from 'src/__mocks__/redis-utils';
+
+jest.doMock('src/modules/redis/utils/cluster.util', mockRedisClusterUtilModule);
+jest.doMock(
+  'src/modules/redis/utils/sentinel.util',
+  mockRedisSentinelUtilModule,
+);
+
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   mockCaCertificateService,
-  mockClientCertificateService, mockClusterDatabaseWithTlsAuth,
+  mockClientCertificateService,
+  mockClusterDatabaseWithTlsAuth,
+  mockClusterRedisClient,
+  mockCredentialProvider,
   mockDatabase,
-  mockDatabaseInfoProvider, mockDatabaseWithTlsAuth,
-  mockIORedisClient, mockIORedisCluster, mockIORedisSentinel, mockRedisConnectionFactory,
+  mockDatabaseInfoProvider,
+  mockDatabaseWithTlsAuth,
+  mockRedisClientFactory,
   mockRedisNoPermError,
-  mockRedisService,
   mockSentinelDatabaseWithTlsAuth,
-  MockType,
+  mockSentinelRedisClient,
+  mockSessionMetadata,
+  mockStandaloneRedisClient,
 } from 'src/__mocks__';
 import { DatabaseFactory } from 'src/modules/database/providers/database.factory';
-import { RedisService } from 'src/modules/redis/redis.service';
 import { DatabaseInfoProvider } from 'src/modules/database/providers/database-info.provider';
 import { CaCertificateService } from 'src/modules/certificate/ca-certificate.service';
 import { ClientCertificateService } from 'src/modules/certificate/client-certificate.service';
 import { ConnectionType } from 'src/modules/database/entities/database.entity';
 import ERROR_MESSAGES from 'src/constants/error-messages';
 import { NotFoundException } from '@nestjs/common';
-import { RedisErrorCodes } from 'src/constants';
-import { RedisConnectionFactory } from 'src/modules/redis/redis-connection.factory';
+import { RedisClientFactory } from 'src/modules/redis/redis.client.factory';
+import { CredentialStrategyProvider } from 'src/modules/database/credentials';
 
 describe('DatabaseFactory', () => {
   let service: DatabaseFactory;
-  let databaseInfoProvider: MockType<DatabaseInfoProvider>;
+  let credentialProvider;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -32,12 +49,8 @@ describe('DatabaseFactory', () => {
       providers: [
         DatabaseFactory,
         {
-          provide: RedisService,
-          useFactory: mockRedisService,
-        },
-        {
-          provide: RedisConnectionFactory,
-          useFactory: mockRedisConnectionFactory,
+          provide: RedisClientFactory,
+          useFactory: mockRedisClientFactory,
         },
         {
           provide: DatabaseInfoProvider,
@@ -51,47 +64,114 @@ describe('DatabaseFactory', () => {
           provide: ClientCertificateService,
           useFactory: mockClientCertificateService,
         },
+        {
+          provide: CredentialStrategyProvider,
+          useFactory: mockCredentialProvider,
+        },
       ],
     }).compile();
 
     service = await module.get(DatabaseFactory);
-    databaseInfoProvider = await module.get(DatabaseInfoProvider);
+    credentialProvider = await module.get(CredentialStrategyProvider);
   });
 
   describe('createDatabaseModel', () => {
     it('should create standalone database model', async () => {
-      databaseInfoProvider.isSentinel.mockResolvedValue(false);
-      databaseInfoProvider.isCluster.mockResolvedValue(false);
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(false);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(false);
 
-      const result = await service.createDatabaseModel(mockDatabase);
+      const result = await service.createDatabaseModel(
+        mockSessionMetadata,
+        mockDatabase,
+      );
 
       expect(result).toEqual(mockDatabase);
     });
     it('should create sentinel database model', async () => {
-      databaseInfoProvider.isSentinel.mockResolvedValue(true);
-      databaseInfoProvider.isCluster.mockResolvedValue(false);
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(true);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(false);
 
-      const result = await service.createDatabaseModel(mockSentinelDatabaseWithTlsAuth);
+      const result = await service.createDatabaseModel(
+        mockSessionMetadata,
+        mockSentinelDatabaseWithTlsAuth,
+      );
 
       expect(result).toEqual(mockSentinelDatabaseWithTlsAuth);
     });
     it('should throw an error for sentinel without sentinelMaster field provided', async () => {
-      databaseInfoProvider.isSentinel.mockResolvedValue(true);
-      databaseInfoProvider.isCluster.mockResolvedValue(false);
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(true);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(false);
       try {
-        await service.createDatabaseModel(mockDatabase);
+        await service.createDatabaseModel(mockSessionMetadata, mockDatabase);
         fail();
       } catch (e) {
-        expect(e.message).toEqual(RedisErrorCodes.SentinelParamsRequired);
+        expect(e.message).toEqual(ERROR_MESSAGES.SENTINEL_MASTER_NAME_REQUIRED);
       }
     });
     it('should create cluster database model', async () => {
-      databaseInfoProvider.isSentinel.mockResolvedValue(false);
-      databaseInfoProvider.isCluster.mockResolvedValue(true);
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(false);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(true);
 
-      const result = await service.createDatabaseModel(mockClusterDatabaseWithTlsAuth);
+      const result = await service.createDatabaseModel(
+        mockSessionMetadata,
+        mockClusterDatabaseWithTlsAuth,
+      );
 
       expect(result).toEqual(mockClusterDatabaseWithTlsAuth);
+    });
+    it('should create standalone model when cluster database is passed but with standalone flag on', async () => {
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(false);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(true);
+
+      const result = await service.createDatabaseModel(mockSessionMetadata, {
+        ...mockClusterDatabaseWithTlsAuth,
+        forceStandalone: true,
+      });
+
+      expect({
+        forceStandalone: result.forceStandalone,
+        connectionType: result.connectionType,
+      }).toEqual({
+        forceStandalone: true,
+        connectionType: ConnectionType.STANDALONE,
+      });
+    });
+
+    it('should resolve credentials before creating standalone client', async () => {
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(false);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(false);
+
+      await service.createDatabaseModel(mockSessionMetadata, mockDatabase);
+
+      expect(credentialProvider.resolve).toHaveBeenCalledWith(mockDatabase);
+    });
+
+    it('should resolve credentials before creating cluster client', async () => {
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(false);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(true);
+
+      await service.createDatabaseModel(
+        mockSessionMetadata,
+        mockClusterDatabaseWithTlsAuth,
+      );
+
+      expect(credentialProvider.resolve).toHaveBeenCalledWith(
+        mockClusterDatabaseWithTlsAuth,
+      );
+    });
+
+    it('should resolve credentials before creating sentinel client', async () => {
+      mockRedisSentinelUtil.isSentinel.mockResolvedValue(true);
+      mockRedisClusterUtil.isCluster.mockResolvedValue(false);
+
+      await service.createDatabaseModel(
+        mockSessionMetadata,
+        mockSentinelDatabaseWithTlsAuth,
+      );
+
+      expect(credentialProvider.resolve).toHaveBeenCalledWith(
+        mockSentinelDatabaseWithTlsAuth,
+      );
     });
   });
 
@@ -102,7 +182,9 @@ describe('DatabaseFactory', () => {
       expect(result).toEqual(mockDatabase);
     });
     it('should create standalone database model and fetch existing certs', async () => {
-      const result = await service.createStandaloneDatabaseModel(mockDatabaseWithTlsAuth);
+      const result = await service.createStandaloneDatabaseModel(
+        mockDatabaseWithTlsAuth,
+      );
 
       expect(result).toEqual(mockDatabaseWithTlsAuth);
     });
@@ -110,23 +192,33 @@ describe('DatabaseFactory', () => {
 
   describe('createClusterDatabaseModel', () => {
     it('should create cluster database model', async () => {
-      const result = await service.createClusterDatabaseModel({
-        ...mockClusterDatabaseWithTlsAuth,
-        connectionType: ConnectionType.STANDALONE,
-      }, mockIORedisCluster);
+      const result = await service.createClusterDatabaseModel(
+        mockSessionMetadata,
+        {
+          ...mockClusterDatabaseWithTlsAuth,
+          connectionType: ConnectionType.STANDALONE,
+        },
+        mockStandaloneRedisClient,
+      );
 
       expect(result).toEqual(mockClusterDatabaseWithTlsAuth);
-      expect(mockIORedisCluster.disconnect).toHaveBeenCalled();
+      expect(mockClusterRedisClient.disconnect).toHaveBeenCalled();
     });
 
     it('should throw ACL error if no permissions', async () => {
-      databaseInfoProvider.determineClusterNodes.mockRejectedValueOnce(mockRedisNoPermError);
+      mockRedisClusterUtil.discoverClusterNodes.mockRejectedValueOnce(
+        mockRedisNoPermError,
+      );
 
       try {
-        await service.createClusterDatabaseModel({
-          ...mockSentinelDatabaseWithTlsAuth,
-          connectionType: ConnectionType.STANDALONE,
-        }, mockIORedisClient);
+        await service.createClusterDatabaseModel(
+          mockSessionMetadata,
+          {
+            ...mockSentinelDatabaseWithTlsAuth,
+            connectionType: ConnectionType.STANDALONE,
+          },
+          mockStandaloneRedisClient,
+        );
         fail();
       } catch (e) {
         // todo: returned BadRequest. why not Forbidden?
@@ -138,25 +230,33 @@ describe('DatabaseFactory', () => {
 
   describe('createSentinelDatabaseModel', () => {
     it('should create sentinel database model', async () => {
-      const result = await service.createSentinelDatabaseModel({
-        ...mockSentinelDatabaseWithTlsAuth,
-        connectionType: ConnectionType.STANDALONE,
-      }, mockIORedisClient);
+      const result = await service.createSentinelDatabaseModel(
+        mockSessionMetadata,
+        {
+          ...mockSentinelDatabaseWithTlsAuth,
+          connectionType: ConnectionType.STANDALONE,
+        },
+        mockStandaloneRedisClient,
+      );
 
       expect(result).toEqual(mockSentinelDatabaseWithTlsAuth);
-      expect(mockIORedisSentinel.disconnect).toHaveBeenCalled();
+      expect(mockSentinelRedisClient.disconnect).toHaveBeenCalled();
     });
 
     it('should throw NotFound error if no such master group', async () => {
       try {
-        await service.createSentinelDatabaseModel({
-          ...mockSentinelDatabaseWithTlsAuth,
-          connectionType: ConnectionType.STANDALONE,
-          sentinelMaster: {
-            ...mockSentinelDatabaseWithTlsAuth.sentinelMaster,
-            name: 'not existing master group',
+        await service.createSentinelDatabaseModel(
+          mockSessionMetadata,
+          {
+            ...mockSentinelDatabaseWithTlsAuth,
+            connectionType: ConnectionType.STANDALONE,
+            sentinelMaster: {
+              ...mockSentinelDatabaseWithTlsAuth.sentinelMaster,
+              name: 'not existing master group',
+            },
           },
-        }, mockIORedisClient);
+          mockStandaloneRedisClient,
+        );
         fail();
       } catch (e) {
         expect(e).toBeInstanceOf(NotFoundException);
@@ -165,17 +265,23 @@ describe('DatabaseFactory', () => {
     });
 
     it('should throw ACL error if no permissions', async () => {
-      databaseInfoProvider.determineSentinelMasterGroups.mockRejectedValueOnce(mockRedisNoPermError);
+      mockRedisSentinelUtil.discoverSentinelMasterGroups.mockRejectedValueOnce(
+        mockRedisNoPermError,
+      );
 
       try {
-        await service.createSentinelDatabaseModel({
-          ...mockSentinelDatabaseWithTlsAuth,
-          connectionType: ConnectionType.STANDALONE,
-          sentinelMaster: {
-            ...mockSentinelDatabaseWithTlsAuth.sentinelMaster,
-            name: 'not existing master group',
+        await service.createSentinelDatabaseModel(
+          mockSessionMetadata,
+          {
+            ...mockSentinelDatabaseWithTlsAuth,
+            connectionType: ConnectionType.STANDALONE,
+            sentinelMaster: {
+              ...mockSentinelDatabaseWithTlsAuth.sentinelMaster,
+              name: 'not existing master group',
+            },
           },
-        }, mockIORedisClient);
+          mockStandaloneRedisClient,
+        );
         fail();
       } catch (e) {
         // todo: returned BadRequest. why not Forbidden?

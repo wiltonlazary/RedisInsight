@@ -4,7 +4,6 @@ import {
   mockCommandsJsonProvider,
   mockMainCommands,
   mockRedijsonCommands,
-  mockRedisaiCommands,
   mockRedisearchCommands,
   mockRedisgraphCommands,
   mockRedistimeseriesCommands,
@@ -15,12 +14,16 @@ import { CommandsJsonProvider } from 'src/modules/commands/commands-json.provide
 describe('CommandsService', () => {
   let service: CommandsService;
 
-  const mainCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
-  const redisearchCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
-  const redijsonCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
-  const redistimeseriesCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
-  const redisaiCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
-  const redisgraphCommandsProvider: MockType<CommandsJsonProvider> = mockCommandsJsonProvider();
+  const mainCommandsProvider: MockType<CommandsJsonProvider> =
+    mockCommandsJsonProvider();
+  const redisearchCommandsProvider: MockType<CommandsJsonProvider> =
+    mockCommandsJsonProvider();
+  const redijsonCommandsProvider: MockType<CommandsJsonProvider> =
+    mockCommandsJsonProvider();
+  const redistimeseriesCommandsProvider: MockType<CommandsJsonProvider> =
+    mockCommandsJsonProvider();
+  const redisgraphCommandsProvider: MockType<CommandsJsonProvider> =
+    mockCommandsJsonProvider();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -30,7 +33,6 @@ describe('CommandsService', () => {
       redisearchCommandsProvider,
       redijsonCommandsProvider,
       redistimeseriesCommandsProvider,
-      redisaiCommandsProvider,
       redisgraphCommandsProvider,
     ];
 
@@ -46,12 +48,21 @@ describe('CommandsService', () => {
 
     service = module.get(CommandsService);
 
-    mainCommandsProvider.getCommands.mockResolvedValue({ main: mockMainCommands });
-    redisearchCommandsProvider.getCommands.mockResolvedValue({ search: mockRedisearchCommands });
-    redijsonCommandsProvider.getCommands.mockResolvedValue({ json: mockRedijsonCommands });
-    redistimeseriesCommandsProvider.getCommands.mockResolvedValue({ timeseries: mockRedistimeseriesCommands });
-    redisaiCommandsProvider.getCommands.mockResolvedValue({ sai: mockRedisaiCommands });
-    redisgraphCommandsProvider.getCommands.mockResolvedValue({ graph: mockRedisgraphCommands });
+    mainCommandsProvider.getCommands.mockResolvedValue({
+      main: mockMainCommands,
+    });
+    redisearchCommandsProvider.getCommands.mockResolvedValue({
+      search: mockRedisearchCommands,
+    });
+    redijsonCommandsProvider.getCommands.mockResolvedValue({
+      json: mockRedijsonCommands,
+    });
+    redistimeseriesCommandsProvider.getCommands.mockResolvedValue({
+      timeseries: mockRedistimeseriesCommands,
+    });
+    redisgraphCommandsProvider.getCommands.mockResolvedValue({
+      graph: mockRedisgraphCommands,
+    });
   });
 
   describe('onModuleInit', () => {
@@ -61,8 +72,9 @@ describe('CommandsService', () => {
       expect(mainCommandsProvider.updateLatestJson).toHaveBeenCalled();
       expect(redisearchCommandsProvider.updateLatestJson).toHaveBeenCalled();
       expect(redijsonCommandsProvider.updateLatestJson).toHaveBeenCalled();
-      expect(redistimeseriesCommandsProvider.updateLatestJson).toHaveBeenCalled();
-      expect(redisaiCommandsProvider.updateLatestJson).toHaveBeenCalled();
+      expect(
+        redistimeseriesCommandsProvider.updateLatestJson,
+      ).toHaveBeenCalled();
       expect(redisgraphCommandsProvider.updateLatestJson).toHaveBeenCalled();
     });
   });
@@ -73,7 +85,6 @@ describe('CommandsService', () => {
         ...mockRedisearchCommands,
         ...mockRedijsonCommands,
         ...mockRedistimeseriesCommands,
-        ...mockRedisaiCommands,
         ...mockRedisgraphCommands,
         ...mockMainCommands,
       });
@@ -86,7 +97,6 @@ describe('CommandsService', () => {
         search: { ...mockRedisearchCommands },
         json: { ...mockRedijsonCommands },
         timeseries: { ...mockRedistimeseriesCommands },
-        sai: { ...mockRedisaiCommands },
         graph: { ...mockRedisgraphCommands },
         main: { ...mockMainCommands },
       });

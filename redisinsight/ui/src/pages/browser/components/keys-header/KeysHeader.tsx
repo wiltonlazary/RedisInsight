@@ -1,40 +1,60 @@
 /* eslint-disable react/destructuring-assignment */
-import { EuiButton, EuiButtonIcon, EuiIcon, EuiLink, EuiPopover, EuiText, EuiToolTip, } from '@elastic/eui'
-import cx from 'classnames'
 /* eslint-disable react/no-this-in-sfc */
-import React, { FC, Ref, SVGProps, useCallback, useRef, useState } from 'react'
+import React, { Ref, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import { ReactComponent as BulkActionsIcon } from 'uiSrc/assets/img/icons/bulk_actions.svg'
-import { ReactComponent as TreeViewIcon } from 'uiSrc/assets/img/icons/treeview.svg'
-import { ReactComponent as VectorIcon } from 'uiSrc/assets/img/icons/vector.svg'
-import { ReactComponent as RediSearchIcon } from 'uiSrc/assets/img/modules/RedisSearchLight.svg'
+import { IconType, EqualIcon, FoldersIcon } from 'uiSrc/components/base/icons'
 import KeysSummary from 'uiSrc/components/keys-summary'
-import { BrowserStorageItem } from 'uiSrc/constants'
-import { SCAN_COUNT_DEFAULT, SCAN_TREE_COUNT_DEFAULT } from 'uiSrc/constants/api'
-import { localStorageService } from 'uiSrc/services'
-import { resetBrowserTree, setBrowserKeyListDataLoaded, } from 'uiSrc/slices/app/context'
+import {
+  SCAN_COUNT_DEFAULT,
+  SCAN_TREE_COUNT_DEFAULT,
+} from 'uiSrc/constants/api'
+import {
+  appContextDbConfig,
+  resetBrowserTree,
+  setBrowserKeyListDataLoaded,
+  setBrowserSelectedKey,
+  setBrowserShownColumns,
+} from 'uiSrc/slices/app/context'
 
-import { changeKeyViewType, changeSearchMode, fetchKeys, keysSelector, resetKeysData, } from 'uiSrc/slices/browser/keys'
+import {
+  changeKeyViewType,
+  fetchKeys,
+  keysSelector,
+  resetKeyInfo,
+  resetKeysData,
+} from 'uiSrc/slices/browser/keys'
 import { redisearchSelector } from 'uiSrc/slices/browser/redisearch'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
-import { KeysStoreData, KeyViewType, SearchMode } from 'uiSrc/slices/interfaces/keys'
-import { getBasedOnViewTypeEvent, sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
-import { isRedisearchAvailable } from 'uiSrc/utils'
+import {
+  KeysStoreData,
+  KeyViewType,
+  SearchMode,
+} from 'uiSrc/slices/interfaces/keys'
+import {
+  getBasedOnViewTypeEvent,
+  sendEventTelemetry,
+  TelemetryEvent,
+} from 'uiSrc/telemetry'
 
 import { OnboardingStepName, OnboardingSteps } from 'uiSrc/constants/onboarding'
 import { incrementOnboardStepAction } from 'uiSrc/slices/app/features'
-import { OnboardingTour } from 'uiSrc/components'
+import { AutoRefresh, OnboardingTour } from 'uiSrc/components'
+import { RiPopover, RiTooltip } from 'uiSrc/components/base'
 import { ONBOARDING_FEATURES } from 'uiSrc/components/onboarding-features'
-import AutoRefresh from '../auto-refresh'
-import FilterKeyType from '../filter-key-type'
-import RediSearchIndexesList from '../redisearch-key-list'
-import SearchKeyList from '../search-key-list'
+import { BrowserColumns, KeyValueFormat } from 'uiSrc/constants'
 
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { setConnectivityError } from 'uiSrc/slices/app/connectivity'
+import { Checkbox } from 'uiSrc/components/base/forms/checkbox/Checkbox'
+import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import styles from './styles.module.scss'
+import { ButtonGroup } from 'uiSrc/components/base/forms/button-group/ButtonGroup'
+import styled from 'styled-components'
+import { ToggleButton } from 'uiSrc/components/base/forms/buttons'
+import { Text } from 'uiSrc/components/base/text'
 
-const HIDE_REFRESH_LABEL_WIDTH = 600
-const FULL_SCREEN_RESOLUTION = 1260
+const HIDE_REFRESH_LABEL_WIDTH = 640
 
 interface ISwitchType<T> {
   tooltipText: string
@@ -42,10 +62,9 @@ interface ISwitchType<T> {
   disabled?: boolean
   ariaLabel: string
   dataTestId: string
-  getClassName: () => string
   onClick: () => void
   isActiveView: () => boolean
-  getIconType: () => string | FC<SVGProps<SVGSVGElement>>
+  getIconType: () => IconType
 }
 
 export interface Props {
@@ -54,11 +73,13 @@ export interface Props {
   nextCursor: string
   isSearched: boolean
   loadKeys: (type?: KeyViewType) => void
-  handleAddKeyPanel: (value: boolean) => void
-  handleBulkActionsPanel: (value: boolean) => void
-  handleCreateIndexPanel: (value: boolean) => void
   handleScanMoreClick: (config: any) => void
 }
+
+const ViewSwitchButton = styled(ButtonGroup.Button)`
+  width: 24px !important;
+  min-width: 24px !important;
+`
 
 const KeysHeader = (props: Props) => {
   const {
@@ -66,102 +87,74 @@ const KeysHeader = (props: Props) => {
     keysState,
     isSearched,
     loadKeys,
-    handleAddKeyPanel,
-    handleBulkActionsPanel,
-    handleCreateIndexPanel,
     handleScanMoreClick,
     nextCursor,
   } = props
 
-  const { id: instanceId, modules } = useSelector(connectedInstanceSelector)
+  const { id: instanceId, keyNameFormat } = useSelector(
+    connectedInstanceSelector,
+  )
   const { viewType, searchMode, isFiltered } = useSelector(keysSelector)
+  const { shownColumns } = useSelector(appContextDbConfig)
   const { selectedIndex } = useSelector(redisearchSelector)
+
+  const [columnsConfigShown, setColumnsConfigShown] = useState(false)
 
   const rootDivRef: Ref<HTMLDivElement> = useRef(null)
 
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
-
   const dispatch = useDispatch()
 
+  // TODO: Check if encoding can be reused from BE and FE
+  const format = keyNameFormat as unknown as KeyValueFormat
+  const isTreeViewDisabled =
+    (format || KeyValueFormat.Unicode) === KeyValueFormat.HEX
   const viewTypes: ISwitchType<KeyViewType>[] = [
     {
       type: KeyViewType.Browser,
       tooltipText: 'List View',
       ariaLabel: 'List view button',
       dataTestId: 'view-type-browser-btn',
-      isActiveView() { return viewType === this.type },
-      getClassName() {
-        return cx(styles.viewTypeBtn, { [styles.active]: this.isActiveView() })
+      isActiveView() {
+        return viewType === this.type
       },
       getIconType() {
-        return 'menu'
-      },
-      onClick() { handleSwitchView(this.type) }
-    },
-    {
-      type: KeyViewType.Tree,
-      tooltipText: 'Tree View',
-      ariaLabel: 'Tree view button',
-      dataTestId: 'view-type-list-btn',
-      isActiveView() { return viewType === this.type },
-      getClassName() {
-        return cx(styles.viewTypeBtn, { [styles.active]: this.isActiveView() })
-      },
-      getIconType() {
-        return TreeViewIcon
+        return EqualIcon
       },
       onClick() {
         handleSwitchView(this.type)
-        dispatch(incrementOnboardStepAction(
-          OnboardingSteps.BrowserTreeView,
-          undefined,
-          () => sendEventTelemetry({
-            event: TelemetryEvent.ONBOARDING_TOUR_ACTION_MADE,
-            eventData: {
-              databaseId: instanceId,
-              step: OnboardingStepName.BrowserTreeView,
-            }
-          })
-        ))
-      }
-    },
-  ]
-
-  const searchModes: ISwitchType<SearchMode>[] = [
-    {
-      type: SearchMode.Pattern,
-      tooltipText: 'Filter by Key Name or Pattern',
-      ariaLabel: 'Filter by Key Name or Pattern button',
-      dataTestId: 'search-mode-pattern-btn',
-      isActiveView() { return searchMode === this.type },
-      getClassName() {
-        return cx(styles.viewTypeBtn, styles.iconVector, { [styles.active]: this.isActiveView() })
       },
-      getIconType() {
-        return VectorIcon
-      },
-      onClick() { handleSwitchSearchMode(this.type) }
     },
     {
-      type: SearchMode.Redisearch,
-      tooltipText: 'Search by Values of Keys',
-      ariaLabel: 'Search by Values of Keys button',
-      dataTestId: 'search-mode-redisearch-btn',
-      disabled: !isRedisearchAvailable(modules),
-      isActiveView() { return searchMode === this.type },
-      getClassName() {
-        return cx(styles.viewTypeBtn, { [styles.active]: this.isActiveView() })
+      type: KeyViewType.Tree,
+      tooltipText: isTreeViewDisabled
+        ? 'Tree View is unavailable when the HEX key name format is selected.'
+        : 'Tree View',
+      ariaLabel: 'Tree view button',
+      dataTestId: 'view-type-list-btn',
+      disabled: isTreeViewDisabled,
+      isActiveView() {
+        return viewType === this.type
       },
       getIconType() {
-        return RediSearchIcon
+        return FoldersIcon
       },
       onClick() {
-        if (this.disabled) {
-          showPopover()
-        } else {
-          handleSwitchSearchMode(this.type)
-        }
-      }
+        handleSwitchView(this.type)
+        dispatch(
+          incrementOnboardStepAction(
+            OnboardingSteps.BrowserTreeView,
+            undefined,
+            () =>
+              sendEventTelemetry({
+                event: TelemetryEvent.ONBOARDING_TOUR_ACTION_MADE,
+                eventData: {
+                  databaseId: instanceId,
+                  step: OnboardingStepName.BrowserTreeView,
+                },
+              }),
+          ),
+        )
+      },
     },
   ]
 
@@ -170,31 +163,40 @@ const KeysHeader = (props: Props) => {
     height: '36px !important',
   }
 
-  const handleRefreshKeys = (enableAutoRefresh: boolean) => {
-    if (!enableAutoRefresh) {
-      sendEventTelemetry({
-        event: getBasedOnViewTypeEvent(
-          viewType,
-          TelemetryEvent.BROWSER_KEY_LIST_REFRESH_CLICKED,
-          TelemetryEvent.TREE_VIEW_KEY_LIST_REFRESH_CLICKED
-        ),
-        eventData: {
-          databaseId: instanceId
-        }
-      })
-    }
-    dispatch(fetchKeys(
-      {
-        searchMode,
-        cursor: '0',
-        count: viewType === KeyViewType.Browser ? SCAN_COUNT_DEFAULT : SCAN_TREE_COUNT_DEFAULT,
-      },
-      () => dispatch(setBrowserKeyListDataLoaded(searchMode, true)),
-      () => dispatch(setBrowserKeyListDataLoaded(searchMode, false)),
-    ))
+  const toggleColumnsConfigVisibility = () =>
+    setColumnsConfigShown(!columnsConfigShown)
+
+  const handleRefreshKeys = () => {
+    dispatch(
+      fetchKeys(
+        {
+          searchMode,
+          cursor: '0',
+          count:
+            viewType === KeyViewType.Browser
+              ? SCAN_COUNT_DEFAULT
+              : SCAN_TREE_COUNT_DEFAULT,
+        },
+        (data) => {
+          const keys = Array.isArray(data) ? data[0].keys : data.keys
+
+          if (!keys.length) {
+            dispatch(resetKeyInfo())
+            dispatch(setBrowserSelectedKey(null))
+          }
+
+          dispatch(setBrowserKeyListDataLoaded(searchMode, true))
+          dispatch(setConnectivityError(null))
+        },
+        () => dispatch(setBrowserKeyListDataLoaded(searchMode, false)),
+      ),
+    )
   }
 
-  const handleEnableAutoRefresh = (enableAutoRefresh: boolean, refreshRate: string) => {
+  const handleEnableAutoRefresh = (
+    enableAutoRefresh: boolean,
+    refreshRate: string,
+  ) => {
     const browserViewEvent = enableAutoRefresh
       ? TelemetryEvent.BROWSER_KEY_LIST_AUTO_REFRESH_ENABLED
       : TelemetryEvent.BROWSER_KEY_LIST_AUTO_REFRESH_DISABLED
@@ -206,11 +208,14 @@ const KeysHeader = (props: Props) => {
       eventData: {
         databaseId: instanceId,
         refreshRate: +refreshRate,
-      }
+      },
     })
   }
 
-  const handleChangeAutoRefreshRate = (enableAutoRefresh: boolean, refreshRate: string) => {
+  const handleChangeAutoRefreshRate = (
+    enableAutoRefresh: boolean,
+    refreshRate: string,
+  ) => {
     if (enableAutoRefresh) {
       handleEnableAutoRefresh(enableAutoRefresh, refreshRate)
     }
@@ -219,40 +224,26 @@ const KeysHeader = (props: Props) => {
   const handleScanMore = (config: any) => {
     handleScanMoreClick?.({
       ...config,
-      stopIndex: (viewType === KeyViewType.Browser ? SCAN_COUNT_DEFAULT : SCAN_TREE_COUNT_DEFAULT) - 1,
+      stopIndex:
+        (viewType === KeyViewType.Browser
+          ? SCAN_COUNT_DEFAULT
+          : SCAN_TREE_COUNT_DEFAULT) - 1,
     })
-  }
-
-  const openAddKeyPanel = () => {
-    handleAddKeyPanel(true)
-    sendEventTelemetry({
-      event: getBasedOnViewTypeEvent(
-        viewType,
-        TelemetryEvent.BROWSER_KEY_ADD_BUTTON_CLICKED,
-        TelemetryEvent.TREE_VIEW_KEY_ADD_BUTTON_CLICKED
-      ),
-      eventData: {
-        databaseId: instanceId
-      }
-    })
-  }
-
-  const openBulkActions = () => {
-    handleBulkActionsPanel(true)
   }
 
   const handleSwitchView = (type: KeyViewType) => {
-    if (type === KeyViewType.Tree) {
-      sendEventTelemetry({
-        event: TelemetryEvent.TREE_VIEW_OPENED,
-        eventData: {
-          databaseId: instanceId
-        }
-      })
-    }
+    sendEventTelemetry({
+      event:
+        type === KeyViewType.Tree
+          ? TelemetryEvent.TREE_VIEW_OPENED
+          : TelemetryEvent.LIST_VIEW_OPENED,
+      eventData: {
+        databaseId: instanceId,
+      },
+    })
+
     dispatch(resetBrowserTree())
     dispatch(resetKeysData(searchMode))
-    localStorageService.set(BrowserStorageItem.browserViewType, type)
 
     if (!(searchMode === SearchMode.Redisearch && !selectedIndex)) {
       loadKeys(type)
@@ -263,208 +254,185 @@ const KeysHeader = (props: Props) => {
     }, 0)
   }
 
-  const handleSwitchSearchMode = (mode: SearchMode) => {
-    if (searchMode !== mode) {
-      sendEventTelemetry({
-        event: TelemetryEvent.SEARCH_MODE_CHANGED,
-        eventData: {
-          databaseId: instanceId,
-          previous: searchMode,
-          current: mode,
-          view: viewType,
-        }
-      })
+  const changeColumnsShown = (status: boolean, columnType: BrowserColumns) => {
+    const shown = []
+    const hidden = []
+    const newColumns = status
+      ? [...shownColumns, columnType]
+      : shownColumns.filter((col) => col !== columnType)
+
+    if (columnType === BrowserColumns.TTL) {
+      status ? shown.push(BrowserColumns.TTL) : hidden.push(BrowserColumns.TTL)
+    } else if (columnType === BrowserColumns.Size) {
+      status
+        ? shown.push(BrowserColumns.Size)
+        : hidden.push(BrowserColumns.Size)
     }
 
-    dispatch(changeSearchMode(mode))
-
-    if (viewType === KeyViewType.Tree) {
-      dispatch(resetBrowserTree())
-    }
-
-    localStorageService.set(BrowserStorageItem.browserSearchMode, mode)
+    dispatch(setBrowserShownColumns(newColumns))
+    sendEventTelemetry({
+      event: TelemetryEvent.SHOW_BROWSER_COLUMN_CLICKED,
+      eventData: {
+        databaseId: instanceId,
+        shown,
+        hidden,
+      },
+    })
   }
 
-  const AddKeyBtn = (
-    <EuiButton
-      fill
-      size="s"
-      color="secondary"
-      onClick={openAddKeyPanel}
-      className={styles.addKey}
-      data-testid="btn-add-key"
-    >
-      + Key
-    </EuiButton>
-  )
-
-  const BulkActionsBtn = (
-    <EuiToolTip content="Bulk Actions" position="top">
-      <EuiButton
-        fill
-        size="s"
-        color="secondary"
-        onClick={openBulkActions}
-        className={styles.bulkActions}
-        data-testid="btn-bulk-actions"
-      >
-        <EuiIcon type={BulkActionsIcon} />
-      </EuiButton>
-    </EuiToolTip>
-  )
-
-  const ViewSwitch = (width: number) => (
-    <div
-      className={
-        cx(styles.viewTypeSwitch, {
-          [styles.middleScreen]: width > HIDE_REFRESH_LABEL_WIDTH,
-          [styles.fullScreen]: width > FULL_SCREEN_RESOLUTION
-        })
-      }
-      data-testid="view-type-switcher"
-    >
-      <OnboardingTour options={ONBOARDING_FEATURES.BROWSER_TREE_VIEW}>
-        <>
-          {viewTypes.map((view) => (
-            <EuiToolTip content={view.tooltipText} position="top" key={view.tooltipText}>
-              <EuiButtonIcon
-                className={view.getClassName()}
-                iconType={view.getIconType()}
-                aria-label={view.ariaLabel}
-                onClick={() => view.onClick()}
-                data-testid={view.dataTestId}
-              />
-            </EuiToolTip>
-          ))}
-        </>
-      </OnboardingTour>
-    </div>
-  )
-
-  const showPopover = useCallback(() => {
-    setIsPopoverOpen(true)
-  }, [])
-
-  const hidePopover = useCallback(() => {
-    setIsPopoverOpen(false)
-  }, [])
-
-  const SwitchModeBtn = (item: ISwitchType<SearchMode>) => (
-    <EuiButtonIcon
-      className={item.getClassName()}
-      iconType={item.getIconType()}
-      aria-label={item.ariaLabel}
-      onClick={() => item.onClick?.()}
-      data-testid={item.dataTestId}
-    />
-  )
-
-  const SearchModeSwitch = (width: number) => (
-    <div
-      className={
-        cx(styles.searchModeSwitch, {
-          [styles.middleScreen]: width > HIDE_REFRESH_LABEL_WIDTH,
-          [styles.fullScreen]: width > FULL_SCREEN_RESOLUTION
-        })
-      }
-      data-testid="search-mode-switcher"
-    >
-      {searchModes.map((mode) => (
-        !mode.disabled ? (
-          <EuiToolTip content={mode.tooltipText} position="bottom" key={mode.tooltipText}>
-            {SwitchModeBtn(mode)}
-          </EuiToolTip>
-        )
-          : (
-            <EuiToolTip content={mode.tooltipText} position="bottom" key={mode.tooltipText}>
-              <EuiPopover
-                ownFocus={false}
-                anchorPosition="downCenter"
-                isOpen={isPopoverOpen}
-                closePopover={hidePopover}
-                panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popoverPanelWrapper)}
-                panelPaddingSize="l"
-                button={SwitchModeBtn(mode)}
-              >
-                <EuiText className={styles.noModuleInfo}>
-                  {'RediSearch module is not loaded. Create a '}
-                  <EuiLink
-                    color="subdued"
-                    href="https://redis.com/try-free/?utm_source=redis&utm_medium=app&utm_campaign=redisinsight_browser_search"
-                    className={styles.link}
-                    external={false}
-                    target="_blank"
-                    data-testid="redisearch-free-db"
-                  >
-                    free Redis database
-                  </EuiLink>
-                  {' with module support on Redis Cloud.'}
-                </EuiText>
-              </EuiPopover>
-            </EuiToolTip>
-          )))}
-
-    </div>
+  const ViewSwitch = () => (
+    <OnboardingTour options={ONBOARDING_FEATURES.BROWSER_TREE_VIEW}>
+      <ButtonGroup data-testid="view-type-switcher">
+        {viewTypes.map((view) => (
+          <RiTooltip
+            content={view.tooltipText}
+            position="top"
+            key={view.tooltipText}
+          >
+            <ViewSwitchButton
+              aria-label={view.ariaLabel}
+              onClick={() => view.onClick()}
+              isSelected={view.isActiveView()}
+              data-testid={view.dataTestId}
+              disabled={view.disabled || false}
+            >
+              <ButtonGroup.Icon icon={view.getIconType()} />
+            </ViewSwitchButton>
+          </RiTooltip>
+        ))}
+      </ButtonGroup>
+    </OnboardingTour>
   )
 
   return (
     <div className={styles.content} ref={rootDivRef}>
       <AutoSizer disableHeight>
         {({ width }) => (
-          <div style={{ width }}>
-            <div className={styles.top}>
-              <OnboardingTour
-                options={ONBOARDING_FEATURES.BROWSER_FILTER_SEARCH}
-                anchorPosition="downLeft"
-                panelClassName={styles.browserFilterOnboard}
-              >
-                {SearchModeSwitch(width)}
-              </OnboardingTour>
-              {searchMode === SearchMode.Pattern ? (
-                <FilterKeyType />
-              ) : (
-                <RediSearchIndexesList onCreateIndex={handleCreateIndexPanel} />
-              )}
-              <SearchKeyList />
-              {ViewSwitch(width)}
-              <div style={{ minWidth: '120px' }}>
-                {AddKeyBtn}
-                {BulkActionsBtn}
-              </div>
-            </div>
-
-            <div className={styles.bottom}>
+          <Row justify="between" style={{ width }}>
+            <FlexItem>
               <KeysSummary
                 items={keysState.keys}
                 totalItemsCount={keysState.total}
                 scanned={
-                  isSearched
-                  || (isFiltered && searchMode === SearchMode.Pattern)
-                  || viewType === KeyViewType.Tree ? keysState.scanned : 0
+                  isSearched ||
+                  (isFiltered && searchMode === SearchMode.Pattern) ||
+                  viewType === KeyViewType.Tree
+                    ? keysState.scanned
+                    : 0
                 }
                 loading={loading}
                 showScanMore={
-                  !(searchMode === SearchMode.Redisearch
-                    && keysState.maxResults
-                    && keysState.keys.length >= keysState.maxResults)
+                  !(
+                    searchMode === SearchMode.Redisearch &&
+                    keysState.maxResults &&
+                    keysState.keys.length >= keysState.maxResults
+                  )
                 }
                 scanMoreStyle={scanMoreStyle}
                 loadMoreItems={handleScanMore}
                 nextCursor={nextCursor}
               />
-              <AutoRefresh
-                postfix="keys"
-                loading={loading}
-                lastRefreshTime={keysState.lastRefreshTime}
-                displayText={width > HIDE_REFRESH_LABEL_WIDTH}
-                containerClassName={styles.refreshContainer}
-                onRefresh={handleRefreshKeys}
-                onEnableAutoRefresh={handleEnableAutoRefresh}
-                onChangeAutoRefreshRate={handleChangeAutoRefreshRate}
-                testid="refresh-keys-btn"
-              />
-            </div>
-          </div>
+            </FlexItem>
+            <FlexItem>
+              <Row gap="l">
+                <FlexItem>
+                  <AutoRefresh
+                    disabled={
+                      searchMode === SearchMode.Redisearch && !selectedIndex
+                    }
+                    disabledRefreshButtonMessage="Select an index to refresh keys."
+                    iconSize="S"
+                    postfix="keys"
+                    loading={loading}
+                    lastRefreshTime={keysState.lastRefreshTime}
+                    displayText={(width || 0) > HIDE_REFRESH_LABEL_WIDTH}
+                    onRefresh={handleRefreshKeys}
+                    onEnableAutoRefresh={handleEnableAutoRefresh}
+                    onChangeAutoRefreshRate={handleChangeAutoRefreshRate}
+                    testid="keys"
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <RiPopover
+                    ownFocus={false}
+                    anchorPosition="downLeft"
+                    isOpen={columnsConfigShown}
+                    anchorClassName={styles.anchorWrapper}
+                    panelClassName={styles.popoverWrapper}
+                    closePopover={() => setColumnsConfigShown(false)}
+                    button={
+                      <ToggleButton
+                        onPressedChange={toggleColumnsConfigVisibility}
+                        className={styles.columnsButton}
+                        data-testid="btn-columns-actions"
+                        aria-label="columns"
+                        pressed={columnsConfigShown}
+                      >
+                        <RiIcon size="m" type="ColumnsIcon" />
+                        <Text size="s">Columns</Text>
+                      </ToggleButton>
+                    }
+                  >
+                    <Col gap="m">
+                      <FlexItem>
+                        <Row align="center" gap="m">
+                          <FlexItem grow>
+                            <Checkbox
+                              id="show-key-size"
+                              name="show-key-size"
+                              label="Key size"
+                              checked={shownColumns.includes(
+                                BrowserColumns.Size,
+                              )}
+                              onChange={(e) =>
+                                changeColumnsShown(
+                                  e.target.checked,
+                                  BrowserColumns.Size,
+                                )
+                              }
+                              data-testid="show-key-size"
+                              className={styles.checkbox}
+                            />
+                          </FlexItem>
+                          <FlexItem>
+                            <RiTooltip
+                              content="Hide the key size to avoid performance issues when working with large keys."
+                              position="top"
+                              anchorClassName="flex-row"
+                            >
+                              <RiIcon
+                                className={styles.infoIcon}
+                                type="InfoIcon"
+                                size="m"
+                                style={{ cursor: 'pointer' }}
+                                data-testid="key-size-info-icon"
+                              />
+                            </RiTooltip>
+                          </FlexItem>
+                        </Row>
+                      </FlexItem>
+                      <FlexItem>
+                        <Checkbox
+                          id="show-ttl"
+                          name="show-ttl"
+                          label="TTL"
+                          checked={shownColumns.includes(BrowserColumns.TTL)}
+                          onChange={(e) =>
+                            changeColumnsShown(
+                              e.target.checked,
+                              BrowserColumns.TTL,
+                            )
+                          }
+                          data-testid="show-ttl"
+                        />
+                      </FlexItem>
+                    </Col>
+                  </RiPopover>
+                </FlexItem>
+                <FlexItem>{ViewSwitch()}</FlexItem>
+              </Row>
+            </FlexItem>
+          </Row>
         )}
       </AutoSizer>
     </div>

@@ -1,19 +1,20 @@
 import React from 'react'
 import { Dispatch, PayloadAction } from '@reduxjs/toolkit'
 import parse from 'html-react-parser'
+import { isUndefined } from 'lodash'
 
 import { localStorageService } from 'uiSrc/services'
 import { CommandExecutionStatus } from 'uiSrc/slices/interfaces/cli'
-import { resetOutput, updateCliCommandHistory } from 'uiSrc/slices/cli/cli-output'
-import { BrowserStorageItem, ICommands } from 'uiSrc/constants'
+import {
+  resetOutput,
+  updateCliCommandHistory,
+} from 'uiSrc/slices/cli/cli-output'
+import { BrowserStorageItem, ICommands, CommandGroup } from 'uiSrc/constants'
 import { ModuleCommandPrefix } from 'uiSrc/pages/workbench/constants'
 import { SelectCommand } from 'uiSrc/constants/cliOutput'
-import {
-  ClusterNode,
-  RedisDefaultModules,
-  COMMAND_MODULES,
-} from 'uiSrc/slices/interfaces'
+import { RedisDefaultModules, COMMAND_MODULES } from 'uiSrc/slices/interfaces'
 
+import { getCommandsForExecution } from 'uiSrc/utils/monaco/monacoUtils'
 import { AdditionalRedisModule } from 'apiSrc/modules/database/models/additional.redis.module'
 import formatToText from './transformers/cliTextFormatter'
 import { getDbIndex } from './longNames'
@@ -29,32 +30,25 @@ interface IGroupModeCommand {
   status: CommandExecutionStatus
 }
 
-const cliParseTextResponseWithRedirect = (
-  text: string = '',
-  command: string = '',
-  status: CommandExecutionStatus = CommandExecutionStatus.Success,
-  redirectTo: ClusterNode | undefined,
-) => {
-  let redirectMessage = ''
-  if (redirectTo) {
-    const { host, port, slot } = redirectTo
-    redirectMessage = `-> Redirected to slot [${slot}] located at ${host}:${port}`
-  }
-  return [redirectMessage, '\n', cliParseTextResponse(text, command, status), '\n']
-}
-
 const cliParseTextResponseWithOffset = (
   text: string = '',
   command: string = '',
   status: CommandExecutionStatus = CommandExecutionStatus.Success,
 ) => [cliParseTextResponse(text, command, status), '\n']
 
+const replaceEmptyValue = (value: any) => {
+  if (isUndefined(value) || value === '' || value === false) {
+    return '(nil)'
+  }
+  return value
+}
+
 const cliParseTextResponse = (
   text: string | JSX.Element = '',
   command: string = '',
   status: CommandExecutionStatus = CommandExecutionStatus.Success,
   prefix: CliPrefix = CliPrefix.Cli,
-  isParse: boolean = false
+  isParse: boolean = false,
 ) => (
   <span
     key={Math.random()}
@@ -73,21 +67,27 @@ const cliParseTextResponse = (
   </span>
 )
 
-const cliCommandOutput = (command: string, dbIndex = 0) => ['\n', bashTextValue(dbIndex), cliCommandWrapper(command), '\n']
+const cliCommandOutput = (command: string, dbIndex = 0) => [
+  '\n',
+  bashTextValue(dbIndex),
+  cliCommandWrapper(command),
+  '\n',
+]
 
 const bashTextValue = (dbIndex = 0) => `${getDbIndex(dbIndex)} > `.trimStart()
 
 const cliCommandWrapper = (command: string) => (
-  <span className="cli-command-wrapper" data-testid="cli-command-wrapper" key={Math.random()}>
+  <span
+    className="cli-command-wrapper"
+    data-testid="cli-command-wrapper"
+    key={Math.random()}
+  >
     {command}
   </span>
 )
 
 const wbSummaryCommand = (command: string, db?: number) => (
-  <span
-    className="cli-command-wrapper"
-    data-testid="wb-command"
-  >
+  <span className="cli-command-wrapper" data-testid="wb-command">
     {`${getDbIndex(db)} > ${command} \n`}
   </span>
 )
@@ -104,9 +104,18 @@ const cliParseCommandsGroupResult = (
 
   let executionResult = []
   if (result.status === CommandExecutionStatus.Success) {
-    executionResult = formatToText(result.response || '(nil)', result.command).split('\n')
+    executionResult = formatToText(
+      replaceEmptyValue(result.response),
+      result.command,
+    ).split('\n')
   } else {
-    executionResult = [cliParseTextResponse(result.response || '(nil)', result.command, result.status)]
+    executionResult = [
+      cliParseTextResponse(
+        result.response || '(nil)',
+        result.command,
+        result.status,
+      ),
+    ]
   }
 
   return [executionCommand, ...executionResult]
@@ -114,14 +123,15 @@ const cliParseCommandsGroupResult = (
 
 const updateCliHistoryStorage = (
   command: string = '',
-  dispatch: Dispatch<PayloadAction<string[]>>
+  dispatch: Dispatch<PayloadAction<string[]>>,
 ) => {
   if (!command) {
     return
   }
   const maxCountCommandHistory = 20
 
-  const commandHistoryPrev = localStorageService.get(BrowserStorageItem.cliInputHistory) ?? []
+  const commandHistoryPrev =
+    localStorageService.get(BrowserStorageItem.cliInputHistory) ?? []
 
   const commandHistory = [command?.trim()]
     .concat(commandHistoryPrev)
@@ -129,18 +139,27 @@ const updateCliHistoryStorage = (
 
   localStorageService.set(
     BrowserStorageItem.cliInputHistory,
-    commandHistory.slice(0, maxCountCommandHistory)
+    commandHistory.slice(0, maxCountCommandHistory),
   )
 
   dispatch?.(updateCliCommandHistory?.(commandHistory))
 }
 
-const checkUnsupportedCommand = (unsupportedCommands: string[], commandLine: string) =>
+const checkUnsupportedCommand = (
+  unsupportedCommands: string[],
+  commandLine: string,
+) =>
   unsupportedCommands?.find((command) =>
-    commandLine?.trim().toLowerCase().startsWith(command?.toLowerCase()))
+    commandLine?.trim().toLowerCase().startsWith(command?.toLowerCase()),
+  )
 
-const checkBlockingCommand = (blockingCommands: string[], commandLine: string) =>
-  blockingCommands?.find((command) => commandLine?.trim().toLowerCase().startsWith(command))
+const checkBlockingCommand = (
+  blockingCommands: string[],
+  commandLine: string,
+) =>
+  blockingCommands?.find((command) =>
+    commandLine?.trim().toLowerCase().startsWith(command),
+  )
 
 const checkCommandModule = (command: string) => {
   switch (true) {
@@ -152,9 +171,6 @@ const checkCommandModule = (command: string) => {
     }
     case command.startsWith(ModuleCommandPrefix.TimeSeries): {
       return RedisDefaultModules.TimeSeries
-    }
-    case command.startsWith(ModuleCommandPrefix.Graph): {
-      return RedisDefaultModules.Graph
     }
     case command.startsWith(ModuleCommandPrefix.BF):
     case command.startsWith(ModuleCommandPrefix.CF):
@@ -169,7 +185,24 @@ const checkCommandModule = (command: string) => {
   }
 }
 
-const checkUnsupportedModuleCommand = (loadedModules: AdditionalRedisModule[], commandLine: string) => {
+const getUnsupportedModulesFromQuery = (
+  loadedModules: AdditionalRedisModule[],
+  query: string = '',
+): Set<RedisDefaultModules> => {
+  const result = new Set<RedisDefaultModules>()
+  getCommandsForExecution(query).forEach((command) => {
+    const module = checkUnsupportedModuleCommand(loadedModules, command)
+    if (module) {
+      result.add(module)
+    }
+  })
+  return result
+}
+
+const checkUnsupportedModuleCommand = (
+  loadedModules: AdditionalRedisModule[],
+  commandLine: string,
+) => {
   const command = commandLine?.trim().toUpperCase()
 
   const commandModule = checkCommandModule(command)
@@ -177,7 +210,8 @@ const checkUnsupportedModuleCommand = (loadedModules: AdditionalRedisModule[], c
     return null
   }
   const isModuleLoaded = loadedModules?.some(({ name }) =>
-    COMMAND_MODULES[commandModule].some((module) => name === module))
+    COMMAND_MODULES[commandModule].some((module) => name === module),
+  )
 
   if (isModuleLoaded) {
     return null
@@ -201,21 +235,36 @@ const getDbIndexFromSelectQuery = (query: string): number => {
 const getCommandNameFromQuery = (
   query: string,
   commandsSpec: ICommands = {},
-  queryLimit: number = 50
+  queryLimit: number = 50,
 ): string | undefined => {
   try {
     const [command, firstArg] = query.slice(0, queryLimit).trim().split(/\s+/)
-    if (commandsSpec[`${command} ${firstArg}`.toUpperCase()]) return `${command} ${firstArg}`
+    if (commandsSpec[`${command} ${firstArg}`.toUpperCase()])
+      return `${command} ${firstArg}`
     return command
   } catch (error) {
     return undefined
   }
 }
 
+const DEPRECATED_MODULE_PREFIXES = [ModuleCommandPrefix.Graph]
+
+const DEPRECATED_MODULE_GROUPS = [CommandGroup.Graph]
+
+const checkDeprecatedModuleCommand = (command: string) =>
+  DEPRECATED_MODULE_PREFIXES.some((prefix) =>
+    command.toUpperCase().startsWith(prefix),
+  )
+
+const checkDeprecatedCommandGroup = (item: string) =>
+  DEPRECATED_MODULE_GROUPS.some((group) => group === item)
+
+const removeDeprecatedModuleCommands = (commands: string[]) =>
+  commands.filter((command) => !checkDeprecatedModuleCommand(command))
+
 export {
   cliParseTextResponse,
   cliParseTextResponseWithOffset,
-  cliParseTextResponseWithRedirect,
   cliParseCommandsGroupResult,
   cliCommandOutput,
   bashTextValue,
@@ -229,4 +278,9 @@ export {
   getDbIndexFromSelectQuery,
   getCommandNameFromQuery,
   wbSummaryCommand,
+  replaceEmptyValue,
+  removeDeprecatedModuleCommands,
+  checkDeprecatedModuleCommand,
+  checkDeprecatedCommandGroup,
+  getUnsupportedModulesFromQuery,
 }

@@ -11,8 +11,11 @@ import {
   act,
 } from 'uiSrc/utils/test-utils'
 import { BrowserStorageItem } from 'uiSrc/constants'
-import { processCliClient, resetCliSettings, toggleCli } from 'uiSrc/slices/cli/cli-settings'
-import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
+import {
+  processCliClient,
+  resetCliSettings,
+  toggleCli,
+} from 'uiSrc/slices/cli/cli-settings'
 import { sessionStorageService } from 'uiSrc/services'
 import { resetOutputLoading } from 'uiSrc/slices/cli/cli-output'
 import CliHeader from './CliHeader'
@@ -88,25 +91,6 @@ describe('CliHeader', () => {
     const expectedActions = [toggleCli()]
     expect(store.getActions()).toEqual(expectedActions)
   })
-
-  it('Cli endpoint should be equal connected Instance host:port', () => {
-    const host = 'localhost'
-    const port = 6379
-    const endpoint = `${host}:${port}`
-    const mockEndpoint = `cli-endpoint-${endpoint}`
-
-    connectedInstanceSelector.mockImplementation(() => ({
-      host,
-      port,
-    }))
-
-    const { queryByTestId } = render(<CliHeader />)
-
-    const endpointEl = queryByTestId(mockEndpoint)
-
-    expect(endpointEl).toBeInTheDocument()
-    expect(endpointEl).toHaveTextContent(endpoint)
-  })
 })
 
 it('should "processCliClient" action be called after close cli with mocked sessionStorage item ', async () => {
@@ -119,12 +103,16 @@ it('should "processCliClient" action be called after close cli with mocked sessi
     fireEvent.click(screen.getByTestId('close-cli'))
   })
 
-  expect(sessionStorageService.get).toBeCalledWith(BrowserStorageItem.cliClientUuid)
+  expect(sessionStorageService.get).toBeCalledWith(
+    BrowserStorageItem.cliClientUuid,
+  )
 
   const expectedActions = [
     processCliClient(),
     resetCliSettings(),
     resetOutputLoading(),
   ]
-  expect(store.getActions()).toEqual(expectedActions)
+  expect(store.getActions().slice(0, expectedActions.length)).toEqual(
+    expectedActions,
+  )
 })

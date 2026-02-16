@@ -26,25 +26,36 @@ export class ProfilerClient {
     this.id = id;
     this.client = client;
     this.items = [];
-    this.debounce = debounce(() => {
-      if (this.items.length) {
-        this.logsEmitters.forEach((emitter) => {
-          emitter.emit(this.items);
-        });
-        this.items = [];
-      }
-    }, 10, {
-      maxWait: 50,
-    });
+    this.debounce = debounce(
+      () => {
+        if (this.items.length) {
+          this.logsEmitters.forEach((emitter) => {
+            emitter.emit(this.items);
+          });
+          this.items = [];
+        }
+      },
+      10,
+      {
+        maxWait: 50,
+      },
+    );
   }
 
   public handleOnData(payload: IMonitorData) {
-    const {
-      time, args, source, database,
-    } = payload;
+    const { time, args, source, database } = payload;
+
+    // If there's [ in the time, strip it out.
+    //
+    // There is a case of a timestamp coming with '[' on Alibaba
+    // Redis's monitor.
+    const newTime = time.split('[')[0];
 
     this.items.push({
-      time, args, source, database,
+      time: newTime,
+      args,
+      source,
+      database,
     });
 
     this.debounce();
@@ -68,7 +79,9 @@ export class ProfilerClient {
   }
 
   public destroy() {
-    this.logsEmitters.forEach((emitter) => emitter.removeProfilerClient(this.id));
+    this.logsEmitters.forEach((emitter) =>
+      emitter.removeProfilerClient(this.id),
+    );
   }
 
   /**
@@ -76,8 +89,6 @@ export class ProfilerClient {
    * @private
    */
   private logCurrentState() {
-    this.logger.debug(
-      `Emitters: ${this.logsEmitters.size}`,
-    );
+    this.logger.debug(`Emitters: ${this.logsEmitters.size}`);
   }
 }

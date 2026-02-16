@@ -1,4 +1,3 @@
-import { EuiButtonIcon, EuiPopover } from '@elastic/eui'
 import cx from 'classnames'
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -6,10 +5,13 @@ import {
   notificationCenterSelector,
   setIsCenterOpen,
   setIsNotificationOpen,
-  unreadNotificationsAction
+  unreadNotificationsAction,
 } from 'uiSrc/slices/app/notifications'
 import { IGlobalNotification } from 'uiSrc/slices/interfaces'
 import { sendEventTelemetry, TelemetryEvent } from 'uiSrc/telemetry'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CancelSlimIcon } from 'uiSrc/components/base/icons'
+import { RiPopover } from 'uiSrc/components/base'
 import Notification from '../Notification'
 
 import styles from '../styles.module.scss'
@@ -17,9 +19,11 @@ import styles from '../styles.module.scss'
 const CLOSE_NOTIFICATION_TIME = 6000
 
 const PopoverNotification = () => {
-  const { isNotificationOpen, isCenterOpen, lastReceivedNotification } = useSelector(notificationCenterSelector)
+  const { isNotificationOpen, isCenterOpen, lastReceivedNotification } =
+    useSelector(notificationCenterSelector)
   const [isHovering, setIsHovering] = useState(false)
-  const [isShowNotification, setIsShowNotification] = useState(isNotificationOpen)
+  const [isShowNotification, setIsShowNotification] =
+    useState(isNotificationOpen)
 
   const timeOutRef = useRef<NodeJS.Timeout>()
 
@@ -46,7 +50,10 @@ const PopoverNotification = () => {
         return
       }
 
-      timeOutRef.current = setTimeout(onCloseNotification, CLOSE_NOTIFICATION_TIME)
+      timeOutRef.current = setTimeout(
+        onCloseNotification,
+        CLOSE_NOTIFICATION_TIME,
+      )
     }
   }, [isShowNotification, isHovering])
 
@@ -57,13 +64,18 @@ const PopoverNotification = () => {
 
   const handleClickClose = (notification: IGlobalNotification) => {
     onCloseNotification()
-    dispatch(unreadNotificationsAction({ timestamp: notification.timestamp, type: notification.type }))
+    dispatch(
+      unreadNotificationsAction({
+        timestamp: notification.timestamp,
+        type: notification.type,
+      }),
+    )
 
     sendEventTelemetry({
       event: TelemetryEvent.NOTIFICATIONS_MESSAGE_CLOSED,
       eventData: {
-        notificationID: lastReceivedNotification?.timestamp
-      }
+        notificationID: lastReceivedNotification?.timestamp,
+      },
     })
   }
 
@@ -76,13 +88,15 @@ const PopoverNotification = () => {
   return (
     <>
       {lastReceivedNotification && (
-        <EuiPopover
-          initialFocus={false}
+        <RiPopover
           anchorPosition="rightUp"
           isOpen={isShowNotification}
           closePopover={() => {}}
           anchorClassName={styles.popoverAnchor}
-          panelClassName={cx('euiToolTip', 'popoverLikeTooltip', styles.popoverNotificationTooltip)}
+          panelClassName={cx(
+            'popoverLikeTooltip',
+            styles.popoverNotificationTooltip,
+          )}
           button={<div className={styles.popoverAnchor} />}
           onMouseUp={onMouseUpPopover}
         >
@@ -92,9 +106,8 @@ const PopoverNotification = () => {
             className={styles.popoverNotification}
             data-testid="notification-popover"
           >
-            <EuiButtonIcon
-              iconType="cross"
-              color="primary"
+            <IconButton
+              icon={CancelSlimIcon}
               aria-label="Close notification"
               className={styles.closeBtn}
               onMouseUp={(e: React.MouseEvent) => e.stopPropagation()}
@@ -103,7 +116,7 @@ const PopoverNotification = () => {
             />
             <Notification notification={lastReceivedNotification} />
           </div>
-        </EuiPopover>
+        </RiPopover>
       )}
     </>
   )

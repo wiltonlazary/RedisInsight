@@ -1,17 +1,21 @@
 import React from 'react'
-import { ReactComponent as LogoIcon } from 'uiSrc/assets/img/logo.svg'
-import { EuiLoadingLogo, EuiEmptyPrompt } from '@elastic/eui'
+
+import LogoIcon from 'uiSrc/assets/img/logo_small.svg'
+import { getConfig } from 'uiSrc/config'
+import { RiLoadingLogo } from 'uiSrc/components/base/display'
+import { RiEmptyPrompt } from 'uiSrc/components/base/layout'
+
+const riConfig = getConfig()
 
 const PagePlaceholder = () => (
   <>
-    { process.env.NODE_ENV !== 'development' && (
-      <EuiEmptyPrompt
-        icon={<EuiLoadingLogo logo={LogoIcon} size="xl" style={{ fontSize: '40px' }} />}
-        titleSize="s"
+    {riConfig.app.env !== 'development' && (
+      <RiEmptyPrompt
+        data-testid="page-placeholder"
+        icon={<RiLoadingLogo src={LogoIcon} $size="XXL" />}
       />
     )}
   </>
-
 )
 
 export default PagePlaceholder

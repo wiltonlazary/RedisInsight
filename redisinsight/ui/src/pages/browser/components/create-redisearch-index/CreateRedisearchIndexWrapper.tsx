@@ -1,72 +1,84 @@
 import React from 'react'
-import {
-  EuiButtonIcon,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiLink,
-  EuiText,
-  EuiTitle,
-  EuiToolTip
-} from '@elastic/eui'
-import cx from 'classnames'
+import styled from 'styled-components'
+
+import { getUtmExternalLink } from 'uiSrc/utils/links'
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CancelSlimIcon } from 'uiSrc/components/base/icons'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { Link } from 'uiSrc/components/base/link/Link'
+import { RiTooltip } from 'uiSrc/components'
 import CreateRedisearchIndex from './CreateRedisearchIndex'
 
-import styles from './styles.module.scss'
+import { HorizontalRule, Spacer } from 'uiSrc/components/base/layout'
+
+const StyledCreateRedisearchIndexWrapper = styled(Col)`
+  background-color: ${({ theme }) =>
+    theme.name === 'light'
+      ? theme.semantic.color.background.neutral100
+      : theme.semantic.color.background.neutral200};
+  padding: ${({ theme }) => theme.core.space.space200};
+  width: 100%;
+  height: 100%;
+`
+
+const StyledHeader = styled(Col)`
+  flex: 0 0 auto;
+`
 
 export interface Props {
+  arePanelsCollapsed?: boolean
   onClosePanel?: () => void
   onCreateIndex?: () => void
 }
 
-const CreateRedisearchIndexWrapper = ({ onClosePanel, onCreateIndex }: Props) => (
-  <div className={styles.page} data-testid="create-index-panel">
-    <EuiFlexGroup
-      justifyContent="center"
-      direction="column"
-      className={cx(styles.container, 'relative')}
-      gutterSize="none"
-    >
-      <div className={styles.headerWrapper}>
-        <EuiFlexItem grow style={{ marginBottom: '16px' }}>
-          <EuiTitle size="xs" className={styles.header}>
-            <h4>New Index</h4>
-          </EuiTitle>
-          <EuiToolTip
-            content="Close"
-            position="left"
-            anchorClassName={styles.closeBtnTooltip}
-          >
-            <EuiButtonIcon
-              iconType="cross"
-              color="primary"
+const CreateRedisearchIndexWrapper = ({
+  arePanelsCollapsed,
+  onClosePanel,
+  onCreateIndex,
+}: Props) => (
+  <StyledCreateRedisearchIndexWrapper data-testid="create-index-panel">
+    <Spacer size="m" />
+    <StyledHeader gap="xl">
+      <Row justify="between">
+        <Title size="M">New Index</Title>
+        {!arePanelsCollapsed && (
+          <RiTooltip content="Close" position="left">
+            <IconButton
+              size="L"
+              icon={CancelSlimIcon}
               aria-label="Close panel"
-              className={styles.closeBtn}
               data-testid="create-index-close-panel"
               onClick={onClosePanel}
             />
-          </EuiToolTip>
-        </EuiFlexItem>
-        <EuiFlexItem className={styles.header}>
-          <EuiText size="s">Use CLI or Workbench to create more advanced indexes. See more details in the
-            {' '}
-            <EuiLink
-              color="text"
-              href="https://redis.io/commands/ft.create/"
-              className={styles.link}
-              external={false}
-              target="_blank"
-            >
-              documentation.
-            </EuiLink>
-          </EuiText>
-        </EuiFlexItem>
-      </div>
-      <CreateRedisearchIndex
-        onCreateIndex={onCreateIndex}
-        onClosePanel={onClosePanel}
-      />
-    </EuiFlexGroup>
-  </div>
+          </RiTooltip>
+        )}
+      </Row>
+      <FlexItem>
+        <Text size="s">
+          Use CLI or Workbench to create more advanced indexes. See more details
+          in the{' '}
+          <Link
+            variant="inline"
+            size="S"
+            href={getUtmExternalLink('https://redis.io/commands/ft.create/', {
+              campaign: 'browser_search',
+            })}
+            target="_blank"
+            color="primary"
+          >
+            documentation.
+          </Link>
+        </Text>
+      </FlexItem>
+    </StyledHeader>
+    <HorizontalRule margin="l" colorVariable="separatorColor" />
+    <CreateRedisearchIndex
+      onCreateIndex={onCreateIndex}
+      onClosePanel={onClosePanel}
+    />
+  </StyledCreateRedisearchIndexWrapper>
 )
 
 export default CreateRedisearchIndexWrapper

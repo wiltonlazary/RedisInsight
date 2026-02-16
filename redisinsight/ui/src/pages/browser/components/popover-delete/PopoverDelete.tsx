@@ -1,15 +1,24 @@
 import React from 'react'
-import { EuiButton, EuiButtonIcon, EuiPopover, EuiText } from '@elastic/eui'
 
+import { RiTooltip } from 'uiSrc/components/base'
+import { DeleteIcon } from 'uiSrc/components/base/icons'
 import { RedisString } from 'uiSrc/slices/interfaces'
+import { isTruncatedString } from 'uiSrc/utils'
+import { TEXT_DISABLED_ACTION_WITH_TRUNCATED_DATA } from 'uiSrc/constants'
+import {
+  DestructiveButton,
+  EmptyButton,
+  IconButton,
+} from 'uiSrc/components/base/forms/buttons'
 import styles from './styles.module.scss'
+import ConfirmationPopover from 'uiSrc/components/confirmation-popover'
 
 export interface Props {
-  header?: string
+  header?: JSX.Element | string
   text: JSX.Element | string
   item: string
   itemRaw?: RedisString
-  suffix: string
+  suffix?: string
   deleting: string
   closePopover: () => void
   showPopover: (item: string) => void
@@ -18,6 +27,9 @@ export interface Props {
   handleButtonClick?: () => void
   appendInfo?: JSX.Element | string | null
   testid?: string
+  buttonLabel?: string
+  persistent?: boolean
+  customOutsideDetector?: boolean
 }
 
 const PopoverDelete = (props: Props) => {
@@ -26,7 +38,7 @@ const PopoverDelete = (props: Props) => {
     text,
     item,
     itemRaw,
-    suffix,
+    suffix = '',
     deleting,
     closePopover,
     updateLoading,
@@ -35,9 +47,16 @@ const PopoverDelete = (props: Props) => {
     handleButtonClick,
     appendInfo,
     testid = '',
+    buttonLabel,
+    persistent,
+    customOutsideDetector,
   } = props
 
-  const onButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const isDisabled = isTruncatedString(item)
+
+  const onButtonClick = (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) => {
     e.stopPropagation()
     if (item + suffix !== deleting) {
       showPopover(item)
@@ -47,8 +66,39 @@ const PopoverDelete = (props: Props) => {
     }
   }
 
+  const deleteButton = buttonLabel ? (
+    <EmptyButton
+      icon={DeleteIcon}
+      aria-label="Remove field"
+      disabled={isDisabled || updateLoading}
+      onClick={isDisabled ? () => {} : onButtonClick}
+      data-testid={testid ? `${testid}-icon` : 'remove-icon'}
+    >
+      {buttonLabel}
+    </EmptyButton>
+  ) : (
+    <IconButton
+      size="M"
+      icon={DeleteIcon}
+      aria-label="Remove field"
+      disabled={isDisabled || updateLoading}
+      onClick={isDisabled ? () => {} : onButtonClick}
+      data-testid={testid ? `${testid}-icon` : 'remove-icon'}
+    />
+  )
+
+  const deleteButtonWithTooltip = (
+    <RiTooltip
+      content={TEXT_DISABLED_ACTION_WITH_TRUNCATED_DATA}
+      anchorClassName={styles.editBtnAnchor}
+      data-testid={testid ? `${testid}-tooltip` : 'remove-tooltip'}
+    >
+      {deleteButton}
+    </RiTooltip>
+  )
+
   return (
-    <EuiPopover
+    <ConfirmationPopover
       key={item}
       anchorPosition="leftCenter"
       ownFocus
@@ -56,44 +106,24 @@ const PopoverDelete = (props: Props) => {
       closePopover={() => closePopover()}
       panelPaddingSize="m"
       anchorClassName="deleteFieldPopover"
-      button={(
-        <EuiButtonIcon
-          iconType="trash"
-          aria-label="Remove field"
-          color="primary"
-          disabled={updateLoading}
-          onClick={onButtonClick}
-          data-testid={testid ? `${testid}-icon` : 'remove-icon'}
-        />
-      )}
+      button={isDisabled ? deleteButtonWithTooltip : deleteButton}
       onClick={(e) => e.stopPropagation()}
-    >
-      <div className={styles.popover}>
-        <EuiText size="m">
-          {!!header && (
-            <h4>
-              <b>{header}</b>
-            </h4>
-          )}
-          <EuiText size="s">
-            {text}
-          </EuiText>
-          {appendInfo}
-        </EuiText>
-        <div className={styles.popoverFooter}>
-          <EuiButton
-            fill
-            size="s"
-            color="warning"
-            iconType="trash"
-            onClick={() => handleDeleteItem(itemRaw || item)}
-            data-testid={testid || 'remove'}
-          >
-            Remove
-          </EuiButton>
-        </div>
-      </div>
-    </EuiPopover>
+      title={header}
+      message={text}
+      persistent={persistent}
+      appendInfo={appendInfo}
+      confirmButton={
+        <DestructiveButton
+          size="small"
+          icon={DeleteIcon}
+          onClick={() => handleDeleteItem(itemRaw || item)}
+          data-testid={testid || 'remove'}
+        >
+          Remove
+        </DestructiveButton>
+      }
+      customOutsideDetector={customOutsideDetector}
+    />
   )
 }
 

@@ -1,37 +1,49 @@
-import React, { ReactElement, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import parse from 'html-react-parser'
 import cx from 'classnames'
 import { flatten, isArray, isEmpty, map, uniq } from 'lodash'
-import {
-  EuiBasicTableColumn,
-  EuiButtonIcon,
-  EuiInMemoryTable,
-  EuiTextColor,
-  EuiToolTip,
-} from '@elastic/eui'
+import styled from 'styled-components'
 
-import { CommandArgument, Command } from '../../constants'
-import { formatLongName, replaceSpaces } from '../../utils'
+import { handleCopy as handleCopyUtil } from 'uiSrc/utils'
+import { Table, ColumnDef } from 'uiSrc/components/base/layout/table'
+import { ColorText } from 'uiSrc/components/base/text/ColorText'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CopyIcon } from 'uiSrc/components/base/icons'
+import { RiTooltip } from 'uiSrc/components/base/tooltip/RITooltip'
+import {
+  CommandArgument,
+  Command,
+} from 'uiSrc/packages/redisearch/src/constants'
+import {
+  formatLongName,
+  replaceSpaces,
+} from 'uiSrc/packages/redisearch/src/utils'
+import MultilineEllipsisText from 'uiSrc/components/base/text/MultilineEllipsisText'
 
 export interface Props {
-  query: string;
-  result: any;
-  matched?: number;
+  query: string
+  result: any
+  matched?: number
+  cursorId?: null | number
 }
 
-const loadingMessage = 'loading...'
+const EllipsisText = styled(ColorText)`
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
 const noResultsMessage = 'No results found.'
 
 const TableResult = React.memo((props: Props) => {
-  const { result, query, matched } = props
+  const { result, query, matched, cursorId } = props
 
-  const [columns, setColumns] = useState<EuiBasicTableColumn<any>[]>([])
+  const [columns, setColumns] = useState<ColumnDef<any>[]>([])
 
   const checkShouldParsedHTML = (query: string) => {
     const command = query.toUpperCase()
     return (
-      command.startsWith(Command.Search)
-      && command.includes(CommandArgument.Highlight)
+      command.startsWith(Command.Search) &&
+      command.includes(CommandArgument.Highlight)
     )
   }
 
@@ -39,7 +51,7 @@ const TableResult = React.memo((props: Props) => {
     event.preventDefault()
     event.stopPropagation()
 
-    navigator.clipboard.writeText(text)
+    handleCopyUtil(text)
   }
 
   useEffect(() => {
@@ -48,82 +60,88 @@ const TableResult = React.memo((props: Props) => {
     }
 
     const shouldParsedHTML = checkShouldParsedHTML(query)
-    const uniqColumns = uniq(flatten(map(result, (doc) => Object.keys(doc)))) ?? []
+    const uniqColumns =
+      uniq(flatten(map(result, (doc) => Object.keys(doc)))) ?? []
 
-    const newColumns: EuiBasicTableColumn<any>[] = uniqColumns.map((title: string = ' ') => ({
-      field: title,
-      name: title,
-      truncateText: true,
-      dataType: 'string',
-      'data-testid': `query-column-${title}`,
-      // sortable: (value) => (value[title] ? value[title].toLowerCase() : Infinity),
-      render: function Cell(initValue: string = ''): ReactElement | string {
-        if (!initValue || (isArray(initValue) && isEmpty(initValue))) {
-          return ''
-        }
+    const newColumns: ColumnDef<any>[] = uniqColumns.map(
+      (title: string = ' ') => ({
+        header: title,
+        id: title,
+        accessorKey: title,
+        cell: ({ row: { original } }) => {
+          const initValue = original[title] || ''
+          if (!initValue || (isArray(initValue) && isEmpty(initValue))) {
+            return ''
+          }
 
-        const value = initValue.toString()
-        let cellContent: string | JSX.Element | JSX.Element[] = replaceSpaces(
-          initValue.toString().substring(0, 200)
-        )
+          const value = initValue.toString()
+          let cellContent: string | JSX.Element | JSX.Element[] = replaceSpaces(
+            initValue.toString().substring(0, 200),
+          )
 
-        if (shouldParsedHTML) {
-          cellContent = parse(cellContent)
-        }
+          if (shouldParsedHTML) {
+            cellContent = parse(cellContent)
+          }
 
-        return (
-          <div role="presentation" className={cx('tooltipContainer')}>
-            <EuiToolTip
-              position="bottom"
-              title={title}
-              anchorClassName={cx('tooltip')}
-              content={formatLongName(value.toString())}
+          return (
+            <div
+              role="presentation"
+              className={cx('tooltipContainer')}
+              data-testid={`query-column-${title}`}
             >
-              <div className="copy-btn-wrapper">
-                <EuiTextColor className={cx('cell')}>{cellContent}</EuiTextColor>
-                <EuiButtonIcon
-                  iconType="copy"
-                  aria-label="Copy result"
-                  className="copy-near-btn"
-                  onClick={(event: React.MouseEvent) => handleCopy(event, initValue)}
-                />
-              </div>
-            </EuiToolTip>
-          </div>
-        )
-      },
-    }))
+              <RiTooltip
+                position="left"
+                title={title}
+                anchorClassName={cx('tooltip')}
+                content={
+                  <MultilineEllipsisText lineCount={7} paddingBlock="s">
+                    {formatLongName(value.toString())}
+                  </MultilineEllipsisText>
+                }
+              >
+                <div className="copy-btn-wrapper">
+                  <EllipsisText className={cx('cell', 'test')}>
+                    {cellContent}
+                  </EllipsisText>
+                  <IconButton
+                    icon={CopyIcon}
+                    aria-label="Copy result"
+                    className="copy-near-btn"
+                    onClick={(event: React.MouseEvent) =>
+                      handleCopy(event, initValue)
+                    }
+                  />
+                </div>
+              </RiTooltip>
+            </div>
+          )
+        },
+      }),
+    )
 
     setColumns(newColumns)
   }, [result, query])
 
-  const isDataArr = !React.isValidElement(result) && !(isArray(result) && isEmpty(result))
+  const isDataArr =
+    !React.isValidElement(result) && !(isArray(result) && isEmpty(result))
   const isDataEl = React.isValidElement(result)
 
   return (
     <div className={cx('queryResultsContainer', 'container')}>
-      {!!matched && <div className={cx('matched')}>{`Matched: ${matched}`}</div>}
+      <div className="queryHeader">
+        {!!matched && (
+          <div className={cx('matched')}>{`Matched: ${matched}`}</div>
+        )}
+        {!!cursorId && (
+          <div className={cx('matched')}>{`Cursor ID: ${cursorId}`}</div>
+        )}
+      </div>
       {isDataArr && (
-        <EuiInMemoryTable
-          pagination
-          items={result ?? []}
-          loading={!result}
-          message={loadingMessage}
-          columns={columns}
-          className={cx(
-            {
-              table: true,
-              inMemoryTableDefault: true,
-              tableWithPagination: result?.length > 10,
-            }
-          )}
-          responsive={false}
-          data-testid={`query-table-result-${query}`}
-        />
+        <div data-testid={`query-table-result-${query}`}>
+          <Table columns={columns} data={result ?? []} />
+        </div>
       )}
-      {isDataEl && (
-        <div className={cx('resultEl')}>{result}</div>
-      )}
+      {isDataEl && <div className={cx('resultEl')}>{result}</div>}
       {!isDataArr && !isDataEl && (
         <div className={cx('resultEl')} data-testid="query-table-no-results">
           {noResultsMessage}

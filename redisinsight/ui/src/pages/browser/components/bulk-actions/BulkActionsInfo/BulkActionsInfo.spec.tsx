@@ -1,6 +1,6 @@
 import React from 'react'
 import { mock } from 'ts-mockito'
-import { KeyTypes } from 'uiSrc/constants'
+import { BulkActionsStatus, KeyTypes } from 'uiSrc/constants'
 import { render, screen } from 'uiSrc/utils/test-utils'
 
 import BulkActionsInfo, { Props } from './BulkActionsInfo'
@@ -23,6 +23,22 @@ describe('BulkActionsInfo', () => {
   it('filter should not render when does not exist', () => {
     render(<BulkActionsInfo {...mockedProps} filter={null} />)
 
-    expect(screen.queryByTestId('bulk-actions-info-filter')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('bulk-actions-info-filter'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('should show connection lost when status is disconnect', () => {
+    render(
+      <BulkActionsInfo
+        {...mockedProps}
+        filter={null}
+        status={BulkActionsStatus.Disconnected}
+      />,
+    )
+
+    expect(screen.getByTestId('bulk-status-disconnected')).toHaveTextContent(
+      'Connection Lost',
+    )
   })
 })

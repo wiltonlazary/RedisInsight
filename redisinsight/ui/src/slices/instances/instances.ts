@@ -1,21 +1,48 @@
-import { first, isNull, map } from 'lodash'
+import { filter, first, get, isNull, map, orderBy } from 'lodash'
 import { createSlice } from '@reduxjs/toolkit'
-import axios, { AxiosError, CancelTokenSource } from 'axios'
+import axios, { AxiosError } from 'axios'
 
 import ApiErrors from 'uiSrc/constants/apiErrors'
-import { apiService, localStorageService, sessionStorageService } from 'uiSrc/services'
-import { ApiEndpoints, BrowserStorageItem } from 'uiSrc/constants'
+import {
+  instancesService,
+  localStorageService,
+  sessionStorageService,
+} from 'uiSrc/services'
+import {
+  BrowserStorageItem,
+  COLUMN_FIELD_NAME_MAP,
+  CustomErrorCodes,
+  DatabaseListColumn,
+} from 'uiSrc/constants'
 import { setAppContextInitialState } from 'uiSrc/slices/app/context'
+import { resetKeys } from 'uiSrc/slices/browser/keys'
 import successMessages from 'uiSrc/components/notifications/success-messages'
-import { checkRediStack, getApiErrorMessage, isStatusSuccessful, Nullable } from 'uiSrc/utils'
+import {
+  checkRediStack,
+  ensureSemanticVersion,
+  getApiErrorMessage,
+  Nullable,
+} from 'uiSrc/utils'
+import {
+  INFINITE_MESSAGES,
+  InfiniteMessagesIds,
+} from 'uiSrc/components/notifications/components'
 import { Database as DatabaseInstanceResponse } from 'apiSrc/modules/database/models/database'
 import { RedisNodeInfoResponse } from 'apiSrc/modules/database/dto/redis-info.dto'
 import { ExportDatabase } from 'apiSrc/modules/database/models/export-database'
 
 import { fetchMastersSentinelAction } from './sentinel'
+import { fetchTags } from './tags'
 import { AppDispatch, RootState } from '../store'
-import { addErrorNotification, addMessageNotification } from '../app/notifications'
-import { Instance, InitialStateInstances, ConnectionType } from '../interfaces'
+import {
+  addErrorNotification,
+  addInfiniteNotification,
+  addMessageNotification,
+  removeInfiniteNotification,
+} from '../app/notifications'
+import { ConnectionType, InitialStateInstances, Instance } from '../interfaces'
+
+const HIDE_CREATING_DB_DELAY_MS = 500
 
 export const initialState: InitialStateInstances = {
   loading: false,
@@ -25,17 +52,19 @@ export const initialState: InitialStateInstances = {
   errorChanging: '',
   changedSuccessfully: false,
   deletedSuccessfully: false,
+  freeInstances: [],
   connectedInstance: {
     id: '',
     name: '',
     host: '',
     port: 0,
+    version: '',
     nameFromProvider: '',
     lastConnection: new Date(),
     connectionType: ConnectionType.Standalone,
     isRediStack: false,
     modules: [],
-    loading: false,
+    loading: undefined,
   },
   editedInstance: {
     loading: false,
@@ -47,13 +76,14 @@ export const initialState: InitialStateInstances = {
   },
   instanceInfo: {
     version: '',
-    server: {}
+    server: {},
   },
   importInstances: {
     loading: false,
     error: '',
-    data: null
+    data: null,
   },
+  shownColumns: [...COLUMN_FIELD_NAME_MAP.keys()],
 }
 
 // A slice for recipes
@@ -66,11 +96,22 @@ const instancesSlice = createSlice({
       state.loading = true
       state.error = ''
     },
-    loadInstancesSuccess: (state, { payload }: { payload: DatabaseInstanceResponse[] }) => {
-      state.data = checkRediStack(payload)
+    loadInstancesSuccess: (
+      state,
+      { payload }: { payload: DatabaseInstanceResponse[] },
+    ) => {
+      const data = checkRediStack(payload)
+      state.data = data.map(ensureSemanticVersion)
       state.loading = false
+      state.freeInstances =
+        (filter(
+          [...orderBy(payload, 'lastConnection', 'desc')],
+          'cloudDetails.free',
+        ) as unknown as Instance[]) || null
       if (state.connectedInstance.id) {
-        const isRediStack = state.data.find((db) => db.id === state.connectedInstance.id)?.isRediStack
+        const isRediStack = state.data.find(
+          (db) => db.id === state.connectedInstance.id,
+        )?.isRediStack
         state.connectedInstance.isRediStack = isRediStack || false
       }
     },
@@ -144,18 +185,15 @@ const instancesSlice = createSlice({
       state.error = payload
     },
     getDatabaseConfigInfo: (state) => {
-      state.loading = true
       state.error = ''
     },
     getDatabaseConfigInfoSuccess: (state, { payload }) => {
-      state.loading = false
       state.instanceOverview = {
         ...payload,
         version: payload?.version || state.instanceOverview.version || '',
       }
     },
     getDatabaseConfigInfoFailure: (state, { payload }) => {
-      state.loading = false
       state.error = payload
     },
 
@@ -173,28 +211,46 @@ const instancesSlice = createSlice({
     },
 
     // set connected instance success
-    setConnectedInstanceSuccess: (state, { payload }: { payload: Instance }) => {
-      const isRediStack = state.data?.find((db) => db.id === state.connectedInstance.id)?.isRediStack
-      state.connectedInstance = payload
+    setConnectedInstanceSuccess: (
+      state,
+      { payload }: { payload: Instance },
+    ) => {
+      const isRediStack = state.data?.find(
+        (db) => db.id === state.connectedInstance.id,
+      )?.isRediStack
+      state.connectedInstance = ensureSemanticVersion(payload)
       state.connectedInstance.loading = false
       state.connectedInstance.isRediStack = isRediStack || false
-      state.connectedInstance.db = sessionStorageService.get(`${BrowserStorageItem.dbIndex}${payload.id}`) ?? payload.db
+      state.connectedInstance.isFreeDb = payload.cloudDetails?.free || false
+      state.connectedInstance.db =
+        sessionStorageService.get(
+          `${BrowserStorageItem.dbIndex}${payload.id}`,
+        ) ?? payload.db
     },
 
     setConnectedInfoInstance: (state) => {
       state.instanceInfo = initialState.instanceInfo
     },
 
-    setConnectedInfoInstanceSuccess: (state, { payload }: { payload: RedisNodeInfoResponse }) => {
+    setConnectedInfoInstanceSuccess: (
+      state,
+      { payload }: { payload: RedisNodeInfoResponse },
+    ) => {
       state.instanceInfo = payload
     },
 
     // set edited instance
-    setEditedInstance: (state, { payload }: { payload: Nullable<Instance> }) => {
+    setEditedInstance: (
+      state,
+      { payload }: { payload: Nullable<Instance> },
+    ) => {
       state.editedInstance.data = payload
     },
 
-    updateEditedInstance: (state, { payload }: { payload: Nullable<Instance> }) => {
+    updateEditedInstance: (
+      state,
+      { payload }: { payload: Nullable<Instance> },
+    ) => {
       if (isNull(state.editedInstance.data)) {
         state.editedInstance.data = payload
       } else {
@@ -240,11 +296,20 @@ const instancesSlice = createSlice({
       state.connectedInstance.db = payload
       state.connectedInstance.loading = false
 
-      sessionStorageService.set(`${BrowserStorageItem.dbIndex}${state.connectedInstance.id}`, payload)
+      sessionStorageService.set(
+        `${BrowserStorageItem.dbIndex}${state.connectedInstance.id}`,
+        payload,
+      )
     },
     checkDatabaseIndexFailure: (state) => {
       state.connectedInstance.loading = false
-    }
+    },
+    setShownColumns: (
+      state,
+      { payload }: { payload: DatabaseListColumn[] },
+    ) => {
+      state.shownColumns = [...payload]
+    },
   },
 })
 
@@ -285,12 +350,18 @@ export const {
   checkDatabaseIndexFailure,
   setConnectedInfoInstance,
   setConnectedInfoInstanceSuccess,
+  setShownColumns,
 } = instancesSlice.actions
 
 // selectors
-export const instancesSelector = (state: RootState) => state.connections.instances
+export const instancesSelector = (state: RootState) =>
+  state.connections.instances
+export const freeInstancesSelector = (state: RootState) =>
+  state.connections.instances.freeInstances
 export const connectedInstanceSelector = (state: RootState) =>
   state.connections.instances.connectedInstance
+export const connectedInstanceCDSelector = (state: RootState) =>
+  state.connections.instances.connectedInstance.cloudDetails
 export const connectedInstanceInfoSelector = (state: RootState) =>
   state.connections.instances.instanceInfo
 export const editedInstanceSelector = (state: RootState) =>
@@ -303,23 +374,33 @@ export const importInstancesSelector = (state: RootState) =>
 // The reducer
 export default instancesSlice.reducer
 
-// eslint-disable-next-line import/no-mutable-exports
-export let sourceInstance: Nullable<CancelTokenSource> = null
-
 // Asynchronous thunk action
-export function fetchInstancesAction(onSuccess?: (data?: DatabaseInstanceResponse[]) => void) {
-  return async (dispatch: AppDispatch) => {
+export function fetchInstancesAction(onSuccess?: (data: Instance[]) => void) {
+  return async (dispatch: AppDispatch, stateInit: () => RootState) => {
+    const envDependentFeature = get(stateInit(), [
+      'app',
+      'features',
+      'featureFlags',
+      'features',
+      'envDependent',
+    ])
+
+    if (!envDependentFeature?.flag) {
+      return
+    }
+
     dispatch(loadInstances())
 
     try {
-      const { data, status } = await apiService.get<DatabaseInstanceResponse[]>(`${ApiEndpoints.DATABASES}`)
+      const data = await instancesService.listDatabases()
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         localStorageService.set(BrowserStorageItem.instancesCount, data?.length)
-        onSuccess?.(data)
+        onSuccess?.(data as Instance[])
         dispatch(loadInstancesSuccess(data))
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(loadInstancesFailure(errorMessage))
       dispatch(addErrorNotification(error))
@@ -332,23 +413,57 @@ export function fetchInstancesAction(onSuccess?: (data?: DatabaseInstanceRespons
 // Asynchronous thunk action
 export function createInstanceStandaloneAction(
   payload: Instance,
-  onRedirectToSentinel?: () => void
+  onRedirectToSentinel?: () => void,
+  onSuccess?: (id: string) => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(defaultInstanceChanging())
 
     try {
-      const { status } = await apiService.post(`${ApiEndpoints.DATABASES}`, payload)
+      const data = await instancesService.createInstance(payload)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(defaultInstanceChangingSuccess())
         dispatch<any>(fetchInstancesAction())
 
-        dispatch(addMessageNotification(successMessages.ADDED_NEW_INSTANCE(payload.name ?? '')))
+        dispatch(
+          addMessageNotification(
+            successMessages.ADDED_NEW_INSTANCE(payload.name ?? ''),
+          ),
+        )
+        onSuccess?.(data.id)
       }
     } catch (_error) {
-      const error: AxiosError = _error
+      const error = _error as AxiosError
       const errorMessage = getApiErrorMessage(error)
+      const errorCode = get(
+        error,
+        'response.data.errorCode',
+        0,
+      ) as CustomErrorCodes
+
+      if (errorCode === CustomErrorCodes.DatabaseAlreadyExists) {
+        const databaseId: string = get(
+          error,
+          'response.data.resource.databaseId',
+          '',
+        )
+
+        dispatch(
+          autoCreateAndConnectToInstanceActionSuccess(
+            databaseId,
+            successMessages.DATABASE_ALREADY_EXISTS(),
+            () => {
+              dispatch(defaultInstanceChangingSuccess())
+              onSuccess?.(databaseId)
+            },
+            () => {
+              dispatch(defaultInstanceChangingFailure(errorMessage))
+            },
+          ),
+        )
+        return
+      }
 
       dispatch(defaultInstanceChangingFailure(errorMessage))
 
@@ -363,19 +478,122 @@ export function createInstanceStandaloneAction(
 }
 
 // Asynchronous thunk action
-export function updateInstanceAction({ id, ...payload }: Instance, onSuccess?: () => void) {
+export function autoCreateAndConnectToInstanceAction(
+  payload: Instance,
+  onSuccess?: (id: string) => void,
+) {
+  return async (dispatch: AppDispatch) => {
+    dispatch(
+      addInfiniteNotification(INFINITE_MESSAGES.AUTO_CREATING_DATABASE()),
+    )
+
+    try {
+      const data = await instancesService.createInstance(payload)
+
+      if (data !== null) {
+        await dispatch(
+          autoCreateAndConnectToInstanceActionSuccess(
+            data?.id,
+            successMessages.ADDED_NEW_INSTANCE(data?.name),
+            onSuccess,
+          ),
+        )
+      }
+    } catch (error) {
+      const errorCode = get(
+        error,
+        'response.data.errorCode',
+        0,
+      ) as CustomErrorCodes
+
+      if (errorCode === CustomErrorCodes.DatabaseAlreadyExists) {
+        const databaseId = get(error, 'response.data.resource.databaseId', '')
+
+        dispatch(
+          autoCreateAndConnectToInstanceActionSuccess(
+            databaseId,
+            successMessages.DATABASE_ALREADY_EXISTS(),
+            onSuccess,
+          ),
+        )
+        return
+      }
+      dispatch(addErrorNotification(error as AxiosError))
+      dispatch(removeInfiniteNotification(InfiniteMessagesIds.autoCreateDb))
+    }
+  }
+}
+
+function autoCreateAndConnectToInstanceActionSuccess(
+  id: string,
+  message: any,
+  onSuccess?: (id: string) => void,
+  onFail?: () => void,
+) {
+  return async (dispatch: AppDispatch, stateInit: () => RootState) => {
+    try {
+      const state = stateInit()
+      const isConnectedId = state.app?.context?.contextInstanceId === id
+      if (!isConnectedId) {
+        dispatch(resetKeys())
+        dispatch(setAppContextInitialState())
+        dispatch(setConnectedInstanceId(id ?? ''))
+      }
+      dispatch(
+        checkConnectToInstanceAction(
+          id,
+          (id) => {
+            setTimeout(() => {
+              dispatch(
+                removeInfiniteNotification(InfiniteMessagesIds.autoCreateDb),
+              )
+              dispatch(addMessageNotification(message))
+              onSuccess?.(id)
+            }, HIDE_CREATING_DB_DELAY_MS)
+          },
+          () => {
+            dispatch(
+              removeInfiniteNotification(InfiniteMessagesIds.autoCreateDb),
+            )
+            onFail?.()
+          },
+          !isConnectedId,
+        ),
+      )
+    } catch (error) {
+      // process error if needed
+    }
+  }
+}
+
+export type PartialInstance = Partial<Omit<Instance, 'tags'>> & {
+  tags?: {
+    key: string
+    value: string
+  }[]
+}
+
+// Asynchronous thunk action
+export function updateInstanceAction(
+  { id, ...payload }: PartialInstance,
+  onSuccess?: () => void,
+) {
   return async (dispatch: AppDispatch) => {
     dispatch(defaultInstanceChanging())
 
     try {
-      const { status } = await apiService.put(`${ApiEndpoints.DATABASES}/${id}`, payload)
+      const result = await instancesService.updateInstance(id!, payload)
 
-      if (isStatusSuccessful(status)) {
+      if (result) {
         dispatch(defaultInstanceChangingSuccess())
         dispatch<any>(fetchInstancesAction())
+        if (payload.tags) {
+          dispatch(fetchTags())
+        }
         onSuccess?.()
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(defaultInstanceChangingFailure(errorMessage))
       dispatch(addErrorNotification(error))
@@ -384,38 +602,77 @@ export function updateInstanceAction({ id, ...payload }: Instance, onSuccess?: (
 }
 
 // Asynchronous thunk action
-export function deleteInstancesAction(instances: Instance[], onSuccess?: () => void) {
+export function cloneInstanceAction(
+  { id, ...payload }: Partial<Instance>,
+  onSuccess?: (id?: string) => void,
+) {
+  return async (dispatch: AppDispatch) => {
+    dispatch(defaultInstanceChanging())
+
+    try {
+      const data = await instancesService.cloneInstance(id!, payload)
+
+      if (data !== null) {
+        dispatch(defaultInstanceChangingSuccess())
+        dispatch<any>(fetchInstancesAction())
+
+        dispatch(
+          addMessageNotification(
+            successMessages.ADDED_NEW_INSTANCE(data.name ?? ''),
+          ),
+        )
+        onSuccess?.(id)
+      }
+    } catch (_err) {
+      const error = _err as AxiosError
+      const errorMessage = getApiErrorMessage(error)
+      dispatch(defaultInstanceChangingFailure(errorMessage))
+      dispatch(addErrorNotification(error))
+    }
+  }
+}
+
+// Asynchronous thunk action
+export function deleteInstancesAction(
+  instances: Instance[],
+  onSuccess?: () => void,
+) {
   return async (dispatch: AppDispatch, stateInit: () => RootState) => {
     dispatch(setDefaultInstance())
 
     try {
       const state = stateInit()
       const databasesIds = map(instances, 'id')
-      const { status } = await apiService.delete(ApiEndpoints.DATABASES, {
-        data: { ids: databasesIds },
-      })
+      const result = await instancesService.deleteInstances(databasesIds)
 
-      if (isStatusSuccessful(status)) {
+      if (result) {
         dispatch(setDefaultInstanceSuccess())
         dispatch<any>(fetchInstancesAction())
+        dispatch(fetchTags())
 
         if (databasesIds.includes(state.app.context.contextInstanceId)) {
           dispatch(resetConnectedInstance())
+          dispatch(resetKeys())
           dispatch(setAppContextInitialState())
         }
         onSuccess?.()
 
         if (instances.length === 1) {
           dispatch(
-            addMessageNotification(successMessages.DELETE_INSTANCE(first(instances)?.name ?? ''))
+            addMessageNotification(
+              successMessages.DELETE_INSTANCE(first(instances)?.name ?? ''),
+            ),
           )
         } else {
           dispatch(
-            addMessageNotification(successMessages.DELETE_INSTANCES(map(instances, 'name')))
+            addMessageNotification(
+              successMessages.DELETE_INSTANCES(map(instances, 'name')),
+            ),
           )
         }
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(setDefaultInstanceFailure(errorMessage))
       dispatch(addErrorNotification(error))
@@ -428,26 +685,21 @@ export function exportInstancesAction(
   ids: string[],
   withSecrets: boolean,
   onSuccess?: (data: ExportDatabase) => void,
-  onFail?: () => void
+  onFail?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(setDefaultInstance())
 
     try {
-      const { data, status } = await apiService.post<ExportDatabase>(
-        ApiEndpoints.DATABASES_EXPORT,
-        {
-          ids,
-          withSecrets
-        }
-      )
+      const data = await instancesService.exportInstances(ids, withSecrets)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(setDefaultInstanceSuccess())
 
         onSuccess?.(data)
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(setDefaultInstanceFailure(errorMessage))
       dispatch(addErrorNotification(error))
@@ -457,38 +709,50 @@ export function exportInstancesAction(
 }
 
 // Asynchronous thunk action
-export function fetchConnectedInstanceAction(id: string, onSuccess?: () => void) {
+export function fetchConnectedInstanceAction(
+  id: string,
+  onSuccess?: () => void,
+  onFail?: () => void,
+) {
   return async (dispatch: AppDispatch) => {
     dispatch(setDefaultInstance())
     dispatch(setConnectedInstance())
 
     try {
-      const { data, status } = await apiService.get<Instance>(`${ApiEndpoints.DATABASES}/${id}`)
+      const data = await instancesService.getInstance(id)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(setConnectedInstanceSuccess(data))
         dispatch(setDefaultInstanceSuccess())
       }
       onSuccess?.()
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(setDefaultInstanceFailure(errorMessage))
       dispatch(addErrorNotification(error))
+      onFail?.()
     }
   }
 }
 
 // Asynchronous thunk action
-export function fetchConnectedInstanceInfoAction(id: string, onSuccess?: () => void, onFail?: () => void) {
+export function fetchConnectedInstanceInfoAction(
+  id: string,
+  onSuccess?: () => void,
+  onFail?: () => void,
+) {
   return async (dispatch: AppDispatch) => {
     dispatch(setConnectedInfoInstance())
 
     try {
-      const { data, status } = await apiService.get<RedisNodeInfoResponse>(`${ApiEndpoints.DATABASES}/${id}/info`)
+      const data = await instancesService.getInstanceInfo(id)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(setConnectedInfoInstanceSuccess(data))
         onSuccess?.()
+      } else {
+        onFail?.()
       }
     } catch (error) {
       onFail?.()
@@ -497,20 +761,24 @@ export function fetchConnectedInstanceInfoAction(id: string, onSuccess?: () => v
 }
 
 // Asynchronous thunk action
-export function fetchEditedInstanceAction(instance: Instance, onSuccess?: () => void) {
+export function fetchEditedInstanceAction(
+  instance: Instance,
+  onSuccess?: () => void,
+) {
   return async (dispatch: AppDispatch) => {
     dispatch(setDefaultInstance())
     dispatch(setEditedInstance(instance))
 
     try {
-      const { data, status } = await apiService.get<Instance>(`${ApiEndpoints.DATABASES}/${instance.id}`)
+      const data = await instancesService.getInstance(instance.id)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(updateEditedInstance(data))
         dispatch(setDefaultInstanceSuccess())
       }
       onSuccess?.()
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(setEditedInstance(null))
       dispatch(setConnectedInstanceFailure())
@@ -524,19 +792,21 @@ export function fetchEditedInstanceAction(instance: Instance, onSuccess?: () => 
 export function checkConnectToInstanceAction(
   id: string = '',
   onSuccessAction?: (id: string) => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
+  resetInstance: boolean = true,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(setDefaultInstance())
-    dispatch(resetConnectedInstance())
+    resetInstance && dispatch(resetConnectedInstance())
     try {
-      const { status } = await apiService.get(`${ApiEndpoints.DATABASES}/${id}/connect`)
+      const result = await instancesService.connectInstance(id)
 
-      if (isStatusSuccessful(status)) {
+      if (result) {
         dispatch(setDefaultInstanceSuccess())
         onSuccessAction?.(id)
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(setDefaultInstanceFailure(errorMessage))
       dispatch(addErrorNotification({ ...error, instanceId: id }))
@@ -548,31 +818,34 @@ export function checkConnectToInstanceAction(
 const checkoutToSentinelFlow = (
   payload: Instance,
   dispatch: AppDispatch,
-  onRedirectToSentinel?: () => void
+  onRedirectToSentinel?: () => void,
 ) => {
   const payloadSentinel = { ...payload }
   delete payloadSentinel.name
   delete payloadSentinel.db
 
-  dispatch<any>(fetchMastersSentinelAction(payloadSentinel, onRedirectToSentinel))
+  dispatch<any>(
+    fetchMastersSentinelAction(payloadSentinel, onRedirectToSentinel),
+  )
 }
 
 // Asynchronous thunk action
 export function getDatabaseConfigInfoAction(
   id: string,
   onSuccessAction?: (id: string) => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(getDatabaseConfigInfo())
     try {
-      const { status, data } = await apiService.get(`${ApiEndpoints.DATABASES}/${id}/overview`)
+      const data = await instancesService.getInstanceOverview(id)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
         dispatch(getDatabaseConfigInfoSuccess(data))
         onSuccessAction?.(id)
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(getDatabaseConfigInfoFailure(errorMessage))
       onFailAction?.()
@@ -585,24 +858,14 @@ export function changeInstanceAliasAction(
   id: string = '',
   name: string,
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(changeInstanceAlias())
 
     try {
-      sourceInstance?.cancel?.()
-      const { CancelToken } = axios
-      sourceInstance = CancelToken.source()
-
-      const { status } = await apiService.patch(
-        `${ApiEndpoints.DATABASES}/${id}`,
-        { name },
-        { cancelToken: sourceInstance.token }
-      )
-
-      sourceInstance = null
-      if (isStatusSuccessful(status)) {
+      const result = await instancesService.updateInstanceAlias(id, name)
+      if (result) {
         dispatch(changeInstanceAliasSuccess({ id, name }))
         onSuccessAction?.()
       }
@@ -622,17 +885,15 @@ export function checkDatabaseIndexAction(
   id: string,
   index: number,
   onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(checkDatabaseIndex())
 
     try {
-      const { status } = await apiService.get(
-        `${ApiEndpoints.DATABASES}/${id}/db/${index}`
-      )
+      const result = await instancesService.checkInstanceDbIndex(id, index)
 
-      if (isStatusSuccessful(status)) {
+      if (result) {
         dispatch(checkDatabaseIndexSuccess(index))
         onSuccessAction?.()
       }
@@ -648,36 +909,29 @@ export function checkDatabaseIndexAction(
 export function resetInstanceUpdateAction() {
   return async (dispatch: AppDispatch) => {
     dispatch(resetInstanceUpdate())
-    sourceInstance?.cancel?.()
+    instancesService.sourceInstance?.source?.cancel?.()
   }
 }
 
 // Asynchronous thunk action
 export function uploadInstancesFile(
   file: FormData,
-  onSuccessAction?: () => void,
-  onFailAction?: () => void
+  onSuccessAction?: (data: any) => void,
+  onFailAction?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(importInstancesFromFile())
 
     try {
-      const { status, data } = await apiService.post(
-        ApiEndpoints.DATABASES_IMPORT,
-        file,
-        {
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      )
+      const data = await instancesService.importInstances(file)
 
-      if (isStatusSuccessful(status)) {
+      if (data !== null) {
+        dispatch(fetchTags())
         dispatch(importInstancesFromFileSuccess(data))
-        onSuccessAction?.()
+        onSuccessAction?.(data)
       }
-    } catch (error) {
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
       dispatch(importInstancesFromFileFailure(errorMessage))
       onFailAction?.()
@@ -687,28 +941,30 @@ export function uploadInstancesFile(
 
 // Asynchronous thunk action
 export function testInstanceStandaloneAction(
-  payload: Instance,
-  onRedirectToSentinel?: () => void
+  { id, ...payload }: Partial<Instance>,
+  onRedirectToSentinel?: () => void,
 ) {
   return async (dispatch: AppDispatch) => {
     dispatch(testConnection())
-
     try {
-      const { status } = await apiService.post(`${ApiEndpoints.DATABASES_TEST_CONNECTION}`, payload)
-
-      if (isStatusSuccessful(status)) {
+      const result = await instancesService.testInstanceConnection(id, payload)
+      if (result) {
         dispatch(testConnectionSuccess())
 
         dispatch(addMessageNotification(successMessages.TEST_CONNECTION()))
       }
-    } catch (_error) {
-      const error: AxiosError = _error
+    } catch (_err) {
+      const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
 
       dispatch(testConnectionFailure(errorMessage))
 
       if (error?.response?.data?.error === ApiErrors.SentinelParamsRequired) {
-        checkoutToSentinelFlow(payload, dispatch, onRedirectToSentinel)
+        checkoutToSentinelFlow(
+          { id, ...payload },
+          dispatch,
+          onRedirectToSentinel,
+        )
         return
       }
 

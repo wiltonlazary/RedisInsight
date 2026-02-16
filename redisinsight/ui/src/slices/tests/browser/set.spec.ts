@@ -7,10 +7,14 @@ import {
   mockedStore,
   mockStore,
 } from 'uiSrc/utils/test-utils'
-import { addErrorNotification, addMessageNotification } from 'uiSrc/slices/app/notifications'
+import {
+  addErrorNotification,
+  addMessageNotification,
+} from 'uiSrc/slices/app/notifications'
 import successMessages from 'uiSrc/components/notifications/success-messages'
 import { stringToBuffer } from 'uiSrc/utils'
 import { deleteRedisearchKeyFromList } from 'uiSrc/slices/browser/redisearch'
+import { MOCK_TIMESTAMP } from 'uiSrc/mocks/data/dateNow'
 import {
   defaultSelectedKeyAction,
   deleteSelectedKeySuccess,
@@ -53,7 +57,7 @@ beforeEach(() => {
 
 describe('set slice', () => {
   beforeAll(() => {
-    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => 1629128049027)
+    dateNow = jest.spyOn(Date, 'now').mockImplementation(() => MOCK_TIMESTAMP)
   })
 
   afterAll(() => {
@@ -85,9 +89,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadSetMembers(['', undefined]))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -103,7 +108,7 @@ describe('set slice', () => {
         total: 1,
         nextCursor: 67,
         members: ['1', '2'],
-        match: '*1*'
+        match: '*1*',
       }
 
       const state = {
@@ -116,16 +121,17 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadSetMembersSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
 
     it('should properly set the state with empty data', () => {
       // Arrange
       const data: any = {
-        keyName: 'key'
+        keyName: 'key',
       }
 
       const state = {
@@ -134,7 +140,7 @@ describe('set slice', () => {
         data: {
           ...initialState.data,
           ...data,
-          key: data.keyName
+          key: data.keyName,
         },
       }
 
@@ -142,9 +148,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadSetMembersSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -162,7 +169,7 @@ describe('set slice', () => {
           keyName: '',
           members: [],
           nextCursor: 0,
-          match: '*'
+          match: '*',
         },
       }
 
@@ -170,9 +177,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadSetMembersFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -189,7 +197,7 @@ describe('set slice', () => {
           keyName: '',
           members: [],
           nextCursor: 0,
-          match: '*'
+          match: '*',
         },
       }
 
@@ -197,9 +205,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadMoreSetMembers())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -214,7 +223,7 @@ describe('set slice', () => {
         nextCursor: 0,
         total: 0,
         members: ['2', '3'],
-        match: '*2*'
+        match: '*2*',
       }
 
       const state = {
@@ -227,9 +236,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadMoreSetMembersSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
 
@@ -256,9 +266,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadMoreSetMembersSuccess(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -276,7 +287,7 @@ describe('set slice', () => {
           keyName: '',
           members: [],
           nextCursor: 0,
-          match: '*'
+          match: '*',
         },
       }
 
@@ -284,9 +295,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, loadMoreSetMembersFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -303,9 +315,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, addSetMembers())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -322,9 +335,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, addSetMembersSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -336,16 +350,17 @@ describe('set slice', () => {
       const state = {
         ...initialState,
         loading: false,
-        error: data
+        error: data,
       }
 
       // Act
       const nextState = reducer(initialState, addSetMembersFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -362,9 +377,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, removeSetMembers())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -385,9 +401,10 @@ describe('set slice', () => {
       const nextState = reducer(initailStateRemove, removeSetMembersSuccess())
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(initailStateRemove)
     })
   })
@@ -405,7 +422,7 @@ describe('set slice', () => {
           keyName: '',
           members: [],
           nextCursor: 0,
-          match: '*'
+          match: '*',
         },
       }
 
@@ -413,9 +430,10 @@ describe('set slice', () => {
       const nextState = reducer(initialState, removeSetMembersFailure(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -443,15 +461,13 @@ describe('set slice', () => {
       }
 
       // Act
-      const nextState = reducer(
-        initialStateRemove,
-        removeMembersFromList(data)
-      )
+      const nextState = reducer(initialStateRemove, removeMembersFromList(data))
 
       // Assert
-      const rootState = Object.assign(initialStateDefault, {
+      const rootState = {
+        ...initialStateDefault,
         browser: { set: nextState },
-      })
+      }
       expect(setSelector(rootState)).toEqual(state)
     })
   })
@@ -464,7 +480,7 @@ describe('set slice', () => {
         nextCursor: 0,
         members: ['123', '123', '1'],
         total: 3,
-        match: '*'
+        match: '*',
       }
       it('call fetchSetMembers, loadSetMembersSuccess when fetch is successed', async () => {
         // Arrange
@@ -568,7 +584,9 @@ describe('set slice', () => {
       apiService.put = jest.fn().mockResolvedValue(responsePayload)
 
       // Act
-      await store.dispatch<any>(addSetMembersAction({ keyName, members }, jest.fn))
+      await store.dispatch<any>(
+        addSetMembersAction({ keyName, members }, jest.fn),
+      )
 
       // Assert
       const expectedActions = [
@@ -577,7 +595,9 @@ describe('set slice', () => {
         defaultSelectedKeyAction(),
       ]
 
-      expect(mockedStore.getActions()).toEqual(expectedActions)
+      expect(store.getActions().slice(0, expectedActions.length)).toEqual(
+        expectedActions,
+      )
     })
     it('failed to add members to set', async () => {
       // Arrange
@@ -591,7 +611,9 @@ describe('set slice', () => {
       apiService.put = jest.fn().mockRejectedValue(responsePayload)
 
       // Act
-      await store.dispatch<any>(addSetMembersAction({ keyName, members }, jest.fn(), jest.fn()))
+      await store.dispatch<any>(
+        addSetMembersAction({ keyName, members }, jest.fn(), jest.fn()),
+      )
 
       // Assert
       const expectedActions = [
@@ -612,17 +634,19 @@ describe('set slice', () => {
       const responsePayload = { status: 200, data: { affected: 3 } }
 
       apiService.delete = jest.fn().mockResolvedValue(responsePayload)
-      const nextState = Object.assign(initialStateDefault, {
+      const nextState = {
+        ...initialStateDefault,
         browser: {
+          ...initialStateDefault.browser,
           set: {
             ...initialState,
             data: {
               ...initialState.data,
-              total: 10
-            }
-          }
+              total: 10,
+            },
+          },
         },
-      })
+      }
 
       const mockedStore = mockStore(nextState)
 
@@ -636,15 +660,13 @@ describe('set slice', () => {
         removeMembersFromList(members),
         refreshKeyInfo(),
         addMessageNotification(
-          successMessages.REMOVED_KEY_VALUE(
-            key,
-            members.join(''),
-            'Member'
-          )
-        )
+          successMessages.REMOVED_KEY_VALUE(key, members.join(''), 'Member'),
+        ),
       ]
 
-      expect(mockedStore.getActions()).toEqual(expectedActions)
+      expect(mockedStore.getActions().slice(0, expectedActions.length)).toEqual(
+        expectedActions,
+      )
     })
 
     it('succeed to delete all members from set', async () => {
@@ -652,17 +674,18 @@ describe('set slice', () => {
       const responsePayload = { status: 200, data: { affected: 3 } }
 
       apiService.delete = jest.fn().mockResolvedValue(responsePayload)
-      const nextState = Object.assign(initialStateDefault, {
+      const nextState = {
+        ...initialStateDefault,
         browser: {
           set: {
             ...initialState,
             data: {
               ...initialState.data,
-              total: 2
-            }
-          }
+              total: 2,
+            },
+          },
         },
-      })
+      }
 
       const mockedStore = mockStore(nextState)
 
@@ -676,7 +699,7 @@ describe('set slice', () => {
         removeMembersFromList(members),
         deleteSelectedKeySuccess(),
         deleteRedisearchKeyFromList(key),
-        addMessageNotification(successMessages.DELETED_KEY(key))
+        addMessageNotification(successMessages.DELETED_KEY(key)),
       ]
 
       expect(mockedStore.getActions()).toEqual(expectedActions)

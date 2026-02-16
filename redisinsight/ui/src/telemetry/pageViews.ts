@@ -4,8 +4,14 @@ export enum TelemetryPageView {
   SETTINGS_PAGE = 'Settings',
   BROWSER_PAGE = 'Browser',
   WORKBENCH_PAGE = 'Workbench',
+  SEARCH_AND_QUERY_PAGE = 'Search and Query',
   SLOWLOG_PAGE = 'Slow Log',
   CLUSTER_DETAILS_PAGE = 'Overview',
   PUBSUB_PAGE = 'Pub/Sub',
-  DATABASE_ANALYSIS = 'Database Analysis'
+  DATABASE_ANALYSIS = 'Database Analysis',
+  RDI_INSTANCES_PAGE = 'RDI Instances',
+  RDI_CONFIG = 'RDI Configuration',
+  RDI_JOBS = 'RDI Jobs',
+  RDI_STATUS = 'RDI Status',
+  VECTOR_SEARCH_PAGE = 'Vector Search',
 }

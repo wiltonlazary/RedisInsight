@@ -6,13 +6,15 @@ import {
   requirements,
   generateInvalidDataTestCases,
   validateInvalidDataTestCase,
-  getMainCheckFn, expect
+  getMainCheckFn,
 } from '../deps';
 const { server, request, constants, rte } = deps;
 
 // endpoint to test
 const endpoint = (instanceId = constants.TEST_INSTANCE_ID) =>
-  request(server).post(`/${constants.API.DATABASES}/${instanceId}/rejson-rl/get`);
+  request(server).post(
+    `/${constants.API.DATABASES}/${instanceId}/rejson-rl/get`,
+  );
 
 // input data schema
 const dataSchema = Joi.object({
@@ -23,16 +25,18 @@ const dataSchema = Joi.object({
 
 const validInputData = {
   keyName: constants.getRandomString(),
-  path: '.',
+  path: '$',
   forceRetrieve: false,
 };
 
-const responseSchema = Joi.object().keys({
-  downloaded: Joi.boolean().required(),
-  path: Joi.string().required(),
-  type: Joi.string(),
-  data: Joi.any(),
-}).required();
+const responseSchema = Joi.object()
+  .keys({
+    downloaded: Joi.boolean().required(),
+    path: Joi.string().required(),
+    type: Joi.string(),
+    data: Joi.any(),
+  })
+  .required();
 
 const mainCheckFn = getMainCheckFn(endpoint);
 
@@ -49,87 +53,180 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
     });
 
     describe('Modes', () => {
-      [
-        {
-          name: 'Should force get entire json from buff',
-          data: {
-            keyName: {
-              type: 'Buffer',
-              data: [...Buffer.from(constants.TEST_REJSON_KEY_3)],
+      describe('re-json v1', () => {
+        requirements('rte.modules.rejson.version<20000');
+
+        [
+          {
+            name: 'Should force get entire json from buff',
+            data: {
+              keyName: {
+                type: 'Buffer',
+                data: [...Buffer.from(constants.TEST_REJSON_KEY_3)],
+              },
+              path: '.',
+              forceRetrieve: true,
             },
-            path: '.',
-            forceRetrieve: true,
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '.',
+              data: JSON.stringify(constants.TEST_REJSON_VALUE_3),
+            },
           },
-          responseSchema,
-          responseBody: {
-            downloaded: true,
-            path: '.',
-            data: constants.TEST_REJSON_VALUE_3,
+        ].map(mainCheckFn);
+      });
+      describe('re-json v2', () => {
+        requirements('rte.modules.rejson.version>=20000');
+
+        [
+          {
+            name: 'Should force get entire json from buff',
+            data: {
+              keyName: {
+                type: 'Buffer',
+                data: [...Buffer.from(constants.TEST_REJSON_KEY_3)],
+              },
+              path: '$',
+              forceRetrieve: true,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '$',
+              data: JSON.stringify(constants.TEST_REJSON_VALUE_3),
+            },
           },
-        },
-      ].map(mainCheckFn);
+        ].map(mainCheckFn);
+      });
     });
 
     describe('Common', () => {
-      [
-        {
-          name: 'Should force get entire json',
-          data: {
-            keyName: constants.TEST_REJSON_KEY_3,
-            path: '.',
-            forceRetrieve: true,
+      describe('re-json v1', () => {
+        requirements('rte.modules.rejson.version<20000');
+        [
+          {
+            name: 'Should force get entire json',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '.',
+              forceRetrieve: true,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '.',
+              data: JSON.stringify(constants.TEST_REJSON_VALUE_3),
+            },
           },
-          responseSchema,
-          responseBody: {
-            downloaded: true,
-            path: '.',
-            data: constants.TEST_REJSON_VALUE_3,
+          {
+            name: 'Should get nested object',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '.object.field',
+              forceRetrieve: false,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '.object.field',
+              data: `"${'value'}"`,
+            },
           },
-        },
-        {
-          name: 'Should get nested object',
-          data: {
-            keyName: constants.TEST_REJSON_KEY_3,
-            path: '.object.field',
-            forceRetrieve: false,
+          {
+            name: 'Should get nested array value (downloaded true due to size)',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '["array"][1]',
+              forceRetrieve: false,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '["array"][1]',
+              data: String(2),
+            },
           },
-          responseSchema,
-          responseBody: {
-            downloaded: true,
-            path: '.object.field',
-            data: 'value',
-          },
-        },
-        {
-          name: 'Should get nested array value (downloaded true due to size)',
-          data: {
-            keyName: constants.TEST_REJSON_KEY_3,
-            path: '["array"][1]',
-            forceRetrieve: false,
-          },
-          responseSchema,
-          responseBody: {
-            downloaded: true,
-            path: '["array"][1]',
-            data: 2,
-          },
-        },
-        {
-          name: 'Should return NotFound error if instance id does not exists',
-          endpoint: () => endpoint(constants.TEST_NOT_EXISTED_INSTANCE_ID),
-          data: {
-            keyName: constants.TEST_REJSON_KEY_1,
-            path: '["object"]["some"]',
-            forceRetrieve: false,
-          },
-          statusCode: 404,
-          responseBody: {
+          {
+            name: 'Should return NotFound error if instance id does not exists',
+            endpoint: () => endpoint(constants.TEST_NOT_EXISTED_INSTANCE_ID),
+            data: {
+              keyName: constants.TEST_REJSON_KEY_1,
+              path: '["object"]["some"]',
+              forceRetrieve: false,
+            },
             statusCode: 404,
-            error: 'Not Found',
-            message: 'Invalid database instance id.',
+            responseBody: {
+              statusCode: 404,
+              error: 'Not Found',
+              message: 'Invalid database instance id.',
+            },
           },
-        },
-      ].map(mainCheckFn);
+        ].map(mainCheckFn);
+      });
+
+      describe('re-json v2', () => {
+        requirements('rte.modules.rejson.version>=20000');
+        [
+          {
+            name: 'Should force get entire json',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '$',
+              forceRetrieve: true,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '$',
+              data: JSON.stringify(constants.TEST_REJSON_VALUE_3),
+            },
+          },
+          {
+            name: 'Should get nested object',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '$.object.field',
+              forceRetrieve: false,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '$.object.field',
+              data: `"${'value'}"`,
+            },
+          },
+          {
+            name: 'Should get nested array value (downloaded true due to size)',
+            data: {
+              keyName: constants.TEST_REJSON_KEY_3,
+              path: '$["array"][1]',
+              forceRetrieve: false,
+            },
+            responseSchema,
+            responseBody: {
+              downloaded: true,
+              path: '$["array"][1]',
+              data: String(2),
+            },
+          },
+          {
+            name: 'Should return NotFound error if instance id does not exists',
+            endpoint: () => endpoint(constants.TEST_NOT_EXISTED_INSTANCE_ID),
+            data: {
+              keyName: constants.TEST_REJSON_KEY_1,
+              path: '$["object"]["some"]',
+              forceRetrieve: false,
+            },
+            statusCode: 404,
+            responseBody: {
+              statusCode: 404,
+              error: 'Not Found',
+              message: 'Invalid database instance id.',
+            },
+          },
+        ].map(mainCheckFn);
+      });
     });
 
     describe('Large key value', () => {
@@ -160,7 +257,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
                 key: 'object',
                 path: '["object"]',
                 cardinality: 2,
-              }
+              },
             ],
           },
         },
@@ -175,12 +272,12 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
           responseBody: {
             downloaded: false,
             path: '["object"]["some"]',
-            data: constants.TEST_REJSON_VALUE_3.object.some, // full value right now
+            data: `"${constants.TEST_REJSON_VALUE_3.object.some}"`, // full value right now
             type: 'string',
           },
         },
       ].map(mainCheckFn);
-    })
+    });
 
     describe('ACL', () => {
       // todo: do not forget to remove rte.modules.rejson check after fixing MEMORY USAGE issue in RedisJSON v2.0.0
@@ -211,7 +308,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.get')
+          before: () => rte.data.setAclUserRules('~* +@all -json.get'),
         },
         {
           name: 'Should throw error if no permissions for "json.get" command (another)',
@@ -226,7 +323,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.get')
+          before: () => rte.data.setAclUserRules('~* +@all -json.get'),
         },
         {
           name: 'Should return regular item if no permissions for "json.debug" command',
@@ -242,7 +339,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             path: '.',
             data: constants.TEST_REJSON_VALUE_3,
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.debug')
+          before: () => rte.data.setAclUserRules('~* +@all -json.debug'),
         },
         {
           name: 'Should get full json if no permissions for "json.debug" command',
@@ -258,7 +355,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             path: '.',
             data: constants.TEST_REJSON_VALUE_3,
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.debug')
+          before: () => rte.data.setAclUserRules('~* +@all -json.debug'),
         },
         {
           name: 'Should throw error if no permissions for "json.objkeys" command',
@@ -273,7 +370,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.objkeys')
+          before: () => rte.data.setAclUserRules('~* +@all -json.objkeys'),
         },
         {
           name: 'Should throw error if no permissions for "json.type" command',
@@ -288,7 +385,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.type')
+          before: () => rte.data.setAclUserRules('~* +@all -json.type'),
         },
         {
           name: 'Should throw error if no permissions for "json.objlen" command',
@@ -303,7 +400,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.objlen')
+          before: () => rte.data.setAclUserRules('~* +@all -json.objlen'),
         },
         {
           name: 'Should throw error if no permissions for "json.arrlen" command',
@@ -318,7 +415,7 @@ describe('POST /databases/:instanceId/rejson-rl/get', () => {
             statusCode: 403,
             error: 'Forbidden',
           },
-          before: () => rte.data.setAclUserRules('~* +@all -json.arrlen')
+          before: () => rte.data.setAclUserRules('~* +@all -json.arrlen'),
         },
       ].map(mainCheckFn);
     });

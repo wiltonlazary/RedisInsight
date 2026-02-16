@@ -1,62 +1,81 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import cx from 'classnames'
-import {
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiHealth,
-  EuiTitle,
-  EuiToolTip,
-  EuiButtonIcon,
-} from '@elastic/eui'
 import Divider from 'uiSrc/components/divider/Divider'
 import { KeyTypes } from 'uiSrc/constants'
 import HelpTexts from 'uiSrc/constants/help-texts'
 import AddKeyCommonFields from 'uiSrc/pages/browser/components/add-key/AddKeyCommonFields/AddKeyCommonFields'
-import { addKeyStateSelector, resetAddKey, keysSelector } from 'uiSrc/slices/browser/keys'
+import {
+  addKeyStateSelector,
+  resetAddKey,
+  keysSelector,
+} from 'uiSrc/slices/browser/keys'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
-import { sendEventTelemetry, TelemetryEvent, getBasedOnViewTypeEvent } from 'uiSrc/telemetry'
+import {
+  sendEventTelemetry,
+  TelemetryEvent,
+  getBasedOnViewTypeEvent,
+} from 'uiSrc/telemetry'
 import { isContainJSONModule, Maybe, stringToBuffer } from 'uiSrc/utils'
 import { RedisResponseBuffer } from 'uiSrc/slices/interfaces'
 
+import { Col, FlexItem, Row } from 'uiSrc/components/base/layout/flex'
+
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
+import { CancelSlimIcon } from 'uiSrc/components/base/icons'
+import { HealthText } from 'uiSrc/components/base/text/HealthText'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { RiTooltip } from 'uiSrc/components'
+import { Spacer } from 'uiSrc/components/base/layout'
 import { ADD_KEY_TYPE_OPTIONS } from './constants/key-type-options'
-import AddKeyHash from './AddKeyHash/AddKeyHash'
-import AddKeyZset from './AddKeyZset/AddKeyZset'
-import AddKeyString from './AddKeyString/AddKeyString'
-import AddKeySet from './AddKeySet/AddKeySet'
-import AddKeyList from './AddKeyList/AddKeyList'
-import AddKeyReJSON from './AddKeyReJSON/AddKeyReJSON'
-import AddKeyStream from './AddKeyStream/AddKeyStream'
+import AddKeyHash from './AddKeyHash'
+import AddKeyZset from './AddKeyZset'
+import AddKeyString from './AddKeyString'
+import AddKeySet from './AddKeySet'
+import AddKeyList from './AddKeyList'
+import AddKeyReJSON from './AddKeyReJSON'
+import AddKeyStream from './AddKeyStream'
+import { ContentFields } from './AddKey.styles'
 
 import styles from './styles.module.scss'
 
 export interface Props {
   onAddKeyPanel: (value: boolean, keyName?: RedisResponseBuffer) => void
   onClosePanel: () => void
+  arePanelsCollapsed?: boolean
 }
 const AddKey = (props: Props) => {
-  const { onAddKeyPanel, onClosePanel } = props
+  const { onAddKeyPanel, onClosePanel, arePanelsCollapsed } = props
   const dispatch = useDispatch()
 
   const { loading } = useSelector(addKeyStateSelector)
-  const { id: instanceId, modules = [] } = useSelector(connectedInstanceSelector)
+  const { id: instanceId, modules = [] } = useSelector(
+    connectedInstanceSelector,
+  )
   const { viewType } = useSelector(keysSelector)
 
-  useEffect(() =>
-    // componentWillUnmount
-    () => {
-      dispatch(resetAddKey())
-    },
-  [])
+  useEffect(
+    () =>
+      // componentWillUnmount
+      () => {
+        dispatch(resetAddKey())
+      },
+    [],
+  )
 
   const options = ADD_KEY_TYPE_OPTIONS.map((item) => {
     const { value, color, text } = item
     return {
       value,
       inputDisplay: (
-        <EuiHealth color={color} style={{ lineHeight: 'inherit' }} data-test-subj={value}>
+        <HealthText
+          color={color}
+          style={{ lineHeight: 'inherit' }}
+          data-test-subj={value}
+          data-testid={value}
+        >
           {text}
-        </EuiHealth>
+        </HealthText>
       ),
     }
   })
@@ -73,11 +92,11 @@ const AddKey = (props: Props) => {
       event: getBasedOnViewTypeEvent(
         viewType,
         TelemetryEvent.BROWSER_KEY_ADD_CANCELLED,
-        TelemetryEvent.TREE_VIEW_KEY_ADD_CANCELLED
+        TelemetryEvent.TREE_VIEW_KEY_ADD_CANCELLED,
       ),
       eventData: {
-        databaseId: instanceId
-      }
+        databaseId: instanceId,
+      },
     })
   }
 
@@ -87,51 +106,50 @@ const AddKey = (props: Props) => {
   }
 
   const closeAddKeyPanel = (isCancelled?: boolean) => {
-    onAddKeyPanel(false, stringToBuffer(keyName))
+    // meaning that the user closed the "Add Key" panel when clicked on the cancel button
     if (isCancelled) {
+      onAddKeyPanel(false)
       onClosePanel()
       closeKeyTelemetry()
+    }
+    // meaning that the user closed the "Add Key" panel when added a key
+    else {
+      onAddKeyPanel(false, stringToBuffer(keyName))
     }
   }
 
   const defaultFields = {
     keyName,
-    keyTTL
+    keyTTL,
   }
 
   return (
     <div className={styles.page}>
-      <EuiFlexGroup
-        justifyContent="center"
+      <Row
+        justify="center"
         className={cx(styles.contentWrapper, 'relative')}
-        gutterSize="none"
+        gap="none"
       >
-        <EuiFlexGroup
-          gutterSize="none"
-          direction="column"
-          justifyContent="center"
-          className={styles.content}
-        >
-          <EuiFlexItem grow style={{ marginBottom: '36px' }}>
-            <EuiTitle size="xs">
-              <h4>New Key</h4>
-            </EuiTitle>
-            <EuiToolTip
-              content="Close"
-              position="left"
-              anchorClassName={styles.closeKeyTooltip}
-            >
-              <EuiButtonIcon
-                iconType="cross"
-                color="primary"
-                aria-label="Close key"
-                className={styles.closeBtn}
-                onClick={() => closeKey()}
-              />
-            </EuiToolTip>
-          </EuiFlexItem>
-          <div className="eui-yScroll">
-            <div className={styles.contentFields}>
+        <Col justify="center" className={styles.content}>
+          <FlexItem grow style={{ marginBottom: '36px' }}>
+            <Title size="M">New Key</Title>
+            {!arePanelsCollapsed && (
+              <RiTooltip
+                content="Close"
+                position="left"
+                anchorClassName={styles.closeKeyTooltip}
+              >
+                <IconButton
+                  icon={CancelSlimIcon}
+                  aria-label="Close key"
+                  className={styles.closeBtn}
+                  onClick={() => closeKey()}
+                />
+              </RiTooltip>
+            )}
+          </FlexItem>
+          <div className={cx('eui-yScroll', styles.scrollContainer)}>
+            <ContentFields>
               <AddKeyCommonFields
                 typeSelected={typeSelected}
                 onChangeType={onChangeType}
@@ -143,7 +161,11 @@ const AddKey = (props: Props) => {
                 setKeyTTL={setKeyTTL}
               />
 
-              <Divider colorVariable="separatorColor" className={styles.divider} />
+              <Spacer size="xl" />
+
+              <Divider />
+
+              <Spacer size="xl" />
 
               {typeSelected === KeyTypes.Hash && (
                 <AddKeyHash onCancel={closeAddKeyPanel} {...defaultFields} />
@@ -163,21 +185,27 @@ const AddKey = (props: Props) => {
               {typeSelected === KeyTypes.ReJSON && (
                 <>
                   {!isContainJSONModule(modules) && (
-                    <span className={styles.helpText} data-testid="json-not-loaded-text">
+                    <span
+                      className={styles.helpText}
+                      data-testid="json-not-loaded-text"
+                    >
                       {HelpTexts.REJSON_SHOULD_BE_LOADED}
                     </span>
                   )}
-                  <AddKeyReJSON onCancel={closeAddKeyPanel} {...defaultFields} />
+                  <AddKeyReJSON
+                    onCancel={closeAddKeyPanel}
+                    {...defaultFields}
+                  />
                 </>
               )}
               {typeSelected === KeyTypes.Stream && (
                 <AddKeyStream onCancel={closeAddKeyPanel} {...defaultFields} />
               )}
-            </div>
+            </ContentFields>
           </div>
-        </EuiFlexGroup>
+        </Col>
         <div id="formFooterBar" className="formFooterBar" />
-      </EuiFlexGroup>
+      </Row>
     </div>
   )
 }

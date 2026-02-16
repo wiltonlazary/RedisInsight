@@ -5,16 +5,22 @@ import result from './result2.json'
 // import result from './resultInfo.json'
 // import result from './result3.json'
 import App from './App'
+import { ThemeProvider } from 'uiSrc/components/base/utils/pluginsThemeContext'
+import './styles/styles.scss'
 
 interface Props {
   command?: string
-  data?: { response: any, status: string }[]
+  data?: { response: any; status: string }[]
 }
 
-const renderRediSearch = (props:Props) => {
+const renderRediSearch = (props: Props) => {
   const { command = '', data: result = [] } = props
-  render(<App command={command} result={result} />,
-    document.getElementById('app'))
+  render(
+    <ThemeProvider>
+      <App command={command} result={result} />
+    </ThemeProvider>,
+    document.getElementById('app'),
+  )
 }
 
 if (process.env.NODE_ENV === 'development') {

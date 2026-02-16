@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { CloudDatabaseDetails } from 'src/modules/cloud/database/models';
 
 export class DatabaseOverview {
   @ApiProperty({
@@ -12,6 +14,13 @@ export class DatabaseOverview {
     type: Number,
   })
   usedMemory?: number;
+
+  @ApiPropertyOptional({
+    description: 'Cloud details',
+    type: CloudDatabaseDetails,
+  })
+  @Type(() => CloudDatabaseDetails)
+  cloudDetails?: CloudDatabaseDetails;
 
   @ApiPropertyOptional({
     description: 'Total number of keys inside Redis primary shards',
@@ -54,4 +63,17 @@ export class DatabaseOverview {
     type: Number,
   })
   cpuUsagePercentage?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Maximum CPU usage percentage when multiple threads/shards are present (%)',
+    type: Number,
+  })
+  maxCpuUsagePercentage?: number;
+
+  @ApiProperty({
+    description: 'Database server name',
+    type: String,
+  })
+  serverName?: string;
 }

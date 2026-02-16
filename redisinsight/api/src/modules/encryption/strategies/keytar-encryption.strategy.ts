@@ -1,20 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  createDecipheriv, createCipheriv, randomBytes, createHash,
+  createDecipheriv,
+  createCipheriv,
+  randomBytes,
+  createHash,
 } from 'crypto';
-import { EncryptionResult, EncryptionStrategy } from 'src/modules/encryption/models';
+import {
+  EncryptionResult,
+  EncryptionStrategy,
+} from 'src/modules/encryption/models';
 import { IEncryptionStrategy } from 'src/modules/encryption/strategies/encryption-strategy.interface';
 import {
   KeytarDecryptionErrorException,
   KeytarEncryptionErrorException,
   KeytarUnavailableException,
 } from 'src/modules/encryption/exceptions';
-import config from 'src/utils/config';
+import config, { Config } from 'src/utils/config';
 
-const SERVICE = 'redisinsight';
 const ACCOUNT = 'app';
-const ALGORITHM = 'aes-256-cbc';
-const SERVER_CONFIG = config.get('server');
+const SERVER_CONFIG = config.get('server') as Config['server'];
+const ENCRYPTION_CONFIG = config.get('encryption') as Config['encryption'];
 
 @Injectable()
 export class KeytarEncryptionStrategy implements IEncryptionStrategy {
@@ -26,6 +31,10 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
 
   constructor() {
     try {
+      if (!ENCRYPTION_CONFIG.keytar) {
+        return;
+      }
+
       // Have to require keytar here since during tests of keytar module
       // at some point it threw an error when OS secure storage was unavailable
       // Since it is difficult to reproduce we keep module require here to be
@@ -41,7 +50,9 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
    * Generates random password
    */
   private generatePassword(): string {
-    return SERVER_CONFIG.secretStoragePassword || randomBytes(20).toString('base64');
+    return (
+      SERVER_CONFIG.secretStoragePassword || randomBytes(20).toString('base64')
+    );
   }
 
   /**
@@ -50,7 +61,10 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
    */
   private async getPassword(): Promise<string | null> {
     try {
-      return await this.keytar.getPassword(SERVICE, ACCOUNT);
+      return await this.keytar.getPassword(
+        ENCRYPTION_CONFIG.keytarService,
+        ACCOUNT,
+      );
     } catch (error) {
       this.logger.error('Unable to get password');
       throw new KeytarUnavailableException();
@@ -64,11 +78,19 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
    */
   private async setPassword(password: string): Promise<void> {
     try {
-      await this.keytar.setPassword(SERVICE, ACCOUNT, password);
+      await this.keytar.setPassword(
+        ENCRYPTION_CONFIG.keytarService,
+        ACCOUNT,
+        password,
+      );
     } catch (error) {
       this.logger.error('Unable to set password');
       throw new KeytarUnavailableException();
     }
+  }
+
+  private getCipherIV(): Buffer {
+    return Buffer.from(ENCRYPTION_CONFIG.encryptionIV).slice(0, 16);
   }
 
   /**
@@ -96,8 +118,12 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
    * Basically just try to get a password and checks if this call fails
    */
   async isAvailable(): Promise<boolean> {
+    if (!ENCRYPTION_CONFIG.keytar) {
+      return false;
+    }
+
     try {
-      await this.keytar.getPassword(SERVICE, ACCOUNT);
+      await this.keytar.getPassword(ENCRYPTION_CONFIG.keytarService, ACCOUNT);
       return true;
     } catch (e) {
       return false;
@@ -107,7 +133,11 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
   async encrypt(data: string): Promise<EncryptionResult> {
     const cipherKey = await this.getCipherKey();
     try {
-      const cipher = createCipheriv(ALGORITHM, cipherKey, Buffer.alloc(16, 0));
+      const cipher = createCipheriv(
+        ENCRYPTION_CONFIG.encryptionAlgorithm,
+        cipherKey,
+        this.getCipherIV(),
+      );
       let encrypted = cipher.update(data, 'utf8', 'hex');
       encrypted += cipher.final('hex');
 
@@ -128,7 +158,11 @@ export class KeytarEncryptionStrategy implements IEncryptionStrategy {
 
     const cipherKey = await this.getCipherKey();
     try {
-      const decipher = createDecipheriv(ALGORITHM, cipherKey, Buffer.alloc(16, 0));
+      const decipher = createDecipheriv(
+        ENCRYPTION_CONFIG.encryptionAlgorithm,
+        cipherKey,
+        this.getCipherIV(),
+      );
       let decrypted = decipher.update(data, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;

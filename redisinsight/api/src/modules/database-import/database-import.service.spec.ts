@@ -6,17 +6,23 @@ import {
   mockDatabaseImportAnalytics,
   mockDatabaseImportFile,
   mockDatabaseImportResponse,
+  mockSessionMetadata,
   mockSshImportService,
   MockType,
 } from 'src/__mocks__';
 import { DatabaseRepository } from 'src/modules/database/repositories/database.repository';
 import { DatabaseImportAnalytics } from 'src/modules/database-import/database-import.analytics';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConnectionType } from 'src/modules/database/entities/database.entity';
+import {
+  ConnectionType,
+  Compressor,
+} from 'src/modules/database/entities/database.entity';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import {
-  InvalidCaCertificateBodyException, InvalidCertificateNameException, InvalidClientCertificateBodyException,
+  InvalidCaCertificateBodyException,
+  InvalidCertificateNameException,
+  InvalidClientCertificateBodyException,
   NoDatabaseImportFileProvidedException,
   SizeLimitExceededDatabaseImportFileException,
   UnableToParseDatabaseImportFileException,
@@ -67,7 +73,9 @@ describe('DatabaseImportService', () => {
 
   describe('importDatabase', () => {
     beforeEach(() => {
-      databaseRepository.create.mockRejectedValueOnce(new BadRequestException());
+      databaseRepository.create.mockRejectedValueOnce(
+        new BadRequestException(),
+      );
       databaseRepository.create.mockRejectedValueOnce(new ForbiddenException());
       validatoSpy.mockRejectedValueOnce([new ValidationError()]);
       certificateImportService.processCaCertificate
@@ -84,14 +92,20 @@ describe('DatabaseImportService', () => {
     });
 
     it('should import databases from json', async () => {
-      const response = await service.import(mockDatabaseImportFile);
+      const response = await service.import(
+        mockSessionMetadata,
+        mockDatabaseImportFile,
+      );
 
       expect(response).toEqual(mockDatabaseImportResponse);
-      expect(analytics.sendImportResults).toHaveBeenCalledWith(mockDatabaseImportResponse);
+      expect(analytics.sendImportResults).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        mockDatabaseImportResponse,
+      );
     });
 
     it('should import databases from base64', async () => {
-      const response = await service.import({
+      const response = await service.import(mockSessionMetadata, {
         ...mockDatabaseImportFile,
         mimetype: 'binary/octet-stream',
         buffer: Buffer.from(mockDatabaseImportFile.buffer.toString('base64')),
@@ -100,98 +114,237 @@ describe('DatabaseImportService', () => {
       expect(response).toEqual({
         ...mockDatabaseImportResponse,
       });
-      expect(analytics.sendImportResults).toHaveBeenCalledWith(mockDatabaseImportResponse);
+      expect(analytics.sendImportResults).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        mockDatabaseImportResponse,
+      );
     });
 
     it('should fail due to file was not provided', async () => {
       try {
-        await service.import(undefined);
+        await service.import(mockSessionMetadata, undefined);
         fail();
       } catch (e) {
         expect(e).toBeInstanceOf(NoDatabaseImportFileProvidedException);
         expect(e.message).toEqual('No import file provided');
-        expect(analytics.sendImportFailed)
-          .toHaveBeenCalledWith(new NoDatabaseImportFileProvidedException('No import file provided'));
+        expect(analytics.sendImportFailed).toHaveBeenCalledWith(
+          mockSessionMetadata,
+          new NoDatabaseImportFileProvidedException('No import file provided'),
+        );
       }
     });
 
     it('should fail due to file exceeded size limitations', async () => {
       try {
-        await service.import({
+        await service.import(mockSessionMetadata, {
           ...mockDatabaseImportFile,
           size: 10 * 1024 * 1024 + 1,
         });
         fail();
       } catch (e) {
         expect(e).toBeInstanceOf(SizeLimitExceededDatabaseImportFileException);
-        expect(e.message).toEqual('Import file is too big. Maximum 10mb allowed');
+        expect(e.message).toEqual(
+          'Import file is too big. Maximum 10mb allowed',
+        );
       }
     });
 
     it('should fail due to incorrect json', async () => {
       try {
-        await service.import({
+        await service.import(mockSessionMetadata, {
           ...mockDatabaseImportFile,
           buffer: Buffer.from([0, 21]),
         });
         fail();
       } catch (e) {
         expect(e).toBeInstanceOf(UnableToParseDatabaseImportFileException);
-        expect(e.message).toEqual(`Unable to parse ${mockDatabaseImportFile.originalname}`);
+        expect(e.message).toEqual(
+          `Unable to parse ${mockDatabaseImportFile.originalname}`,
+        );
       }
     });
 
     it('should fail due to incorrect base64 + truncate filename', async () => {
       try {
-        await service.import({
+        await service.import(mockSessionMetadata, {
           ...mockDatabaseImportFile,
-          originalname: (new Array(1_000).fill(1)).join(''),
+          originalname: new Array(1_000).fill(1).join(''),
           mimetype: 'binary/octet-stream',
           buffer: Buffer.from([0, 21]),
         });
         fail();
       } catch (e) {
         expect(e).toBeInstanceOf(UnableToParseDatabaseImportFileException);
-        expect(e.message).toEqual(`Unable to parse ${(new Array(50).fill(1)).join('')}...`);
+        expect(e.message).toEqual(
+          `Unable to parse ${new Array(50).fill(1).join('')}...`,
+        );
       }
     });
   });
 
   describe('createDatabase', () => {
     it('should create standalone database', async () => {
-      await service['createDatabase']({
-        ...mockDatabase,
-      }, 0);
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          provider: 'REDIS_CLOUD',
+        },
+        0,
+      );
 
-      expect(databaseRepository.create).toHaveBeenCalledWith({
-        ...pick(mockDatabase, ['host', 'port', 'name', 'connectionType', 'timeout']),
-        new: true,
-      });
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        {
+          ...pick(mockDatabase, [
+            'host',
+            'port',
+            'name',
+            'connectionType',
+            'compressor',
+            'modules',
+          ]),
+          provider: 'REDIS_CLOUD',
+          new: true,
+        },
+        false,
+      );
     });
     it('should create standalone with created name', async () => {
-      await service['createDatabase']({
-        ...mockDatabase,
-        name: undefined,
-      }, 0);
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          name: undefined,
+        },
+        0,
+      );
 
-      expect(databaseRepository.create).toHaveBeenCalledWith({
-        ...pick(mockDatabase, ['host', 'port', 'name', 'connectionType', 'timeout']),
-        name: `${mockDatabase.host}:${mockDatabase.port}`,
-        new: true,
-      });
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        {
+          ...pick(mockDatabase, [
+            'host',
+            'port',
+            'name',
+            'connectionType',
+            'compressor',
+            'modules',
+          ]),
+          name: `${mockDatabase.host}:${mockDatabase.port}`,
+          new: true,
+        },
+        false,
+      );
+    });
+    it('should create standalone with none compressor', async () => {
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          compressor: 'custom',
+        },
+        0,
+      );
+
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        {
+          ...pick(mockDatabase, [
+            'host',
+            'port',
+            'name',
+            'connectionType',
+            'compressor',
+            'modules',
+          ]),
+          compressor: Compressor.NONE,
+          new: true,
+        },
+        false,
+      );
+    });
+    it('should create standalone with compressor and tlsServername', async () => {
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          compressor: Compressor.GZIP,
+          tlsServername: 'redis-insight',
+        },
+        0,
+      );
+
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        {
+          ...pick(mockDatabase, [
+            'host',
+            'port',
+            'name',
+            'connectionType',
+            'compressor',
+            'modules',
+            'tlsServername',
+          ]),
+          compressor: Compressor.GZIP,
+          tlsServername: 'redis-insight',
+          new: true,
+        },
+        false,
+      );
     });
     it('should create cluster database', async () => {
-      await service['createDatabase']({
-        ...mockDatabase,
-        connectionType: undefined,
-        cluster: true,
-      }, 0);
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          connectionType: undefined,
+          cluster: true,
+        },
+        0,
+      );
 
-      expect(databaseRepository.create).toHaveBeenCalledWith({
-        ...pick(mockDatabase, ['host', 'port', 'name', 'timeout']),
-        connectionType: ConnectionType.CLUSTER,
-        new: true,
-      });
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        {
+          ...pick(mockDatabase, [
+            'host',
+            'port',
+            'name',
+            'compressor',
+            'modules',
+          ]),
+          connectionType: ConnectionType.CLUSTER,
+          new: true,
+        },
+        false,
+      );
+    });
+
+    it('should create database with providerDetails for Azure Entra ID', async () => {
+      const providerDetails = {
+        provider: 'azure',
+        authType: 'entraId',
+        azureAccountId: 'test-account-123',
+      };
+
+      await service['createDatabase'](
+        mockSessionMetadata,
+        {
+          ...mockDatabase,
+          providerDetails,
+        },
+        0,
+      );
+
+      expect(databaseRepository.create).toHaveBeenCalledWith(
+        mockSessionMetadata,
+        expect.objectContaining({
+          providerDetails,
+        }),
+        false,
+      );
     });
   });
 
@@ -204,17 +357,35 @@ describe('DatabaseImportService', () => {
       { input: { isCluster: false }, output: ConnectionType.NOT_CONNECTED },
       { input: { isCluster: undefined }, output: ConnectionType.NOT_CONNECTED },
       // sentinelMasterName
-      { input: { sentinelMasterName: 'some name' }, output: ConnectionType.SENTINEL },
+      {
+        input: { sentinelMasterName: 'some name' },
+        output: ConnectionType.SENTINEL,
+      },
       // connectionType
-      { input: { connectionType: ConnectionType.STANDALONE }, output: ConnectionType.STANDALONE },
-      { input: { connectionType: ConnectionType.CLUSTER }, output: ConnectionType.CLUSTER },
-      { input: { connectionType: ConnectionType.SENTINEL }, output: ConnectionType.SENTINEL },
-      { input: { connectionType: 'something not supported' }, output: ConnectionType.NOT_CONNECTED },
+      {
+        input: { connectionType: ConnectionType.STANDALONE },
+        output: ConnectionType.STANDALONE,
+      },
+      {
+        input: { connectionType: ConnectionType.CLUSTER },
+        output: ConnectionType.CLUSTER,
+      },
+      {
+        input: { connectionType: ConnectionType.SENTINEL },
+        output: ConnectionType.SENTINEL,
+      },
+      {
+        input: { connectionType: 'something not supported' },
+        output: ConnectionType.NOT_CONNECTED,
+      },
       // type
       { input: { type: 'standalone' }, output: ConnectionType.STANDALONE },
       { input: { type: 'cluster' }, output: ConnectionType.CLUSTER },
       { input: { type: 'sentinel' }, output: ConnectionType.SENTINEL },
-      { input: { type: 'something not supported' }, output: ConnectionType.NOT_CONNECTED },
+      {
+        input: { type: 'something not supported' },
+        output: ConnectionType.NOT_CONNECTED,
+      },
       // priority tests
       {
         input: {
@@ -250,7 +421,9 @@ describe('DatabaseImportService', () => {
 
     tcs.forEach((tc) => {
       it(`should return ${tc.output} when called with ${JSON.stringify(tc.input)}`, () => {
-        expect(DatabaseImportService.determineConnectionType(tc.input)).toEqual(tc.output);
+        expect(DatabaseImportService.determineConnectionType(tc.input)).toEqual(
+          tc.output,
+        );
       });
     });
   });

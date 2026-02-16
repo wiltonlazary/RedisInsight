@@ -1,71 +1,99 @@
 import React from 'react'
-import { EuiText } from '@elastic/eui'
-import { isUndefined } from 'lodash'
-import cx from 'classnames'
-import { useSelector } from 'react-redux'
 
-import { getApproximatePercentage, Maybe, Nullable } from 'uiSrc/utils'
+import { Maybe, Nullable } from 'uiSrc/utils'
 import Divider from 'uiSrc/components/divider/Divider'
-import { BulkActionsStatus, KeyTypes } from 'uiSrc/constants'
+import { BulkActionsStatus, KeyTypes, RedisDataType } from 'uiSrc/constants'
 import GroupBadge from 'uiSrc/components/group-badge/GroupBadge'
-import { overviewBulkActionsSelector } from 'uiSrc/slices/browser/bulkActions'
-import styles from './styles.module.scss'
+import { Col, Row } from 'uiSrc/components/base/layout/flex'
+import { Text } from 'uiSrc/components/base/text'
+
+import BulkActionsStatusDisplay from '../BulkActionsStatusDisplay'
+import {
+  BulkActionsContainer,
+  BulkActionsInfoFilter,
+  BulkActionsInfoSearch,
+  BulkActionsProgressLine,
+  BulkActionsTitle,
+} from './BulkActionsInfo.styles'
 
 export interface Props {
-  title?: string
+  title?: string | React.ReactNode
+  subTitle?: string | React.ReactNode
   loading: boolean
-  filter: Nullable<KeyTypes>
+  filter?: Nullable<KeyTypes> | RedisDataType
   status: Maybe<BulkActionsStatus>
-  search: string
-  children?: React.ReactElement
+  search?: string
+  progress?: {
+    total: Maybe<number>
+    scanned: Maybe<number>
+  }
+  children?: React.ReactNode
+  error?: string
 }
 
 const BulkActionsInfo = (props: Props) => {
-  const { children, loading, filter, search, status, title = 'Delete Keys with' } = props
-
-  const { progress: { total = 0, scanned = 0 } = {} } = useSelector(overviewBulkActionsSelector) ?? {}
+  const {
+    children,
+    loading,
+    filter,
+    search,
+    status,
+    progress,
+    title = 'Delete Keys with',
+    subTitle,
+    error,
+  } = props
+  const { total = 0, scanned = 0 } = progress || {}
 
   return (
-    <div className={styles.container} data-testid="bulk-actions-info">
-      <div className={styles.header}>
-        <EuiText color="subdued" className={styles.title}>{title}</EuiText>
-        <EuiText color="subdued" className={styles.subTitle}>
-          {filter && (
-            <div className={styles.filter} data-testid="bulk-actions-info-filter">
-              <span style={{ paddingRight: 6 }}>Key type:</span>
-              <GroupBadge type={filter} className={styles.badge} />
-            </div>
-          )}
-          <div className={styles.search} data-testid="bulk-actions-info-search">
-            Pattern:
-            <span className={styles.match}>{` ${search}`}</span>
-          </div>
-        </EuiText>
-        {!isUndefined(status) && status !== BulkActionsStatus.Completed && status !== BulkActionsStatus.Aborted && (
-          <EuiText color="subdued" className={styles.progress} data-testid="bulk-status-progress">
-            In progress:
-            <span>{` ${getApproximatePercentage(total, scanned)}`}</span>
-          </EuiText>
+    <BulkActionsContainer data-testid="bulk-actions-info">
+      <BulkActionsStatusDisplay
+        status={status}
+        total={total}
+        scanned={scanned}
+        error={error}
+      />
+      <Col justify="between" gap="xxl">
+        <BulkActionsTitle color="primary" $full>
+          {title}
+        </BulkActionsTitle>
+        {subTitle && (
+          <BulkActionsTitle color="primary" $full>
+            {subTitle}
+          </BulkActionsTitle>
         )}
-        {status === BulkActionsStatus.Aborted && (
-          <EuiText color="danger" className={styles.progress} data-testid="bulk-status-stopped">
-            Stopped: {getApproximatePercentage(total, scanned)}
-          </EuiText>
+        {(filter || search) && (
+          <Row justify="start" align="center" gap="xxl">
+            {filter && (
+              <BulkActionsInfoFilter data-testid="bulk-actions-info-filter">
+                <Text size="s" color="primary">
+                  Key type:
+                </Text>
+                <GroupBadge type={filter} />
+              </BulkActionsInfoFilter>
+            )}
+            {search && (
+              <BulkActionsInfoFilter data-testid="bulk-actions-info-search">
+                <Text size="s" color="primary">
+                  Pattern:
+                </Text>
+                <BulkActionsInfoSearch color="primary">
+                  {' '}
+                  {search}
+                </BulkActionsInfoSearch>
+              </BulkActionsInfoFilter>
+            )}
+          </Row>
         )}
-        {status === BulkActionsStatus.Completed && (
-          <EuiText className={cx(styles.progress, styles.progressCompleted)} data-testid="bulk-status-completed">
-            Action completed
-          </EuiText>
-        )}
-      </div>
-      <Divider colorVariable="separatorColor" className={styles.divider} />
+      </Col>
+      <Divider />
       {loading && (
-        <div className={styles.progressLine} data-testid="progress-line"><div style={{ width: `${(total ? scanned / total : 0) * 100}%` }} /></div>
+        <BulkActionsProgressLine data-testid="progress-line">
+          <div style={{ width: `${(total ? scanned / total : 0) * 100}%` }} />
+        </BulkActionsProgressLine>
       )}
-      <div className={styles.children}>
-        {children}
-      </div>
-    </div>
+      <div>{children}</div>
+    </BulkActionsContainer>
   )
 }
 

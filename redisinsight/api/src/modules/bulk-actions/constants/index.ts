@@ -6,6 +6,8 @@ export enum BulkActionsServerEvents {
 
 export enum BulkActionType {
   Delete = 'delete',
+  Upload = 'upload',
+  Unlink = 'unlink',
 }
 
 export enum BulkActionStatus {

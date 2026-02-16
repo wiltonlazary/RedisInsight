@@ -1,9 +1,7 @@
 import {
-  MAX_PORT_NUMBER,
   MAX_TTL_NUMBER,
   validateEmail,
   validateField,
-  validatePortNumber,
   validateTTLNumber,
   validateCountNumber,
   validateScoreNumber,
@@ -15,7 +13,8 @@ import {
   errorValidateNegativeInteger,
   validateConsumerGroupId,
   validateNumber,
-  validateTimeoutNumber,
+  checkTimestamp,
+  checkConvertToDate,
 } from 'uiSrc/utils'
 
 const text1 = '123 123 123'
@@ -31,6 +30,39 @@ const text10 = '348.344392421312321312312316786724'
 const text11 = '3.3.1'
 const text12 = '-3-2'
 const text13 = '5'
+
+const checkTimestampTests = [
+  { input: '1234567891', expected: true },
+  { input: '1234567891234', expected: true },
+  { input: '1234567891234567', expected: true },
+  { input: '1234567891234567891', expected: true },
+  { input: '1234567891.2', expected: true },
+  // it should be valid timestamp (for date < 1970)
+  { input: '-123456789', expected: true },
+  { input: '', expected: false },
+  { input: '-', expected: false },
+  { input: '0', expected: false },
+  { input: '1', expected: false },
+  { input: '123', expected: false },
+  { input: '12345678911', expected: false },
+  { input: '12345678912345', expected: false },
+  { input: '12345678912345678', expected: false },
+  { input: '1234567891.2.2', expected: false },
+  { input: '1234567891asd', expected: false },
+  { input: 'inf', expected: false },
+  { input: '-inf', expected: false },
+  { input: '1234567891:12', expected: false },
+  { input: '1234567891a12', expected: false },
+]
+
+const checkConvertToDateTests = [
+  ...checkTimestampTests,
+  { input: '2024-08-02T00:00:00.000Z', expected: true },
+  { input: '10-10-2020', expected: true },
+  { input: '10/10/2020', expected: true },
+  { input: '10/10/2020invalid', expected: false },
+  { input: 'invalid', expected: false },
+]
 
 describe('Validations utils', () => {
   describe('validateField', () => {
@@ -115,26 +147,6 @@ describe('Validations utils', () => {
     })
   })
 
-  describe('validatePortNumber', () => {
-    it('validatePortNumber should return only numbers between 0 and MAX_PORT_NUMBER', () => {
-      const expectedResponse1 = `${MAX_PORT_NUMBER}`
-      const expectedResponse2 = '12312'
-      const expectedResponse4 = ''
-      const expectedResponse5 = ''
-      const expectedResponse6 = '2323'
-      const expectedResponse7 = `${MAX_PORT_NUMBER}`
-      const expectedResponse8 = `${MAX_PORT_NUMBER}`
-
-      expect(validatePortNumber(text1)).toEqual(expectedResponse1)
-      expect(validatePortNumber(text2)).toEqual(expectedResponse2)
-      expect(validatePortNumber(text4)).toEqual(expectedResponse4)
-      expect(validatePortNumber(text5)).toEqual(expectedResponse5)
-      expect(validatePortNumber(text6)).toEqual(expectedResponse6)
-      expect(validatePortNumber(text7)).toEqual(expectedResponse7)
-      expect(validatePortNumber(text8)).toEqual(expectedResponse8)
-    })
-  })
-
   describe('validateEmail', () => {
     it('validateEmail should return "true" only for email format text', () => {
       expect(validateEmail(text1)).toBeFalsy()
@@ -156,11 +168,10 @@ describe('Validations utils', () => {
       ['my [new] {cert}', 'my [new] cert'],
       ['MY-0123456789_cert', 'MY-0123456789_cert'],
       ['my-ффффффф[new]_фффф{cert}', 'my-[new]_cert'],
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = validateCertName(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = validateCertName(input)
+      expect(result).toBe(expected)
+    })
   })
 
   describe('validateRefreshRateNumber', () => {
@@ -177,12 +188,10 @@ describe('Validations utils', () => {
       [text10, '348.3'],
       [text12, '32'],
       [text13, '5'],
-
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = validateRefreshRateNumber(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = validateRefreshRateNumber(input)
+      expect(result).toBe(expected)
+    })
   })
 
   describe('errorValidateRefreshRateNumber', () => {
@@ -199,12 +208,10 @@ describe('Validations utils', () => {
       [validateRefreshRateNumber(text10), false],
       [validateRefreshRateNumber(text12), false],
       [validateRefreshRateNumber(text13), false],
-
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = errorValidateRefreshRateNumber(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = errorValidateRefreshRateNumber(input)
+      expect(result).toBe(expected)
+    })
   })
 
   describe('errorValidateNegativeInteger', () => {
@@ -221,12 +228,10 @@ describe('Validations utils', () => {
       [validateRefreshRateNumber(text10), true],
       [validateRefreshRateNumber(text12), false],
       [validateRefreshRateNumber(text13), false],
-
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = errorValidateNegativeInteger(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = errorValidateNegativeInteger(input)
+      expect(result).toBe(expected)
+    })
   })
 
   describe('validateConsumerGroupId', () => {
@@ -235,11 +240,10 @@ describe('Validations utils', () => {
       ['123-1', '123-1'],
       ['$', '$'],
       ['11.zx-1', '11-1'],
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = validateConsumerGroupId(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = validateConsumerGroupId(input)
+      expect(result).toBe(expected)
+    })
   })
 
   describe('validateNumber', () => {
@@ -252,27 +256,21 @@ describe('Validations utils', () => {
       ['euiejk', ''],
       ['0', '0'],
       ['31231231231', '31231231231'],
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = validateNumber(input)
-        expect(result).toBe(expected)
-      })
+    ])('for input: %s (input), should be output: %s', (input, expected) => {
+      const result = validateNumber(input)
+      expect(result).toBe(expected)
+    })
   })
 
-  describe('validateTimeoutNumber', () => {
-    it.each([
-      ['123', '123'],
-      ['123-1', '1231'],
-      ['$', ''],
-      ['11.zx-1', '111'],
-      ['1ueooeu1', '11'],
-      ['euiejk', ''],
-      ['0', ''],
-      ['1000001', '1000000'],
-    ])('for input: %s (input), should be output: %s',
-      (input, expected) => {
-        const result = validateTimeoutNumber(input)
-        expect(result).toBe(expected)
-      })
+  describe('checkTimestamp', () => {
+    test.each(checkTimestampTests)('%j', ({ input, expected }) => {
+      expect(checkTimestamp(input)).toEqual(expected)
+    })
+  })
+
+  describe('checkConvertToDate', () => {
+    test.each(checkConvertToDateTests)('%j', ({ input, expected }) => {
+      expect(checkConvertToDate(input)).toEqual(expected)
+    })
   })
 })

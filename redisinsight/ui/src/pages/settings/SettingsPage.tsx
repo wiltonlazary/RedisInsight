@@ -1,48 +1,53 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import cx from 'classnames'
-import {
-  EuiForm,
-  EuiFormRow,
-  EuiSuperSelect,
-  EuiPage,
-  EuiPageBody,
-  EuiPageContentBody,
-  EuiTitle,
-  EuiPageHeader,
-  EuiCollapsibleNavGroup,
-  EuiLoadingSpinner,
-  EuiSpacer,
-  EuiText,
-  EuiCallOut,
-} from '@elastic/eui'
+
 import { useDispatch, useSelector } from 'react-redux'
 
 import { setTitle } from 'uiSrc/utils'
-import { THEMES } from 'uiSrc/constants'
+import { FeatureFlags } from 'uiSrc/constants'
 import { useDebouncedEffect } from 'uiSrc/services'
-import { ConsentsNotifications, ConsentsPrivacy } from 'uiSrc/components'
-import { sendEventTelemetry, sendPageViewTelemetry, TelemetryEvent, TelemetryPageView } from 'uiSrc/telemetry'
-import { appAnalyticsInfoSelector } from 'uiSrc/slices/app/info'
-import { ThemeContext } from 'uiSrc/contexts/themeContext'
+import {
+  ConsentsNotifications,
+  ConsentsPrivacy,
+  FeatureFlagComponent,
+} from 'uiSrc/components'
+import { sendPageViewTelemetry, TelemetryPageView } from 'uiSrc/telemetry'
 import {
   fetchUserConfigSettings,
   fetchUserSettingsSpec,
   userSettingsSelector,
 } from 'uiSrc/slices/user/user-settings'
 
-import { AdvancedSettings, WorkbenchSettings } from './components'
-
+import Divider from 'uiSrc/components/divider/Divider'
+import { Spacer } from 'uiSrc/components/base/layout/spacer'
+import {
+  Page,
+  PageBody,
+  PageContentBody,
+  PageHeader,
+} from 'uiSrc/components/base/layout/page'
+import { CallOut } from 'uiSrc/components/base/display/call-out/CallOut'
+import { Title } from 'uiSrc/components/base/text/Title'
+import { Text } from 'uiSrc/components/base/text'
+import { Loader, RICollapsibleNavGroup } from 'uiSrc/components/base/display'
+import { Col } from 'uiSrc/components/base/layout/flex'
+import {
+  AdvancedSettings,
+  CloudSettings,
+  ThemeSettings,
+  WorkbenchSettings,
+} from './components'
+import { DateTimeFormatter } from './components/general-settings'
 import styles from './styles.module.scss'
 
 const SettingsPage = () => {
-  const options = THEMES
-  const themeContext = useContext(ThemeContext)
-
   const [loading, setLoading] = useState(false)
   const { loading: settingsLoading } = useSelector(userSettingsSelector)
-  const { identified: analyticsIdentified } = useSelector(appAnalyticsInfoSelector)
+
+  const initialOpenSection = globalThis.location.hash || ''
 
   const dispatch = useDispatch()
+
   useEffect(() => {
     // componentDidMount
     // fetch config settings, after that take spec
@@ -50,47 +55,21 @@ const SettingsPage = () => {
   }, [])
 
   useEffect(() => {
-    if (analyticsIdentified) {
-      sendPageViewTelemetry({
-        name: TelemetryPageView.SETTINGS_PAGE
-      })
-    }
-  }, [analyticsIdentified])
+    sendPageViewTelemetry({
+      name: TelemetryPageView.SETTINGS_PAGE,
+    })
+  }, [])
 
   useDebouncedEffect(() => setLoading(settingsLoading), 100, [settingsLoading])
   setTitle('Settings')
 
-  const onChange = (value: string) => {
-    const previousValue = themeContext.theme
-    themeContext.changeTheme(value)
-    sendEventTelemetry({
-      event: TelemetryEvent.SETTINGS_COLOR_THEME_CHANGED,
-      eventData: {
-        previousColorTheme: previousValue,
-        currentColorTheme: value,
-      }
-    })
-  }
-
   const Appearance = () => (
     <>
-      <EuiForm component="form">
-        <EuiTitle size="xs">
-          <h4>Color Theme</h4>
-        </EuiTitle>
-        <EuiSpacer size="m" />
-        <EuiFormRow label="Specifies the color theme to be used in RedisInsight:">
-          <EuiSuperSelect
-            options={options}
-            valueOfSelected={themeContext.theme}
-            onChange={onChange}
-            style={{ marginTop: '12px' }}
-            data-test-subj="select-theme"
-          />
-        </EuiFormRow>
-        <EuiSpacer size="xl" />
-      </EuiForm>
+      <ThemeSettings />
       <ConsentsNotifications />
+      <Divider />
+      <Spacer />
+      <DateTimeFormatter />
     </>
   )
 
@@ -98,7 +77,7 @@ const SettingsPage = () => {
     <div>
       {loading && (
         <div className={styles.cover}>
-          <EuiLoadingSpinner size="xl" />
+          <Loader size="xl" />
         </div>
       )}
       <ConsentsPrivacy />
@@ -109,10 +88,21 @@ const SettingsPage = () => {
     <div>
       {loading && (
         <div className={styles.cover}>
-          <EuiLoadingSpinner size="xl" />
+          <Loader size="xl" />
         </div>
       )}
       <WorkbenchSettings />
+    </div>
+  )
+
+  const CloudSettingsGroup = () => (
+    <div>
+      {loading && (
+        <div className={styles.cover}>
+          <Loader size="xl" />
+        </div>
+      )}
+      <CloudSettings />
     </div>
   )
 
@@ -120,66 +110,83 @@ const SettingsPage = () => {
     <div>
       {loading && (
         <div className={styles.cover}>
-          <EuiLoadingSpinner size="xl" />
+          <Loader size="xl" />
         </div>
       )}
-      <EuiCallOut className={styles.warning}>
-        <EuiText size="s" className={styles.smallText}>
-          Advanced settings should only be changed if you understand their impact.
-        </EuiText>
-      </EuiCallOut>
+      <CallOut className={styles.warning}>
+        <Text size="s" className={styles.smallText}>
+          Advanced settings should only be changed if you understand their
+          impact.
+        </Text>
+      </CallOut>
       <AdvancedSettings />
     </div>
   )
 
   return (
-    <EuiPage className={styles.container}>
-      <EuiPageBody component="div">
-        <EuiPageHeader>
-          <EuiTitle size="l">
-            <h1 className={styles.title}>Settings</h1>
-          </EuiTitle>
-        </EuiPageHeader>
-        <EuiPageContentBody style={{ maxWidth: 792 }}>
-          <EuiCollapsibleNavGroup
-            isCollapsible
-            className={styles.accordion}
-            title="General"
-            initialIsOpen={false}
-            data-test-subj="accordion-appearance"
-          >
-            {Appearance()}
-          </EuiCollapsibleNavGroup>
-          <EuiCollapsibleNavGroup
-            isCollapsible
-            className={styles.accordion}
-            title="Privacy"
-            initialIsOpen={false}
-            data-test-subj="accordion-privacy-settings"
-          >
-            {PrivacySettings()}
-          </EuiCollapsibleNavGroup>
-          <EuiCollapsibleNavGroup
-            isCollapsible
-            className={styles.accordion}
-            title="Workbench"
-            initialIsOpen={false}
-            data-test-subj="accordion-workbench-settings"
-          >
-            {WorkbenchSettingsGroup()}
-          </EuiCollapsibleNavGroup>
-          <EuiCollapsibleNavGroup
-            isCollapsible
-            className={cx(styles.accordion, styles.accordionWithSubTitle)}
-            title="Advanced"
-            initialIsOpen={false}
-            data-test-subj="accordion-advanced-settings"
-          >
-            {AdvancedSettingsGroup()}
-          </EuiCollapsibleNavGroup>
-        </EuiPageContentBody>
-      </EuiPageBody>
-    </EuiPage>
+    <Page className={styles.container}>
+      <PageBody component="div">
+        <PageHeader>
+          <Title size="XXL" className={styles.title}>
+            Settings
+          </Title>
+        </PageHeader>
+
+        <PageContentBody style={{ maxWidth: 792 }}>
+          <Col gap="s">
+            <RICollapsibleNavGroup
+              isCollapsible
+              className={styles.accordion}
+              title="General"
+              initialIsOpen={initialOpenSection === '#general'}
+              data-test-subj="accordion-appearance"
+            >
+              {Appearance()}
+            </RICollapsibleNavGroup>{' '}
+            <RICollapsibleNavGroup
+              isCollapsible
+              className={styles.accordion}
+              title="Privacy"
+              initialIsOpen={initialOpenSection === '#privacy'}
+              data-test-subj="accordion-privacy-settings"
+            >
+              {PrivacySettings()}
+            </RICollapsibleNavGroup>
+            <RICollapsibleNavGroup
+              isCollapsible
+              className={styles.accordion}
+              title="Workbench"
+              initialIsOpen={initialOpenSection === '#workbench'}
+              data-test-subj="accordion-workbench-settings"
+              data-testid="accordion-workbench-settings"
+              id="accordion-workbench-settings"
+            >
+              {WorkbenchSettingsGroup()}
+            </RICollapsibleNavGroup>
+            <FeatureFlagComponent name={FeatureFlags.cloudSso}>
+              <RICollapsibleNavGroup
+                isCollapsible
+                className={cx(styles.accordion, styles.accordionWithSubTitle)}
+                title="Redis Cloud"
+                initialIsOpen={initialOpenSection === '#cloud'}
+                data-test-subj="accordion-cloud-settings"
+              >
+                {CloudSettingsGroup()}
+              </RICollapsibleNavGroup>
+            </FeatureFlagComponent>
+            <RICollapsibleNavGroup
+              isCollapsible
+              className={cx(styles.accordion, styles.accordionWithSubTitle)}
+              title="Advanced"
+              initialIsOpen={initialOpenSection === '#advanced'}
+              data-test-subj="accordion-advanced-settings"
+            >
+              {AdvancedSettingsGroup()}
+            </RICollapsibleNavGroup>
+          </Col>
+        </PageContentBody>
+      </PageBody>
+    </Page>
   )
 }
 

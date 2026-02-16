@@ -1,4 +1,4 @@
-import {t, Selector} from 'testcafe';
+import { t, Selector } from 'testcafe';
 import { WorkbenchPage } from '../pageObjects';
 
 const workbenchPage = new WorkbenchPage();
@@ -28,7 +28,14 @@ export class WorkbenchActions {
         await t.click(workbenchPage.selectViewType)
             .click(workbenchPage.viewTypeOptionClientList);
         await t.switchToIframe(workbenchPage.iframe);
-        await t.expect(Selector('tbody tr').count).eql(numberOfRowsInTextView);
+        const paginationSelector = Selector('a[data-test-subj=pagination-button-next]');
+        const tableRow =  Selector('tbody tr');
+        let rowCount = await tableRow.count;
+        if(await paginationSelector.visible) {
+            await t.click(paginationSelector);
+            rowCount += await tableRow.count;
+        }
+        await t.expect(rowCount).eql(numberOfRowsInTextView);
     }
     /**
         Verify error message after `client list` command if there is no permission to run

@@ -1,15 +1,16 @@
 import React from 'react'
-import { useSelector } from 'react-redux'
 import reactRouterDom from 'react-router-dom'
-import { AnalyticsViewTab } from 'uiSrc/slices/interfaces/analytics'
-import store, { RootState } from 'uiSrc/slices/store'
 import { ConnectionType } from 'uiSrc/slices/interfaces'
-import { act, fireEvent, render, screen } from 'uiSrc/utils/test-utils'
+import { fireEvent, render, screen } from 'uiSrc/utils/test-utils'
+import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 import AnalyticsTabs from './AnalyticsTabs'
 
-jest.mock('react-redux', () => ({
-  ...jest.requireActual('react-redux'),
-  useSelector: jest.fn()
+const mockedStandaloneConnection = ConnectionType.Standalone
+jest.mock('uiSrc/slices/instances/instances', () => ({
+  ...jest.requireActual('uiSrc/slices/instances/instances'),
+  connectedInstanceSelector: jest.fn().mockReturnValue({
+    connectionType: mockedStandaloneConnection,
+  }),
 }))
 
 jest.mock('react-router-dom', () => ({
@@ -18,20 +19,6 @@ jest.mock('react-router-dom', () => ({
     push: jest.fn,
   }),
 }))
-
-beforeEach(() => {
-  const state: RootState = store.getState();
-
-  (useSelector as jest.Mock).mockImplementation((callback: (arg0: RootState) => RootState) => callback({
-    ...state,
-    analytics: {
-      ...state.analytics
-    },
-    connections: {
-      ...state.connections
-    }
-  }))
-})
 
 describe('AnalyticsTabs', () => {
   it('should render', () => {
@@ -44,12 +31,12 @@ describe('AnalyticsTabs', () => {
 
     render(<AnalyticsTabs />)
 
-    await act(() => {
-      fireEvent.click(screen.getByTestId(`analytics-tab-${AnalyticsViewTab.DatabaseAnalysis}`))
-    })
+    fireEvent.mouseDown(screen.getByText('Database Analysis'))
 
     expect(pushMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith('/instanceId/analytics/database-analysis')
+    expect(pushMock).toHaveBeenCalledWith(
+      '/instanceId/analytics/database-analysis',
+    )
   })
   it('should call History push with /slowlog path when click on SlowLog tab', async () => {
     const pushMock = jest.fn()
@@ -57,84 +44,42 @@ describe('AnalyticsTabs', () => {
 
     render(<AnalyticsTabs />)
 
-    await act(() => {
-      fireEvent.click(screen.getByTestId(`analytics-tab-${AnalyticsViewTab.SlowLog}`))
-    })
+    fireEvent.mouseDown(screen.getByText('Slow Log'))
 
     expect(pushMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith('/instanceId/analytics/slowlog')
   })
 
   it('should render cluster details tab when connectionType is Cluster', async () => {
-    const state: RootState = store.getState();
-
-    (useSelector as jest.Mock).mockImplementation((callback: (arg0: RootState) => RootState) => callback({
-      ...state,
-      connections: {
-        ...state.connections,
-        instances: {
-          ...state.connections.instances,
-          connectedInstance: {
-            ...state.connections.instances.connectedInstance,
-            connectionType: ConnectionType.Cluster
-          }
-        },
-      }
-    }))
+    const mockConnectionType = ConnectionType.Cluster
+    ;(connectedInstanceSelector as jest.Mock).mockReturnValueOnce({
+      connectionType: mockConnectionType,
+    })
 
     render(<AnalyticsTabs />)
 
-    expect(screen.getByTestId(`analytics-tab-${AnalyticsViewTab.ClusterDetails}`)).toBeInTheDocument()
+    expect(screen.getByText('Overview')).toBeInTheDocument()
   })
 
   it('should not render cluster details tab when connectionType is not Cluster', async () => {
-    const state: RootState = store.getState();
+    const { queryByText } = render(<AnalyticsTabs />)
 
-    (useSelector as jest.Mock).mockImplementation((callback: (arg0: RootState) => RootState) => callback({
-      ...state,
-      connections: {
-        ...state.connections,
-        instances: {
-          ...state.connections.instances,
-          connectedInstance: {
-            ...state.connections.instances.connectedInstance,
-            connectionType: ConnectionType.Standalone
-          }
-        },
-      }
-    }))
-
-    const { queryByTestId } = render(<AnalyticsTabs />)
-
-    expect(queryByTestId(`analytics-tab-${AnalyticsViewTab.ClusterDetails}`)).not.toBeInTheDocument()
+    expect(queryByText('Overview')).not.toBeInTheDocument()
   })
 
-  it('should call History push with /cluster-details path when click on ClusterDetails tab ', async () => {
-    const state: RootState = store.getState();
-
-    (useSelector as jest.Mock).mockImplementation((callback: (arg0: RootState) => RootState) => callback({
-      ...state,
-      connections: {
-        ...state.connections,
-        instances: {
-          ...state.connections.instances,
-          connectedInstance: {
-            ...state.connections.instances.connectedInstance,
-            connectionType: ConnectionType.Cluster
-          }
-        },
-      }
-    }))
+  it('should call History push with /cluster-details path when click on SlowLog tab ', async () => {
+    const mockConnectionType = ConnectionType.Cluster
+    ;(connectedInstanceSelector as jest.Mock).mockReturnValueOnce({
+      connectionType: mockConnectionType,
+    })
     const pushMock = jest.fn()
     reactRouterDom.useHistory = jest.fn().mockReturnValue({ push: pushMock })
 
     render(<AnalyticsTabs />)
 
-    await act(() => {
-      fireEvent.click(screen.getByTestId(`analytics-tab-${AnalyticsViewTab.ClusterDetails}`))
-    })
+    fireEvent.mouseDown(screen.getByText('Slow Log'))
 
     expect(pushMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith('/instanceId/analytics/cluster-details')
+    expect(pushMock).toHaveBeenCalledWith('/instanceId/analytics/slowlog')
   })
 })

@@ -1,23 +1,21 @@
-import React, { ChangeEvent, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import cx from 'classnames'
-import {
-  EuiButtonIcon,
-  EuiFieldSearch,
-  keys,
-} from '@elastic/eui'
 
+import * as keys from 'uiSrc/constants/keys'
+import { SearchInput } from 'uiSrc/components/base/inputs'
 import { Maybe, Nullable } from 'uiSrc/utils'
+import { SearchIcon } from 'uiSrc/components/base/icons'
+import { IconButton } from 'uiSrc/components/base/forms/buttons'
 import styles from './styles.module.scss'
 
 export interface Props {
-  isOpen: boolean;
-  appliedValue: string;
-  initialValue?: string;
-  handleOpenState: (isOpen: boolean) => void;
-  fieldName: string;
-  prependSearchName: string;
-  onApply?: (value: string) => void;
-  searchValidation?: Maybe<(value: string) => string>;
+  isOpen: boolean
+  appliedValue: string
+  initialValue?: string
+  handleOpenState: (isOpen: boolean) => void
+  fieldName: string
+  onApply?: (value: string) => void
+  searchValidation?: Maybe<(value: string) => string>
 }
 
 const TableColumnSearchTrigger = (props: Props) => {
@@ -27,8 +25,7 @@ const TableColumnSearchTrigger = (props: Props) => {
     fieldName,
     appliedValue,
     initialValue = '',
-    prependSearchName,
-    onApply = () => { },
+    onApply = () => {},
     searchValidation,
   } = props
   const [inputEl, setInputEl] = useState<Nullable<HTMLInputElement>>(null)
@@ -49,54 +46,50 @@ const TableColumnSearchTrigger = (props: Props) => {
     handleOpenState(true)
   }
 
-  const handleOnBlur = (e?: React.FocusEvent<HTMLInputElement>) => {
-    const relatedTarget = e?.relatedTarget as HTMLInputElement
-    const target = e?.target as HTMLInputElement
-    if (relatedTarget?.classList.contains('euiFormControlLayoutClearButton')) {
-      return
-    }
-    if (!target.value) {
-      handleOpenState(false)
-    }
-  }
-
   const handleApply = (_value: string): void => {
     if (appliedValue !== _value) {
       onApply(_value)
     }
   }
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === keys.ENTER) {
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === keys.ENTER) {
       handleApply(value)
+    } else if (event.key === keys.ESCAPE) {
+      handleOpenState(false)
+    }
+  }
+
+  const handleOnBlur = (event?: React.FocusEvent<HTMLInputElement>) => {
+    const target = event?.target as HTMLInputElement
+
+    if (!target.value) {
+      handleOpenState(false)
     }
   }
 
   return (
     <div style={{ paddingRight: 10 }}>
-      <EuiButtonIcon
-        iconType="search"
+      <IconButton
+        icon={SearchIcon}
         aria-label={`Search ${fieldName}`}
-        color="primary"
         onClick={handleOpen}
         data-testid="search-button"
       />
       <div
         className={cx(styles.search)}
-        style={{ display: isOpen ? 'block' : 'none' }}
+        style={{ display: isOpen ? 'flex' : 'none' }}
       >
-        <EuiFieldSearch
+        <SearchInput
           onKeyDown={onKeyDown}
           onBlur={handleOnBlur}
-          inputRef={setInputEl}
+          ref={setInputEl}
           name={fieldName}
-          fullWidth
-          prepend={prependSearchName}
           placeholder="Search"
           value={value || ''}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            handleChangeValue(e.target.value)}
+          onChange={handleChangeValue}
           data-testid="search"
+          style={{ width: '100%' }}
         />
       </div>
     </div>

@@ -1,10 +1,21 @@
 import {
-  Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn, Index,
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 import { DatabaseEntity } from 'src/modules/database/entities/database.entity';
-import { RunQueryMode, ResultsMode } from 'src/modules/workbench/dto/create-command-execution.dto';
-import { Expose, Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
 import { IsInt, Min } from 'class-validator';
+import {
+  CommandExecutionType,
+  ResultsMode,
+  RunQueryMode,
+} from 'src/modules/workbench/models/command-execution';
+import { DataAsJsonString } from 'src/common/decorators';
 
 @Entity('command_execution')
 export class CommandExecutionEntity {
@@ -16,14 +27,12 @@ export class CommandExecutionEntity {
   @Expose()
   databaseId: string;
 
-  @ManyToOne(
-    () => DatabaseEntity,
-    {
-      nullable: false,
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => DatabaseEntity, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'databaseId' })
+  @Expose()
   database: DatabaseEntity;
 
   @Column({ nullable: false, type: 'text' })
@@ -35,14 +44,7 @@ export class CommandExecutionEntity {
   mode?: string = RunQueryMode.ASCII;
 
   @Column({ nullable: false, type: 'text' })
-  @Transform((object) => JSON.stringify(object), { toClassOnly: true })
-  @Transform((string) => {
-    try {
-      return JSON.parse(string);
-    } catch (e) {
-      return undefined;
-    }
-  }, { toPlainOnly: true })
+  @DataAsJsonString()
   @Expose()
   result: string;
 
@@ -55,26 +57,12 @@ export class CommandExecutionEntity {
   resultsMode?: string = ResultsMode.Default;
 
   @Column({ nullable: true })
-  @Transform((object) => JSON.stringify(object), { toClassOnly: true })
-  @Transform((string) => {
-    try {
-      return JSON.parse(string);
-    } catch (e) {
-      return undefined;
-    }
-  }, { toPlainOnly: true })
+  @DataAsJsonString()
   @Expose()
   summary?: string;
 
   @Column({ nullable: true })
-  @Transform((object) => JSON.stringify(object), { toClassOnly: true })
-  @Transform((string) => {
-    try {
-      return JSON.parse(string);
-    } catch (e) {
-      return undefined;
-    }
-  }, { toPlainOnly: true })
+  @DataAsJsonString()
   @Expose()
   nodeOptions?: string;
 
@@ -91,12 +79,12 @@ export class CommandExecutionEntity {
   @Min(0)
   db?: number;
 
+  @Column({ nullable: false, default: CommandExecutionType.Workbench })
+  @Expose()
+  type?: string = CommandExecutionType.Workbench;
+
   @CreateDateColumn()
   @Index()
   @Expose()
   createdAt: Date;
-
-  constructor(entity: Partial<CommandExecutionEntity>) {
-    Object.assign(this, entity);
-  }
 }

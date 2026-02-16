@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from 'uiSrc/utils/test-utils'
+import { render, screen, userEvent } from 'uiSrc/utils/test-utils'
 import { GROUP_TYPES_DISPLAY } from 'uiSrc/constants'
 import CHSearchFilter from './CHSearchFilter'
 
@@ -13,7 +13,7 @@ jest.mock(redisCommandsPath, () => {
     ...jest.requireActual(redisCommandsPath),
     appRedisCommandsSelector: jest.fn().mockReturnValue({
       ...defaultState,
-      commandGroups: commandGroupsMock
+      commandGroups: commandGroupsMock,
     }),
   }
 })
@@ -23,13 +23,18 @@ describe('CHSearchFilter', () => {
     expect(render(<CHSearchFilter submitFilter={jest.fn()} />)).toBeTruthy()
   })
 
-  it('should call submitFilter after choose options', () => {
+  it('should call submitFilter after choose options', async () => {
     const submitFilter = jest.fn()
-    const { queryByText } = render(<CHSearchFilter submitFilter={submitFilter} />)
+    render(<CHSearchFilter submitFilter={submitFilter} />)
     const testGroup = commandGroupsMock[0]
-    fireEvent.click(screen.getByTestId('select-filter-group-type'))
-    fireEvent.click(queryByText((GROUP_TYPES_DISPLAY as any)[testGroup]) || document)
+    const dropdownButton = screen.getByTestId('select-filter-group-type')
+    await userEvent.click(dropdownButton)
 
-    expect(submitFilter).toBeCalledWith(testGroup)
+    await userEvent.click(
+      (await screen.findByText((GROUP_TYPES_DISPLAY as any)[testGroup])) ||
+        document,
+    )
+
+    expect(submitFilter).toHaveBeenCalledWith(testGroup)
   })
 })

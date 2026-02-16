@@ -1,18 +1,25 @@
-import { BadRequestException, createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { plainToClass } from 'class-transformer';
+import {
+  BadRequestException,
+  createParamDecorator,
+  ExecutionContext,
+} from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 import { ClientContext, ClientMetadata } from 'src/common/models';
-import { sessionFromRequestFactory } from 'src/common/decorators';
 import { Validator } from 'class-validator';
-import { API_HEADER_DATABASE_INDEX, API_PARAM_DATABASE_ID } from 'src/common/constants';
+import {
+  API_HEADER_DATABASE_INDEX,
+  API_PARAM_DATABASE_ID,
+} from 'src/common/constants';
 import { ApiHeader, ApiParam } from '@nestjs/swagger';
+import { sessionMetadataFromRequestExecutionContext } from 'src/common/decorators/session/session-metadata.decorator';
 
 const validator = new Validator();
 
 export interface IClientMetadataParamOptions {
-  databaseIdParam?: string,
-  uniqueIdParam?: string,
-  context?: ClientContext,
-  ignoreDbIndex?: boolean,
+  databaseIdParam?: string;
+  uniqueIdParam?: string;
+  context?: ClientContext;
+  ignoreDbIndex?: boolean;
 }
 
 export const clientMetadataParamFactory = (
@@ -31,28 +38,39 @@ export const clientMetadataParamFactory = (
     uniqueId = req.params?.[options.uniqueIdParam];
   }
 
-  const clientMetadata = plainToClass(ClientMetadata, {
-    session: sessionFromRequestFactory(undefined, ctx),
-    databaseId,
-    uniqueId,
-    context: options?.context || ClientContext.Common,
-    db: options?.ignoreDbIndex ? undefined : req?.headers?.[API_HEADER_DATABASE_INDEX],
-  });
+  const clientMetadata = plainToInstance(
+    ClientMetadata,
+    {
+      sessionMetadata: sessionMetadataFromRequestExecutionContext(
+        undefined,
+        ctx,
+      ),
+      databaseId,
+      uniqueId,
+      context: options?.context || ClientContext.Common,
+      db: options?.ignoreDbIndex
+        ? undefined
+        : req?.headers?.[API_HEADER_DATABASE_INDEX],
+    },
+    {
+      groups: ['security'],
+    },
+  );
 
   const errors = validator.validateSync(clientMetadata, {
     whitelist: false, // we need this to allow additional fields if needed for flexibility
   });
 
   if (errors?.length) {
-    throw new BadRequestException(Object.values(errors[0].constraints) || 'Bad request');
+    throw new BadRequestException(
+      Object.values(errors[0].constraints) || 'Bad request',
+    );
   }
 
   return clientMetadata;
 };
 
-export const ClientMetadataParam = (
-  options?: IClientMetadataParamOptions,
-) => {
+export const ClientMetadataParam = (options?: IClientMetadataParamOptions) => {
   const opts: IClientMetadataParamOptions = {
     context: ClientContext.Common,
     databaseIdParam: API_PARAM_DATABASE_ID,
