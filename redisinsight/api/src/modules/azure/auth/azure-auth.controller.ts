@@ -9,10 +9,17 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AzureAuthService } from './azure-auth.service';
 import { AzureAuthAnalytics } from './azure-auth.analytics';
 import { AzureAuthStatus } from '../constants';
+import { AzureAuthLoginDto, AzureOAuthPrompt } from './dto';
 import { RequestSessionMetadata } from 'src/common/decorators';
 import { SessionMetadata } from 'src/common/models';
 import { wrapHttpError } from 'src/common/utils';
@@ -34,13 +41,20 @@ export class AzureAuthController {
     description:
       'Returns a URL to redirect the user to Microsoft login for Azure Entra ID authentication.',
   })
+  @ApiQuery({
+    name: 'prompt',
+    required: false,
+    enum: AzureOAuthPrompt,
+    description:
+      'OAuth prompt parameter: "select_account" to show account picker, "login" to force re-auth, "consent" to force consent dialog',
+  })
   @ApiResponse({
     status: 200,
     description: 'Authorization URL generated successfully',
   })
-  async login(): Promise<{ url: string }> {
+  async login(@Query() dto: AzureAuthLoginDto): Promise<{ url: string }> {
     this.logger.log('Initiating Azure OAuth login');
-    const { url } = await this.azureAuthService.getAuthorizationUrl();
+    const { url } = await this.azureAuthService.getAuthorizationUrl(dto.prompt);
     return { url };
   }
 
