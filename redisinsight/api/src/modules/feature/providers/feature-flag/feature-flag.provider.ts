@@ -85,25 +85,22 @@ export class FeatureFlagProvider {
       ),
     );
     this.strategies.set(
-      KnownFeatures.VectorSearch,
+      KnownFeatures.VectorSearchV2,
       new SwitchableFlagStrategy(
         this.featuresConfigService,
         this.settingsService,
       ),
-    );
-    this.strategies.set(
-      KnownFeatures.DevVectorSearch,
-      new SwitchableFlagStrategy(
-        this.featuresConfigService,
-        this.settingsService,
-      ),
-    );
-    this.strategies.set(
-      KnownFeatures.DatabasesListV2,
-      new CommonFlagStrategy(this.featuresConfigService, this.settingsService),
     );
     this.strategies.set(
       KnownFeatures.AzureEntraId,
+      new CommonFlagStrategy(this.featuresConfigService, this.settingsService),
+    );
+    this.strategies.set(
+      KnownFeatures.DevBrowser,
+      new CommonFlagStrategy(this.featuresConfigService, this.settingsService),
+    );
+    this.strategies.set(
+      KnownFeatures.DevVectorSet,
       new CommonFlagStrategy(this.featuresConfigService, this.settingsService),
     );
   }

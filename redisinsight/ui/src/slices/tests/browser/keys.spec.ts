@@ -43,6 +43,8 @@ import { CreateSetWithExpireDto } from 'apiSrc/modules/browser/set/dto'
 import { CreateZSetWithExpireDto } from 'apiSrc/modules/browser/z-set/dto'
 import { SetStringWithExpireDto } from 'apiSrc/modules/browser/string/dto'
 import { rootReducer } from '../../store'
+import { loadVectorSetElements } from '../../browser/vectorSet'
+import { mockVectorSetKeyInfo } from 'uiSrc/mocks/factories/browser/vectorSet/vectorSetElement.factory'
 import { getString, getStringSuccess } from '../../browser/string'
 import reducer, {
   addHashKey,
@@ -53,6 +55,7 @@ import reducer, {
   addReJSONKey,
   addSetKey,
   addStringKey,
+  addVectorSetKey,
   addZsetKey,
   defaultSelectedKeyAction,
   defaultSelectedKeyActionFailure,
@@ -107,6 +110,7 @@ import reducer, {
   setLastBatchPatternKeys,
   updateSelectedKeyRefreshTime,
   refreshKey,
+  fetchNamespaceSearchable,
 } from '../../browser/keys'
 
 const riConfig = getConfig()
@@ -1533,6 +1537,21 @@ describe('keys slice', () => {
           ]),
         )
       })
+
+      it('should dispatch loadVectorSetElements for VectorSet key type', async () => {
+        const data = mockVectorSetKeyInfo
+        const responsePayload = { data, status: 200 }
+
+        apiService.post = jest.fn().mockResolvedValue(responsePayload)
+
+        await store.dispatch<any>(fetchKeyInfo(data.name))
+
+        expect(store.getActions()).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining(loadVectorSetElements(undefined)),
+          ]),
+        )
+      })
     })
 
     describe('refreshKeyInfoAction', () => {
@@ -1766,6 +1785,58 @@ describe('keys slice', () => {
       })
     })
 
+    describe('addVectorSetKey', () => {
+      it('success to add vector set key', async () => {
+        const data = {
+          keyName: stringToBuffer('myVectorSet'),
+          elements: [
+            { name: stringToBuffer('el-1'), vectorValues: [0.1, 0.2, 0.3] },
+          ],
+        }
+        const responsePayload = { status: 200 }
+
+        apiService.post = jest.fn().mockResolvedValue(responsePayload)
+
+        await store.dispatch<any>(addVectorSetKey(data, jest.fn()))
+
+        const expectedActions = [
+          addKey(),
+          addKeySuccess(),
+          updateKeyList({
+            keyName: data.keyName,
+            keyType: KeyTypes.VectorSet,
+          }),
+          addMessageNotification(successMessages.ADDED_NEW_KEY(data.keyName)),
+        ]
+        expect(store.getActions()).toEqual(expectedActions)
+      })
+
+      it('calls onFailAction and dispatches failure on error', async () => {
+        const data = {
+          keyName: stringToBuffer('myVectorSet'),
+          elements: [
+            { name: stringToBuffer('el-1'), vectorValues: [0.1, 0.2, 0.3] },
+          ],
+        }
+        const errorMessage = 'Something went wrong'
+        const responsePayload = {
+          response: { status: 500, data: { message: errorMessage } },
+        }
+
+        apiService.post = jest.fn().mockRejectedValue(responsePayload)
+        const onFail = jest.fn()
+
+        await store.dispatch<any>(addVectorSetKey(data, jest.fn(), onFail))
+
+        expect(onFail).toHaveBeenCalled()
+        expect(
+          store
+            .getActions()
+            .some((action) => action.type === 'keys/addKeyFailure'),
+        ).toBe(true)
+      })
+    })
+
     describe('deleteSelectedKey', () => {
       it('should call proper actions on success', async () => {
         // Arrange
@@ -1849,6 +1920,10 @@ describe('keys slice', () => {
         const responsePayload = { status: 200 }
 
         apiService.patch = jest.fn().mockResolvedValue(responsePayload)
+        apiService.post = jest.fn().mockResolvedValue({
+          data: { data: '{}', keyName: 'keyName' },
+          status: 200,
+        })
 
         // Act
         await store.dispatch<any>(editKeyTTL(key, ttl))
@@ -2226,6 +2301,74 @@ describe('keys slice', () => {
           deleteSearchHistoryFailure(),
         ]
         expect(store.getActions()).toEqual(expectedActions)
+      })
+    })
+
+    describe('fetchNamespaceSearchable', () => {
+      it('should call API with correct prefixes and invoke onSuccess', async () => {
+        const prefixes: [string, string][] = [
+          ['0.0', 'user:'],
+          ['0.1', 'session:'],
+        ]
+        const apiResponse = [
+          { prefix: 'user:', key: { name: 'user:1', type: 'hash' } },
+          { prefix: 'session:' },
+        ]
+        const responsePayload = { data: apiResponse, status: 200 }
+        const apiServiceMock = jest.fn().mockResolvedValue(responsePayload)
+        const onSuccessMock = jest.fn()
+        apiService.post = apiServiceMock
+
+        await store.dispatch<any>(
+          fetchNamespaceSearchable(prefixes, undefined, onSuccessMock),
+        )
+
+        expect(apiServiceMock).toBeCalledWith(
+          '/databases//keys/get-namespace-searchable',
+          { prefixes: ['user:', 'session:'] },
+          { signal: undefined },
+        )
+
+        expect(onSuccessMock).toBeCalledWith([
+          {
+            prefix: 'user:',
+            key: { name: 'user:1', type: 'hash' },
+            path: '0.0',
+          },
+          { prefix: 'session:', path: '0.1' },
+        ])
+      })
+
+      it('should call onFail on error', async () => {
+        const prefixes: [string, string][] = [['0.0', 'user:']]
+        const responsePayload = {
+          response: {
+            status: 500,
+            data: { message: 'Internal error' },
+          },
+        }
+        apiService.post = jest.fn().mockRejectedValue(responsePayload)
+        const onFailMock = jest.fn()
+
+        await store.dispatch<any>(
+          fetchNamespaceSearchable(prefixes, undefined, undefined, onFailMock),
+        )
+
+        expect(onFailMock).toHaveBeenCalled()
+      })
+
+      it('should not throw or call onFail on cancelled request', async () => {
+        const prefixes: [string, string][] = [['0.0', 'user:']]
+        const cancelError = { __CANCEL__: true }
+        Object.defineProperty(cancelError, '__CANCEL__', { value: true })
+        apiService.post = jest.fn().mockRejectedValue(cancelError)
+        const onFailMock = jest.fn()
+
+        await store.dispatch<any>(
+          fetchNamespaceSearchable(prefixes, undefined, undefined, onFailMock),
+        )
+
+        expect(onFailMock).not.toHaveBeenCalled()
       })
     })
 

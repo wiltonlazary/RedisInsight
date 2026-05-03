@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useHistory, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
 import { isNumber } from 'lodash'
-import styled from 'styled-components'
 
 import {
   formatLongName,
@@ -26,6 +24,7 @@ import {
   appContextBrowser,
   setBrowserPanelSizes,
   setBrowserBulkActionOpen,
+  setBrowserKeyListDataLoaded,
   appContextSelector,
 } from 'uiSrc/slices/app/context'
 import { resetErrors } from 'uiSrc/slices/app/notifications'
@@ -35,41 +34,35 @@ import {
   connectedInstanceSelector,
 } from 'uiSrc/slices/instances/instances'
 
-import { KeyViewType } from 'uiSrc/slices/interfaces/keys'
+import { KeyViewType, SearchMode } from 'uiSrc/slices/interfaces/keys'
 import {
   SCAN_COUNT_DEFAULT,
   SCAN_TREE_COUNT_DEFAULT,
 } from 'uiSrc/constants/api'
+import { FeatureFlags, Pages } from 'uiSrc/constants'
+import { appFeatureFlagsFeaturesSelector } from 'uiSrc/slices/app/features'
 import OnboardingStartPopover from 'uiSrc/pages/browser/components/onboarding-start-popover'
 import { sidePanelsSelector } from 'uiSrc/slices/panels/sidePanels'
 import { useStateWithContext } from 'uiSrc/services/hooks'
 
 import { EmptyButton } from 'uiSrc/components/base/forms/buttons'
 import { ArrowLeftIcon } from 'uiSrc/components/base/icons'
-import {
-  ResizableContainer,
-  ResizablePanel,
-  ResizablePanelHandle,
-} from 'uiSrc/components/base/layout'
+import { ResizablePanelHandle } from 'uiSrc/components/base/layout'
 
 import { useAppNavigationActions } from 'uiSrc/contexts/AppNavigationActionsProvider'
 import Actions from 'uiSrc/pages/browser/components/actions/Actions'
+import { MakeSearchableModalProvider } from './components/make-searchable-modal'
 import BrowserSearchPanel from './components/browser-search-panel'
 import BrowserLeftPanel from './components/browser-left-panel'
 import BrowserRightPanel from './components/browser-right-panel'
 
-import styles from './styles.module.scss'
+import * as S from './BrowserPage.styles'
 
 const widthResponsiveSize = 1280
 const widthExplorePanel = 460
 
 export const firstPanelId = 'keys'
 export const secondPanelId = 'keyDetails'
-
-const BorderedResizablePanel = styled(ResizablePanel)`
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.semantic.color.border.neutral500};
-`
 
 const isOneSideMode = (isInsightsOpen: boolean) =>
   globalThis.innerWidth <
@@ -97,13 +90,18 @@ const BrowserPage = () => {
   const { viewType, searchMode } = useSelector(keysSelector)
   const { openedPanel: openedSidePanel } = useSelector(sidePanelsSelector)
   const overview = useSelector(connectedInstanceOverviewSelector)
+  const featureFlags = useSelector(appFeatureFlagsFeaturesSelector)
+  const isDevBrowser = featureFlags?.[FeatureFlags.devBrowser]?.flag ?? false
+  const isVectorSearch =
+    featureFlags?.[FeatureFlags.vectorSearchV2]?.flag ?? false
+  const panelMinSize = isDevBrowser ? 20 : 45
+  const panelDefaultSize = 50
 
   const [isPageViewSent, setIsPageViewSent] = useState(false)
   const [arePanelsCollapsed, setArePanelsCollapsed] = useState(
     isOneSideMode(!!openedSidePanel),
   )
   const [isAddKeyPanelOpen, setIsAddKeyPanelOpen] = useState(false)
-  const [isCreateIndexPanelOpen, setIsCreateIndexPanelOpen] = useState(false)
   const [isBulkActionsPanelOpen, setIsBulkActionsPanelOpen] = useState(
     bulkActionOpenContext,
   )
@@ -120,6 +118,7 @@ const BrowserPage = () => {
   const isBulkActionsPanelOpenRef = useRef<boolean>(isBulkActionsPanelOpen)
   const isSidePanelOpenRef = useRef<boolean>(!!openedSidePanel)
 
+  const history = useHistory()
   const dispatch = useDispatch()
 
   const dbName = `${formatLongName(connectedInstanceName, 33, 0, '...')} ${getDbIndex(db)}`
@@ -144,6 +143,7 @@ const BrowserPage = () => {
       })
       dispatch(setBrowserBulkActionOpen(isBulkActionsPanelOpenRef.current))
       dispatch(setBrowserSelectedKey(selectedKeyRef.current))
+      dispatch(setBrowserKeyListDataLoaded(SearchMode.Pattern, false))
 
       if (!selectedKeyRef.current) {
         dispatch(toggleBrowserFullScreen(false))
@@ -202,12 +202,7 @@ const BrowserPage = () => {
   }
 
   const handlePanel = (value: boolean, keyName?: RedisResponseBuffer) => {
-    if (
-      value &&
-      !isAddKeyPanelOpen &&
-      !isBulkActionsPanelOpen &&
-      !isCreateIndexPanelOpen
-    ) {
+    if (value && !isAddKeyPanelOpen && !isBulkActionsPanelOpen) {
       dispatch(resetKeyInfo())
     }
 
@@ -235,15 +230,19 @@ const BrowserPage = () => {
     handlePanel(true)
   }, [])
 
-  const handleCreateIndexPanel = useCallback((value: boolean) => {
-    handlePanel(value)
-    setIsCreateIndexPanelOpen(value)
-  }, [])
+  const handleCreateIndexPanel = useCallback(
+    (value: boolean) => {
+      if (value && isVectorSearch) {
+        history.push(Pages.vectorSearch(instanceId))
+        return
+      }
+    },
+    [isVectorSearch, instanceId],
+  )
 
   const closeRightPanels = useCallback(() => {
     setIsAddKeyPanelOpen(false)
     setIsBulkActionsPanelOpen(false)
-    setIsCreateIndexPanelOpen(false)
   }, [])
 
   useEffect(() => {
@@ -291,92 +290,84 @@ const BrowserPage = () => {
   }
 
   const isRightPanelOpen =
-    selectedKey !== null ||
-    isAddKeyPanelOpen ||
-    isBulkActionsPanelOpen ||
-    isCreateIndexPanelOpen
+    selectedKey !== null || isAddKeyPanelOpen || isBulkActionsPanelOpen
   const isRightPanelFullScreen =
     (isBrowserFullScreen && isRightPanelOpen) ||
     (arePanelsCollapsed && isRightPanelOpen)
 
   return (
-    <div
-      className={`browserPage ${styles.container}`}
-      data-testid="browser-page"
-    >
-      {arePanelsCollapsed && isRightPanelOpen && !isBrowserFullScreen && (
-        <EmptyButton
-          icon={ArrowLeftIcon}
-          size="small"
-          onClick={closePanel}
-          className={styles.backBtn}
-          data-testid="back-right-panel-btn"
+    <MakeSearchableModalProvider>
+      <S.PageContainer className="browserPage" data-testid="browser-page">
+        {arePanelsCollapsed && isRightPanelOpen && !isBrowserFullScreen && (
+          <S.BackButtonWrapper>
+            <EmptyButton
+              icon={ArrowLeftIcon}
+              size="small"
+              onClick={closePanel}
+              data-testid="back-right-panel-btn"
+            >
+              Back
+            </EmptyButton>
+          </S.BackButtonWrapper>
+        )}
+        <S.SearchPanelWrapper
+          $hidden={isRightPanelFullScreen}
+          $sidePanelOpen={!!openedSidePanel}
         >
-          Back
-        </EmptyButton>
-      )}
-      <div
-        className={cx({
-          [styles.hidden]: isRightPanelFullScreen,
-        })}
-      >
-        <BrowserSearchPanel handleCreateIndexPanel={handleCreateIndexPanel} />
-      </div>
-      <div className={cx(styles.main)}>
-        <ResizableContainer
-          className={styles.resizableContainer}
-          direction="horizontal"
-          onLayout={onPanelWidthChange}
-        >
-          <BorderedResizablePanel
-            defaultSize={sizes && sizes[0] ? sizes[0] : 50}
-            minSize={45}
-            id={firstPanelId}
-            className={cx({
-              [styles.fullWidth]:
-                arePanelsCollapsed ||
-                (isBrowserFullScreen && !isRightPanelOpen),
-            })}
+          <BrowserSearchPanel handleCreateIndexPanel={handleCreateIndexPanel} />
+        </S.SearchPanelWrapper>
+        <S.MainContent grow $sidePanelOpen={!!openedSidePanel}>
+          <S.StyledResizableContainer
+            direction="horizontal"
+            onLayout={onPanelWidthChange}
           >
-            <BrowserLeftPanel
-              selectedKey={selectedKey}
-              selectKey={selectKey}
-              removeSelectedKey={handleRemoveSelectedKey}
-              handleAddKeyPanel={handleAddKeyPanel}
-              handleBulkActionsPanel={handleBulkActionsPanel}
-            />
-          </BorderedResizablePanel>
-          {!arePanelsCollapsed && !isBrowserFullScreen && (
-            <ResizablePanelHandle />
-          )}
-          <BorderedResizablePanel
-            defaultSize={sizes && sizes[1] ? sizes[1] : 50}
-            minSize={45}
-            id={secondPanelId}
-            className={cx({
-              [styles.keyDetailsOpen]: isRightPanelOpen,
-              [styles.fullWidth]:
-                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
-              [styles.keyDetails]:
-                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen),
-            })}
-          >
-            <BrowserRightPanel
-              arePanelsCollapsed={arePanelsCollapsed}
-              setSelectedKey={setSelectedKey}
-              selectedKey={selectedKey}
-              isAddKeyPanelOpen={isAddKeyPanelOpen}
-              isCreateIndexPanelOpen={isCreateIndexPanelOpen}
-              isBulkActionsPanelOpen={isBulkActionsPanelOpen}
-              handleAddKeyPanel={handleAddKeyPanel}
-              handleBulkActionsPanel={handleBulkActionsPanel}
-              closeRightPanels={closeRightPanels}
-            />
-          </BorderedResizablePanel>
-        </ResizableContainer>
-      </div>
-      <OnboardingStartPopover />
-    </div>
+            <S.BorderedResizablePanel
+              defaultSize={sizes && sizes[0] ? sizes[0] : panelDefaultSize}
+              minSize={panelMinSize}
+              id={firstPanelId}
+              $fullWidth={
+                arePanelsCollapsed || (isBrowserFullScreen && !isRightPanelOpen)
+              }
+            >
+              <BrowserLeftPanel
+                selectedKey={selectedKey}
+                selectKey={selectKey}
+                removeSelectedKey={handleRemoveSelectedKey}
+                handleAddKeyPanel={handleAddKeyPanel}
+                handleBulkActionsPanel={handleBulkActionsPanel}
+              />
+            </S.BorderedResizablePanel>
+            {!arePanelsCollapsed && !isBrowserFullScreen && (
+              <ResizablePanelHandle />
+            )}
+            <S.BorderedResizablePanel
+              defaultSize={sizes && sizes[1] ? sizes[1] : panelDefaultSize}
+              minSize={panelMinSize}
+              id={secondPanelId}
+              $keyDetailsOpen={isRightPanelOpen}
+              $fullWidth={
+                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen)
+              }
+              $keyDetails={
+                arePanelsCollapsed || (isRightPanelOpen && isBrowserFullScreen)
+              }
+            >
+              <BrowserRightPanel
+                arePanelsCollapsed={arePanelsCollapsed}
+                setSelectedKey={setSelectedKey}
+                selectedKey={selectedKey}
+                isAddKeyPanelOpen={isAddKeyPanelOpen}
+                isBulkActionsPanelOpen={isBulkActionsPanelOpen}
+                handleAddKeyPanel={handleAddKeyPanel}
+                handleBulkActionsPanel={handleBulkActionsPanel}
+                closeRightPanels={closeRightPanels}
+              />
+            </S.BorderedResizablePanel>
+          </S.StyledResizableContainer>
+        </S.MainContent>
+        <OnboardingStartPopover />
+      </S.PageContainer>
+    </MakeSearchableModalProvider>
   )
 }
 

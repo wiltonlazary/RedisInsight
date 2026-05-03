@@ -1,5 +1,5 @@
 import { ClientContext, ClientMetadata } from 'src/common/models';
-import { isNumber } from 'lodash';
+import { isNumber, pick } from 'lodash';
 import { RedisString, UNKNOWN_REDIS_INFO } from 'src/common/constants';
 import apiConfig from 'src/utils/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -8,6 +8,7 @@ import { convertArrayReplyToObject } from '../utils';
 import * as semverCompare from 'node-version-compare';
 import { RedisDatabaseHelloResponse } from 'src/modules/database/dto/redis-info.dto';
 import { plainToClass } from 'class-transformer';
+import { Database } from 'src/modules/database/models/database';
 
 const REDIS_CLIENTS_CONFIG = apiConfig.get('redis_clients');
 
@@ -55,10 +56,15 @@ export type RedisClientCommandReply =
 export enum RedisFeature {
   HashFieldsExpiration = 'HashFieldsExpiration',
   UnlinkCommand = 'UnlinkCommand',
+  VRangeCommand = 'VRangeCommand',
 }
+
+const CLIENT_DATABASE_FIELDS: (keyof Database)[] = ['providerDetails'];
 
 export abstract class RedisClient extends EventEmitter2 {
   public readonly id: string;
+
+  public readonly database: Partial<Database>;
 
   protected _redisVersion: string | undefined;
 
@@ -70,11 +76,17 @@ export abstract class RedisClient extends EventEmitter2 {
     public readonly clientMetadata: ClientMetadata,
     protected readonly client: unknown,
     public readonly options: IRedisClientOptions,
+    database: Partial<Database> = {},
   ) {
     super();
     this.clientMetadata = RedisClient.prepareClientMetadata(clientMetadata);
+    this.database = RedisClient.pickDatabaseMetadata(database);
     this.lastTimeUsed = Date.now();
     this.id = RedisClient.generateId(this.clientMetadata);
+  }
+
+  static pickDatabaseMetadata(database: Partial<Database>): Partial<Database> {
+    return pick(database, CLIENT_DATABASE_FIELDS);
   }
 
   /**
@@ -175,6 +187,14 @@ export abstract class RedisClient extends EventEmitter2 {
           const redisVersion = await this.getRedisVersion();
           // UNLINK command was introduced in Redis 4.0.0
           return redisVersion && semverCompare('4.0.0', redisVersion) < 1;
+        } catch (e) {
+          return false;
+        }
+      case RedisFeature.VRangeCommand:
+        try {
+          const redisVersion = await this.getRedisVersion();
+          // VRANGE command was introduced in Redis 8.4
+          return redisVersion && semverCompare('8.4', redisVersion) < 1;
         } catch (e) {
           return false;
         }

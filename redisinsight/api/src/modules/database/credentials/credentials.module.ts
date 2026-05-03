@@ -1,19 +1,27 @@
 import { DynamicModule, Global, Type } from '@nestjs/common';
-import { CredentialStrategyProvider } from './credential-strategy.provider';
+import {
+  CredentialStrategyProvider,
+  ICredentialStrategy,
+} from './credential-strategy.provider';
 import { LocalCredentialStrategyProvider } from './local.credential-strategy.provider';
 import { DefaultCredentialStrategy } from './strategies/default.credential-strategy';
 import { AzureEntraIdCredentialStrategy } from './strategies/azure-entra-id.credential-strategy';
+import { AzureAccessKeyCredentialStrategy } from './strategies/azure-access-key.credential-strategy';
 
 @Global()
 export class CredentialsModule {
   static register(
     provider: Type<CredentialStrategyProvider> = LocalCredentialStrategyProvider,
+    strategies: Type<ICredentialStrategy>[] = [
+      AzureEntraIdCredentialStrategy,
+      AzureAccessKeyCredentialStrategy,
+      DefaultCredentialStrategy,
+    ],
   ): DynamicModule {
     return {
       module: CredentialsModule,
       providers: [
-        AzureEntraIdCredentialStrategy,
-        DefaultCredentialStrategy,
+        ...strategies,
         {
           provide: CredentialStrategyProvider,
           useClass: provider,

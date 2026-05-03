@@ -31,10 +31,11 @@ export enum KnownFeatures {
   HashFieldExpiration = 'hashFieldExpiration',
   EnhancedCloudUI = 'enhancedCloudUI',
   DatabaseManagement = 'databaseManagement',
-  VectorSearch = 'vectorSearch',
-  DevVectorSearch = 'dev-vectorSearch',
-  DatabasesListV2 = 'databasesListV2',
-  AzureEntraId = 'dev-azureEntraId',
+  VectorSearchV2 = 'vectorSearchV2',
+  AzureEntraId = 'azureEntraId',
+  DevAzureEntraId = 'dev-azureEntraId',
+  DevBrowser = 'dev-browser',
+  DevVectorSet = 'dev-vectorSet',
 }
 
 export interface IFeatureFlag {

@@ -58,20 +58,25 @@ export const knownFeatures: Record<KnownFeatures, IFeatureFlag> = {
       flag: SERVER_CONFIG.databaseManagement,
     }),
   },
-  [KnownFeatures.VectorSearch]: {
-    name: KnownFeatures.VectorSearch,
+  [KnownFeatures.VectorSearchV2]: {
+    name: KnownFeatures.VectorSearchV2,
     storage: FeatureStorage.Database,
   },
-  [KnownFeatures.DevVectorSearch]: {
-    name: KnownFeatures.DevVectorSearch,
-    storage: FeatureStorage.Database,
-  },
-  [KnownFeatures.DatabasesListV2]: {
-    name: KnownFeatures.DatabasesListV2,
-    storage: FeatureStorage.Database,
-  },
+
   [KnownFeatures.AzureEntraId]: {
     name: KnownFeatures.AzureEntraId,
+    storage: FeatureStorage.Database,
+  },
+  [KnownFeatures.DevAzureEntraId]: {
+    name: KnownFeatures.DevAzureEntraId,
+    storage: FeatureStorage.Database,
+  },
+  [KnownFeatures.DevBrowser]: {
+    name: KnownFeatures.DevBrowser,
+    storage: FeatureStorage.Database,
+  },
+  [KnownFeatures.DevVectorSet]: {
+    name: KnownFeatures.DevVectorSet,
     storage: FeatureStorage.Database,
   },
 };

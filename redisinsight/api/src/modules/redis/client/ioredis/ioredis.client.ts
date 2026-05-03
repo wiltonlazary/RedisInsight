@@ -9,7 +9,11 @@ import {
 } from 'src/modules/redis/client';
 import { RedisString } from 'src/common/constants';
 import { ClientMetadata } from 'src/common/models';
-import { BrowserToolHashCommands } from 'src/modules/browser/constants/browser-tool-commands';
+import {
+  BrowserToolHashCommands,
+  BrowserToolVectorSetCommands,
+} from 'src/modules/browser/constants/browser-tool-commands';
+import { Database } from 'src/modules/database/models/database';
 
 // should return array (same as original reply)
 Redis.Command.setReplyTransformer(
@@ -22,13 +26,24 @@ export abstract class IoredisClient extends RedisClient {
     public readonly clientMetadata: ClientMetadata,
     protected readonly client: Redis | Cluster,
     public readonly options: IRedisClientOptions,
+    database: Partial<Database>,
   ) {
-    super(clientMetadata, client, options);
+    super(clientMetadata, client, options, database);
     client.addBuiltinCommand(BrowserToolHashCommands.HExpire);
     client.addBuiltinCommand(BrowserToolHashCommands.HTtl);
     client.addBuiltinCommand(BrowserToolHashCommands.HPersist);
     // fix not existing command in pipeline
     client.addBuiltinCommand(BrowserToolHashCommands.HGETALL);
+    // Vector Set commands
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VAdd);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VCard);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VInfo);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VRange);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VRandMember);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VEmb);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VGetAttr);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VSetAttr);
+    client.addBuiltinCommand(BrowserToolVectorSetCommands.VRem);
   }
 
   static prepareCommandOptions(options: IRedisClientCommandOptions): any {

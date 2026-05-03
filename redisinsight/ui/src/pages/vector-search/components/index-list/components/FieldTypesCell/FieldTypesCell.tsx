@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 
-import { FieldTag } from 'uiSrc/components/new-index/create-index-step/field-box/FieldTag'
+import { FieldTag } from 'uiSrc/pages/vector-search/components/field-tag/FieldTag'
 import { FlexGroup } from 'uiSrc/components/base/layout/flex'
 import { IndexListRow } from '../../IndexList.types'
 
@@ -18,7 +18,7 @@ export const FieldTypesCell = ({ row }: { row: IndexListRow }) => {
   )
 
   return (
-    <FlexGroup wrap gap="xs" data-testid={`index-field-types-${row.id}`}>
+    <FlexGroup wrap gap="s" data-testid={`index-field-types-${row.id}`}>
       {fieldTags}
     </FlexGroup>
   )

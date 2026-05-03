@@ -42,6 +42,7 @@ import {
   resetBrowserTree,
   setBrowserSelectedKey,
 } from 'uiSrc/slices/app/context'
+import { NamespaceSearchableResult } from 'uiSrc/slices/interfaces/keys'
 
 import { CreateListWithExpireDto } from 'apiSrc/modules/browser/list/dto'
 import { SetStringWithExpireDto } from 'apiSrc/modules/browser/string/dto'
@@ -54,6 +55,7 @@ import {
   GetKeysWithDetailsResponse,
 } from 'apiSrc/modules/browser/keys/dto'
 import { CreateStreamDto } from 'apiSrc/modules/browser/stream/dto'
+import { CreateVectorSetWithExpireDto } from 'uiSrc/slices/interfaces/vectorSet'
 
 import { fetchString } from './string'
 import {
@@ -62,6 +64,7 @@ import {
   refreshZsetMembersAction,
 } from './zset'
 import { fetchSetMembers, refreshSetMembersAction } from './set'
+import { fetchVectorSetElements } from './vectorSet'
 import { fetchReJSON, setEditorType, setIsWithinThreshold } from './rejson'
 import {
   setHashInitialState,
@@ -162,6 +165,8 @@ export const initialKeyInfo = {
   type: KeyTypes.String,
   size: 1,
   length: 0,
+  quantType: undefined,
+  vectorDim: undefined,
 }
 
 const getInitialSelectedKeyState = (state: KeysStore) => ({
@@ -882,6 +887,9 @@ export function fetchKeyInfo(
           )
         }
       }
+      if (data.type === KeyTypes.VectorSet) {
+        dispatch<any>(fetchVectorSetElements({ key, resetData }))
+      }
     } catch (_err) {
       const error = _err as AxiosError
       const errorMessage = getApiErrorMessage(error)
@@ -1050,6 +1058,17 @@ export function addStreamKey(
   onFailAction?: () => void,
 ) {
   return addTypedKey(data, KeyTypes.Stream, onSuccessAction, onFailAction)
+}
+
+// Asynchronous thunk action
+// Vector set create uses POST /vector-set (create-only; VADD against a new key).
+// The element PUT endpoint reuses the same path for adding to an existing key.
+export function addVectorSetKey(
+  data: CreateVectorSetWithExpireDto,
+  onSuccessAction?: () => void,
+  onFailAction?: () => void,
+) {
+  return addTypedKey(data, KeyTypes.VectorSet, onSuccessAction, onFailAction)
 }
 
 // Asynchronous thunk action
@@ -1279,6 +1298,43 @@ export function fetchKeysMetadataTree(
         onFailAction?.()
         console.error(error)
       }
+    }
+  }
+}
+
+export function fetchNamespaceSearchable(
+  prefixes: [string, string][],
+  signal?: AbortSignal,
+  onSuccessAction?: (data: NamespaceSearchableResult[]) => void,
+  onFailAction?: () => void,
+) {
+  return async (_dispatch: AppDispatch, stateInit: () => RootState) => {
+    const state = stateInit()
+
+    try {
+      const { data, status } = await apiService.post<
+        NamespaceSearchableResult[]
+      >(
+        getUrl(
+          state.connections.instances.connectedInstance?.id,
+          ApiEndpoints.KEYS_NAMESPACE_SEARCHABLE,
+        ),
+        { prefixes: prefixes.map(([, prefix]) => prefix) },
+        { signal },
+      )
+
+      if (isStatusSuccessful(status)) {
+        const results = data.map((item, i) => ({
+          ...item,
+          path: prefixes[i][0],
+        }))
+
+        onSuccessAction?.(results)
+      }
+    } catch (_err) {
+      if (axios.isCancel(_err)) return
+
+      onFailAction?.()
     }
   }
 }
@@ -1545,6 +1601,10 @@ export function refreshKey(
       }
       case KeyTypes.Stream: {
         dispatch(refreshStream(key, resetData))
+        break
+      }
+      case KeyTypes.VectorSet: {
+        dispatch(fetchVectorSetElements({ key, resetData }))
         break
       }
       default:

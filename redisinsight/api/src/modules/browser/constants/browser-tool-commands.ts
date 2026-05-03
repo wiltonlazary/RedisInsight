@@ -101,6 +101,18 @@ export enum BrowserToolTSCommands {
   TSInfo = 'ts.info',
 }
 
+export enum BrowserToolVectorSetCommands {
+  VAdd = 'VADD',
+  VCard = 'VCARD',
+  VInfo = 'VINFO',
+  VRange = 'VRANGE',
+  VRandMember = 'VRANDMEMBER',
+  VEmb = 'VEMB',
+  VGetAttr = 'VGETATTR',
+  VSetAttr = 'VSETATTR',
+  VRem = 'VREM',
+}
+
 export type BrowserToolCommands =
   | BrowserToolKeysCommands
   | BrowserToolStringCommands
@@ -111,4 +123,5 @@ export type BrowserToolCommands =
   | BrowserToolRejsonRlCommands
   | BrowserToolStreamCommands
   | BrowserToolGraphCommands
-  | BrowserToolTSCommands;
+  | BrowserToolTSCommands
+  | BrowserToolVectorSetCommands;

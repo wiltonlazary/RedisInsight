@@ -4,46 +4,54 @@ import { useSelector } from 'react-redux'
 import { TelemetryPageView } from 'uiSrc/telemetry'
 import { usePageViewTelemetry } from 'uiSrc/telemetry/usePageViewTelemetry'
 import { Loader } from 'uiSrc/components/base/display'
-import { formatLongName, getDbIndex, setTitle } from 'uiSrc/utils'
+import {
+  formatLongName,
+  getDbIndex,
+  getRedisearchVersion,
+  setTitle,
+} from 'uiSrc/utils'
 import { connectedInstanceSelector } from 'uiSrc/slices/instances/instances'
 
-import {
-  useRedisInstanceCompatibility,
-  useRedisearchListData,
-} from '../../hooks'
-import { RqeNotAvailable } from '../../components/rqe-not-available'
+import { useRedisearchListData } from '../../hooks'
 import { VectorSearchWelcomePage } from '../VectorSearchWelcomePage'
-import { IndexListScreen } from '../components'
+import { VectorSearchListPage } from '../VectorSearchListPage'
 import * as S from '../styles'
 
 /**
  * Main Vector Search page component.
  * Acts as the entry point that selects and renders the appropriate screen
- * based on the current state (RQE support, indexes availability).
+ * based on the current state (indexes availability).
+ * RediSearch module availability is guarded at the router level (VectorSearchPageRouter).
  */
 export const VectorSearchPage = () => {
-  const { hasRedisearch, loading: compatibilityLoading } =
-    useRedisInstanceCompatibility()
   const { stringData: indexes, loading: indexesLoading } =
     useRedisearchListData()
 
-  const { name: connectedInstanceName, db } = useSelector(
-    connectedInstanceSelector,
-  )
+  const {
+    name: connectedInstanceName,
+    db,
+    provider,
+    modules,
+  } = useSelector(connectedInstanceSelector)
+
+  const isReady = indexesLoading === false
 
   usePageViewTelemetry({
     page: TelemetryPageView.VECTOR_SEARCH_PAGE,
+    ready: isReady,
+    eventData: {
+      rqe_version: getRedisearchVersion(modules),
+      provider,
+      number_of_indexes: indexes.length,
+      welcome_page_enabled: indexes.length === 0,
+    },
   })
 
   setTitle(
     `${formatLongName(connectedInstanceName, 33, 0, '...')} ${getDbIndex(db)} - Vector Search`,
   )
 
-  // Treat undefined (uninitialized) as loading so we don't render WelcomeScreen before compatibility is known
-  const isLoading = compatibilityLoading !== false || indexesLoading
-
-  // Show loader while checking compatibility or loading indexes
-  if (isLoading) {
+  if (indexesLoading !== false) {
     return (
       <S.PageWrapper
         data-testid="vector-search-page--loading"
@@ -55,16 +63,6 @@ export const VectorSearchPage = () => {
     )
   }
 
-  // Show RQE not available screen if RediSearch module is not loaded
-  if (compatibilityLoading === false && hasRedisearch === false) {
-    return (
-      <S.PageWrapper data-testid="vector-search-page--rqe-not-available">
-        <RqeNotAvailable />
-      </S.PageWrapper>
-    )
-  }
-
-  // Show welcome screen when no indexes exist
   if (indexes.length === 0) {
     return (
       <S.PageWrapper data-testid="vector-search-page--welcome">
@@ -75,8 +73,8 @@ export const VectorSearchPage = () => {
 
   // Show index list when indexes exist
   return (
-    <S.PageWrapper data-testid="vector-search-page">
-      <IndexListScreen indexes={indexes} />
+    <S.PageWrapper data-testid="vector-search-page--list">
+      <VectorSearchListPage />
     </S.PageWrapper>
   )
 }

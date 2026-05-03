@@ -1,15 +1,29 @@
 import React from 'react'
-import { fireEvent, render, screen } from 'uiSrc/utils/test-utils'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitForRiTooltipVisible,
+} from 'uiSrc/utils/test-utils'
 
 import { QueryEditorContextProvider } from 'uiSrc/components/query'
+import {
+  TOOLTIP_EXPLAIN,
+  TOOLTIP_PROFILE,
+  TOOLTIP_DISABLED_NO_QUERY,
+  TOOLTIP_DISABLED_LOADING,
+} from './QueryEditor.constants'
 import { VectorSearchActions } from './VectorSearchActions'
 
 const mockOnSubmit = jest.fn()
+const mockOnSaveClick = jest.fn()
 
 const renderComponent = ({
   query = '',
   isLoading = false,
-}: { query?: string; isLoading?: boolean } = {}) =>
+  onSaveClick = mockOnSaveClick,
+}: { query?: string; isLoading?: boolean; onSaveClick?: () => void } = {}) =>
   render(
     <QueryEditorContextProvider
       value={{
@@ -21,7 +35,7 @@ const renderComponent = ({
         onSubmit: mockOnSubmit,
       }}
     >
-      <VectorSearchActions />
+      <VectorSearchActions onSaveClick={onSaveClick} />
     </QueryEditorContextProvider>,
   )
 
@@ -30,10 +44,11 @@ describe('VectorSearchActions', () => {
     jest.clearAllMocks()
   })
 
-  it('should render actions bar with run, explain, and profile buttons', () => {
+  it('should render actions bar with save, run, explain, and profile buttons', () => {
     renderComponent()
 
     expect(screen.getByTestId('vector-search-actions')).toBeInTheDocument()
+    expect(screen.getByTestId('btn-save-query')).toBeInTheDocument()
     expect(screen.getByTestId('btn-submit')).toBeInTheDocument()
     expect(screen.getByTestId('btn-explain')).toBeInTheDocument()
     expect(screen.getByTestId('btn-profile')).toBeInTheDocument()
@@ -50,6 +65,40 @@ describe('VectorSearchActions', () => {
     renderComponent({ isLoading: true })
 
     expect(screen.getByTestId('btn-submit')).toBeDisabled()
+  })
+
+  describe('Save button', () => {
+    it('should be disabled when query is empty', () => {
+      renderComponent({ query: '' })
+
+      expect(screen.getByTestId('btn-save-query')).toBeDisabled()
+    })
+
+    it('should be disabled when query is whitespace only', () => {
+      renderComponent({ query: '   ' })
+
+      expect(screen.getByTestId('btn-save-query')).toBeDisabled()
+    })
+
+    it('should be enabled when query has content', () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"' })
+
+      expect(screen.getByTestId('btn-save-query')).not.toBeDisabled()
+    })
+
+    it('should be disabled when loading', () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"', isLoading: true })
+
+      expect(screen.getByTestId('btn-save-query')).toBeDisabled()
+    })
+
+    it('should call onSaveClick when clicked', () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"' })
+
+      fireEvent.click(screen.getByTestId('btn-save-query'))
+
+      expect(mockOnSaveClick).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('Explain button', () => {
@@ -95,6 +144,51 @@ describe('VectorSearchActions', () => {
       fireEvent.click(screen.getByTestId('btn-explain'))
       expect(mockOnSubmit).toHaveBeenCalledWith('FT.EXPLAIN idx "*" LIMIT 0 10')
     })
+
+    it('should show disabled reason in tooltip when no valid query', async () => {
+      renderComponent({ query: '' })
+
+      await act(async () => {
+        fireEvent.focus(screen.getByTestId('btn-explain'))
+      })
+      await waitForRiTooltipVisible()
+
+      expect(screen.getAllByText(TOOLTIP_EXPLAIN)[0]).toBeInTheDocument()
+      expect(
+        screen.getAllByText(TOOLTIP_DISABLED_NO_QUERY)[0],
+      ).toBeInTheDocument()
+    })
+
+    it('should show loading reason in tooltip when query is running', async () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"', isLoading: true })
+
+      await act(async () => {
+        fireEvent.focus(screen.getByTestId('btn-explain'))
+      })
+      await waitForRiTooltipVisible()
+
+      expect(screen.getAllByText(TOOLTIP_EXPLAIN)[0]).toBeInTheDocument()
+      expect(
+        screen.getAllByText(TOOLTIP_DISABLED_LOADING)[0],
+      ).toBeInTheDocument()
+    })
+
+    it('should show only base tooltip when enabled', async () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"' })
+
+      await act(async () => {
+        fireEvent.focus(screen.getByTestId('btn-explain'))
+      })
+      await waitForRiTooltipVisible()
+
+      expect(screen.getAllByText(TOOLTIP_EXPLAIN)[0]).toBeInTheDocument()
+      expect(
+        screen.queryByText(TOOLTIP_DISABLED_NO_QUERY),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(TOOLTIP_DISABLED_LOADING),
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe('Profile button', () => {
@@ -132,6 +226,34 @@ describe('VectorSearchActions', () => {
       expect(mockOnSubmit).toHaveBeenCalledWith(
         'FT.PROFILE idx AGGREGATE QUERY "*" GROUPBY 1 @field',
       )
+    })
+
+    it('should show disabled reason in tooltip when no valid query', async () => {
+      renderComponent({ query: '' })
+
+      await act(async () => {
+        fireEvent.focus(screen.getByTestId('btn-profile'))
+      })
+      await waitForRiTooltipVisible()
+
+      expect(screen.getAllByText(TOOLTIP_PROFILE)[0]).toBeInTheDocument()
+      expect(
+        screen.getAllByText(TOOLTIP_DISABLED_NO_QUERY)[0],
+      ).toBeInTheDocument()
+    })
+
+    it('should show only base tooltip when enabled', async () => {
+      renderComponent({ query: 'FT.SEARCH idx "*"' })
+
+      await act(async () => {
+        fireEvent.focus(screen.getByTestId('btn-profile'))
+      })
+      await waitForRiTooltipVisible()
+
+      expect(screen.getAllByText(TOOLTIP_PROFILE)[0]).toBeInTheDocument()
+      expect(
+        screen.queryByText(TOOLTIP_DISABLED_NO_QUERY),
+      ).not.toBeInTheDocument()
     })
   })
 })

@@ -1,18 +1,16 @@
 import { cloneDeep } from 'lodash'
 import React from 'react'
 import { instance, mock } from 'ts-mockito'
-import { toggleOpenWBResult } from 'uiSrc/slices/workbench/wb-results'
 import { ResultsMode } from 'uiSrc/slices/interfaces/workbench'
-import {
-  cleanup,
-  clearStoreActions,
-  fireEvent,
-  mockedStore,
-  render,
-} from 'uiSrc/utils/test-utils'
+import { cleanup, fireEvent, mockedStore, render } from 'uiSrc/utils/test-utils'
 import { CommandExecutionStatus } from 'uiSrc/slices/interfaces/cli'
+import { appPluginsSelector } from 'uiSrc/slices/app/plugins'
+import {
+  getWbTsResultPreferences,
+  setWbTsResultPreferences,
+} from 'uiSrc/pages/workbench/utils/tsResultPreferences'
 import QueryCard, { Props, getSummaryText } from './QueryCard'
-import { ViewMode, ViewModeContextProvider } from '../context/view-mode.context'
+import { QueryResultsProvider } from '../context/query-results.context'
 
 const mockedProps = mock<Props>()
 
@@ -38,6 +36,12 @@ jest.mock('uiSrc/services', () => ({
   },
 }))
 
+jest.mock('uiSrc/pages/workbench/utils/tsResultPreferences', () => ({
+  ...jest.requireActual('uiSrc/pages/workbench/utils/tsResultPreferences'),
+  getWbTsResultPreferences: jest.fn().mockReturnValue(undefined),
+  setWbTsResultPreferences: jest.fn(),
+}))
+
 jest.mock('uiSrc/slices/app/plugins', () => ({
   ...jest.requireActual('uiSrc/slices/app/plugins'),
   appPluginsSelector: jest.fn().mockReturnValue({
@@ -45,11 +49,14 @@ jest.mock('uiSrc/slices/app/plugins', () => ({
   }),
 }))
 
+const mockAppPluginsSelector = appPluginsSelector as jest.Mock
+const mockGetWbTsResultPreferences = getWbTsResultPreferences as jest.Mock
+
 const renderQueryCardComponent = (props: Partial<Props> = {}) => {
   return render(
-    <ViewModeContextProvider viewMode={ViewMode.Workbench}>
+    <QueryResultsProvider telemetry={{}}>
       <QueryCard {...instance(mockedProps)} {...props} />
-    </ViewModeContextProvider>,
+    </QueryResultsProvider>,
     {
       store,
     },
@@ -111,23 +118,22 @@ describe('QueryCard', () => {
     expect(cliResultEl).not.toBeInTheDocument()
   })
 
-  it('Click on the header should call toggleOpenWBResult', () => {
+  it('Click on the header should call onToggleOpen', () => {
     const cardHeaderTestId = 'query-card-open'
     const mockId = '123'
+    const mockOnToggleOpen = jest.fn()
 
     const { queryByTestId } = renderQueryCardComponent({
       id: mockId,
       result: mockResult,
+      onToggleOpen: mockOnToggleOpen,
     })
 
     const cardHeaderTestEl = queryByTestId(cardHeaderTestId)
 
     fireEvent.click(cardHeaderTestEl)
 
-    const expectedActions = [toggleOpenWBResult(mockId)]
-    expect(
-      clearStoreActions(store.getActions().slice(0, expectedActions.length)),
-    ).toEqual(clearStoreActions(expectedActions))
+    expect(mockOnToggleOpen).toHaveBeenCalledWith(mockId, true)
   })
 
   it('Should return correct summary string', () => {
@@ -205,5 +211,81 @@ describe('QueryCard', () => {
     const queryCliResultEl = queryByTestId('query-cli-result')
 
     expect(queryCliResultEl).toBeInTheDocument()
+  })
+
+  describe('TimeSeries view persistence', () => {
+    const tsVisualization = {
+      id: 'redistimeseries-chart',
+      uniqId: 'redistimeseries__redistimeseries-chart',
+      name: 'Chart',
+      plugin: {
+        name: 'redistimeseries',
+        internal: true,
+        baseUrl: '/plugins/redistimeseries',
+        scriptSrc: '/plugins/redistimeseries/index.js',
+        stylesSrc: '/plugins/redistimeseries/styles.css',
+      },
+      activationMethod: 'renderChart',
+      matchCommands: ['TS.RANGE', 'TS.MRANGE', 'TS.REVRANGE', 'TS.MREVRANGE'],
+      default: true,
+    }
+
+    const setupTsVisualization = () => {
+      mockAppPluginsSelector.mockReturnValue({
+        visualizations: [tsVisualization],
+        staticPath: '/static',
+      })
+      store.getState().connections.instances.connectedInstance.modules = [
+        { name: 'timeseries' },
+      ]
+    }
+
+    afterEach(() => {
+      mockAppPluginsSelector.mockReturnValue({
+        visualizations: [],
+      })
+      mockGetWbTsResultPreferences.mockReturnValue(undefined)
+    })
+
+    it('should not persist view for non-TimeSeries commands', () => {
+      renderQueryCardComponent({
+        command: 'GET key',
+        result: mockResult,
+      })
+
+      expect(setWbTsResultPreferences).not.toHaveBeenCalled()
+    })
+
+    it('should display text result when persisted preference is text', () => {
+      setupTsVisualization()
+      mockGetWbTsResultPreferences.mockReturnValue({
+        selectedView: 'text',
+      })
+
+      const { queryByTestId } = renderQueryCardComponent({
+        command: 'TS.RANGE key - +',
+        result: mockResult,
+        isOpen: true,
+      })
+
+      expect(queryByTestId('query-cli-result')).toBeInTheDocument()
+      expect(queryByTestId('query-plugin-result')).not.toBeInTheDocument()
+    })
+
+    it('should display plugin view when persisted preference is plugin', () => {
+      setupTsVisualization()
+      mockGetWbTsResultPreferences.mockReturnValue({
+        selectedView: 'plugin:redistimeseries-chart',
+      })
+
+      const { queryByTestId } = renderQueryCardComponent({
+        command: 'TS.RANGE key - +',
+        result: mockResult,
+        isOpen: true,
+      })
+
+      expect(queryByTestId('query-plugin-result')).toBeInTheDocument()
+      expect(queryByTestId('query-cli-result')).not.toBeInTheDocument()
+    })
   })
 })

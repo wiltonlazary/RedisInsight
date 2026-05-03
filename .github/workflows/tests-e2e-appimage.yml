@@ -40,7 +40,7 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # SSH Debug
       - name: Enable SSH
@@ -63,7 +63,7 @@ jobs:
           xdg-settings set default-web-browser google-chrome.desktop
 
       - name: Download AppImage Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-builds
           path: ./release
@@ -81,7 +81,7 @@ jobs:
           .github/e2e/test.app-image.sh
 
       - name: Upload Test Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ${{ env.REPORT_NAME }}
@@ -94,7 +94,7 @@ jobs:
           curl -H "Content-type: application/json" --data @e2e.report.json -H "Authorization: Bearer $SLACK_TEST_REPORT_KEY" -X POST https://slack.com/api/chat.postMessage
 
       - name: Generate test results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: 'Test results: E2E (AppImage)'

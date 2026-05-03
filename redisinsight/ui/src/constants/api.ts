@@ -34,6 +34,7 @@ enum ApiEndpoints {
   KEY_INFO = 'keys/get-info',
   KEY_NAME = 'keys/name',
   KEY_TTL = 'keys/ttl',
+  KEYS_NAMESPACE_SEARCHABLE = 'keys/get-namespace-searchable',
 
   ZSET = 'zSet',
   ZSET_MEMBERS = 'zSet/members',
@@ -61,6 +62,13 @@ enum ApiEndpoints {
   REJSON_GET = 'rejson-rl/get',
   REJSON_SET = 'rejson-rl/set',
   REJSON_ARRAPPEND = 'rejson-rl/arrappend',
+
+  VECTOR_SET = 'vector-set',
+  VECTOR_SET_GET_ELEMENTS = 'vector-set/get-elements',
+  VECTOR_SET_ELEMENTS = 'vector-set/elements',
+  VECTOR_SET_GET_ELEMENT_DETAILS = 'vector-set/get-details',
+  VECTOR_SET_ELEMENT_ATTRIBUTES = 'vector-set/attributes',
+  VECTOR_SET_DOWNLOAD_EMBEDDING = 'vector-set/download-embedding',
 
   STREAMS = 'streams',
   STREAMS_ENTRIES = 'streams/entries',
@@ -121,6 +129,10 @@ enum ApiEndpoints {
   REDISEARCH = 'redisearch',
   REDISEARCH_SEARCH = 'redisearch/search',
   REDISEARCH_INFO = 'redisearch/info',
+  REDISEARCH_KEY_INDEXES = 'redisearch/key-indexes',
+
+  QUERY_LIBRARY = 'query-library',
+  QUERY_LIBRARY_SEED = 'query-library/seed',
   HISTORY = 'history',
 
   FEATURES = 'features',

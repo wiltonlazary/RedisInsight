@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, Response, expect } from '@playwright/test';
 
 /**
  * Component Page Object for the Database List
@@ -14,6 +14,8 @@ export class DatabaseList {
   // Bulk selection elements
   readonly selectionCounter: Locator;
   readonly exportButton: Locator;
+  readonly exportConfirmButton: Locator;
+  readonly exportPopover: Locator;
   readonly bulkDeleteButton: Locator;
   readonly cancelSelectingButton: Locator;
 
@@ -38,6 +40,8 @@ export class DatabaseList {
     // Bulk selection elements
     this.selectionCounter = page.getByText(/You selected: \d+ items?/);
     this.exportButton = page.getByRole('button', { name: 'Export' });
+    this.exportPopover = page.getByTestId('export-popover');
+    this.exportConfirmButton = this.exportPopover.getByRole('button', { name: 'Export' });
     this.bulkDeleteButton = page.getByRole('button', { name: 'Delete' });
     this.cancelSelectingButton = page.getByRole('button', { name: 'Cancel selecting' });
 
@@ -63,13 +67,16 @@ export class DatabaseList {
   /**
    * Get a database row by name
    * Uses a strict text match in the database alias column (2nd column)
+   * Handles optional [dbX] suffix for logical databases
    */
   getRow(name: string): Locator {
     const escapedName = this.escapeRegex(name);
     return this.page
       .locator('table tbody tr')
       .filter({
-        has: this.page.locator('td:nth-child(2)').filter({ hasText: new RegExp(`^${escapedName}\\s*$`) }),
+        has: this.page
+          .locator('td:nth-child(2)')
+          .filter({ hasText: new RegExp(`^${escapedName}(\\s*\\[db\\d+\\])?\\s*$`) }),
       })
       .first();
   }
@@ -109,11 +116,22 @@ export class DatabaseList {
    * Delete a database using the row controls dropdown
    */
   async delete(name: string): Promise<void> {
+    // Clear search first to ensure the database row is properly visible
+    await this.clearSearch();
+
     const row = this.getRow(name);
     await row.hover();
     await row.getByTestId(/controls-button/).click();
     await this.page.getByRole('button', { name: 'Remove field' }).click();
-    await this.page.getByRole('button', { name: 'Remove' }).click();
+
+    // Wait for confirmation dialog and click Remove
+    // Use exact: true to avoid matching "Remove field" button which is also visible
+    const removeButton = this.page.getByRole('button', { name: 'Remove', exact: true });
+    await removeButton.waitFor({ state: 'visible' });
+    await removeButton.click();
+
+    // Wait for the row to be removed from the DOM
+    await row.waitFor({ state: 'hidden', timeout: 5000 });
   }
 
   /**
@@ -149,9 +167,15 @@ export class DatabaseList {
    * Returns the total number of databases, not just visible rows
    */
   async getTotalCount(): Promise<number> {
-    const text = await this.paginationRowCount.textContent();
-    const match = text?.match(/out of (\d+) rows/);
-    return match ? parseInt(match[1], 10) : await this.getVisibleRowCount();
+    if (await this.paginationRowCount.isVisible()) {
+      const text = await this.paginationRowCount.textContent();
+      const match = text?.match(/out of (\d+) rows/);
+
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+    return this.getVisibleRowCount();
   }
 
   // ==================== SEARCH ====================
@@ -268,10 +292,28 @@ export class DatabaseList {
   }
 
   /**
-   * Export selected databases
+   * Open the export popover for selected databases
    */
   async exportSelected(): Promise<void> {
     await this.exportButton.click();
+  }
+
+  /**
+   * Export selected databases and return the API response.
+   *
+   * file-saver's blob URL download does not emit a Playwright "download"
+   * event in Electron, so we verify through the API response instead.
+   */
+  async exportSelectedAndDownload(): Promise<Response> {
+    await this.exportSelected();
+    await this.exportConfirmButton.waitFor({ state: 'visible' });
+    const [response] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) => resp.url().includes('/databases/export') && resp.request().method() === 'POST',
+      ),
+      this.exportConfirmButton.click(),
+    ]);
+    return response;
   }
 
   /**
@@ -434,7 +476,7 @@ export class DatabaseList {
    */
   async setItemsPerPage(value: '10' | '25' | '50' | '100'): Promise<void> {
     await this.paginationItemsPerPage.click();
-    await this.page.getByRole('option', { name: value }).click();
+    await this.page.getByRole('option', { name: value, exact: true }).click();
   }
 
   /**
@@ -449,6 +491,6 @@ export class DatabaseList {
    */
   async selectPage(pageNumber: string): Promise<void> {
     await this.paginationPageSelect.click();
-    await this.page.getByRole('option', { name: pageNumber }).click();
+    await this.page.getByRole('option', { name: pageNumber, exact: true }).click();
   }
 }

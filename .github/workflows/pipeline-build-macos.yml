@@ -29,7 +29,7 @@ jobs:
     runs-on: macos-14
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # SSH Debug
       - name: Enable SSH
@@ -102,7 +102,7 @@ jobs:
           ARCH=arm64 ./.github/redisstack/dmg.repack.sh
 
       - name: Upload macos packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-builds
           path: |
@@ -117,7 +117,6 @@ jobs:
 
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       USE_HARD_LINKS: ${{ vars.USE_HARD_LINKS }}

@@ -60,8 +60,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       desktop: ${{ steps.filter.outputs.desktop }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3.0.2
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4.0.1
         id: filter
         with:
           base: ${{ github.ref }}
@@ -100,6 +100,9 @@ jobs:
   lint:
     uses: ./.github/workflows/lint.yml
     secrets: inherit
+
+  docker-build:
+    uses: ./.github/workflows/docker-build.yml
 
   frontend-tests:
     needs: [changes, lint, should-run-all-tests]
@@ -180,6 +183,6 @@ jobs:
       ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Remove all artifacts
         uses: ./.github/actions/remove-artifacts

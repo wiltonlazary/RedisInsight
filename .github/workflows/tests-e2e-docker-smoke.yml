@@ -41,7 +41,7 @@ jobs:
         parallel: [1]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get current date
         id: date
@@ -55,7 +55,7 @@ jobs:
           detached: true
 
       - name: Download Docker Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docker-builds
           path: ./release
@@ -110,7 +110,7 @@ jobs:
           up --abort-on-container-exit --force-recreate
 
       - name: Upload Test Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ${{ env.REPORT_NAME }}-${{ matrix.parallel }}

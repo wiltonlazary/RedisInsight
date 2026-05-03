@@ -1,20 +1,18 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AutoSizer from 'react-virtualized-auto-sizer'
 import { debounce, get, set } from 'lodash'
 import { TreeWalker, TreeWalkerValue, FixedSizeTree as Tree } from 'react-vtree'
 import { useDispatch } from 'react-redux'
 
-import { bufferToString, Maybe, Nullable } from 'uiSrc/utils'
+import { bufferToString, Nullable, stringToBuffer } from 'uiSrc/utils'
 import { useDisposableWebworker } from 'uiSrc/services'
-import { IKeyPropTypes } from 'uiSrc/constants/prop-types/keys'
+import { DEFAULT_TREE_SORTING, KeyTypes } from 'uiSrc/constants'
+import { RedisString } from 'uiSrc/slices/interfaces'
 import {
-  DEFAULT_TREE_SORTING,
-  KeyTypes,
-  ModulesKeyTypes,
-  SortOrder,
-} from 'uiSrc/constants'
-import { RedisResponseBuffer, RedisString } from 'uiSrc/slices/interfaces'
-import { fetchKeysMetadataTree } from 'uiSrc/slices/browser/keys'
+  fetchKeysMetadataTree,
+  fetchNamespaceSearchable,
+} from 'uiSrc/slices/browser/keys'
+import { NamespaceSearchableResult } from 'uiSrc/slices/interfaces/keys'
 import {
   Loader,
   ProgressBarLoader,
@@ -24,37 +22,18 @@ import { RiIcon } from 'uiSrc/components/base/icons/RiIcon'
 import { GetKeyInfoResponse } from 'apiSrc/modules/browser/keys/dto'
 
 import { Node } from './components/Node'
-import { NodeMeta, TreeData, TreeNode } from './interfaces'
+import {
+  NodeMeta,
+  TreeData,
+  TreeNode,
+  VirtualTreeProps,
+} from './VirtualTree.types'
 
 import styles from './styles.module.scss'
 
-export interface Props {
-  items: IKeyPropTypes[]
-  delimiterPattern: string
-  delimiters: string[]
-  loadingIcon?: string
-  loading: boolean
-  deleting: boolean
-  sorting: Maybe<SortOrder>
-  commonFilterType: Nullable<KeyTypes>
-  statusSelected: Nullable<string>
-  statusOpen: OpenedNodes
-  webworkerFn: (...args: any) => any
-  onStatusOpen?: (name: string, value: boolean) => void
-  onStatusSelected?: (key: RedisString) => void
-  setConstructingTree: (status: boolean) => void
-  onDeleteLeaf: (key: RedisResponseBuffer) => void
-  onDeleteClicked: (type: KeyTypes | ModulesKeyTypes) => void
-  onDeleteFolder?: (pattern: string, fullName: string, keyCount: number) => void
-}
-
-interface OpenedNodes {
-  [key: string]: boolean
-}
-
 export const KEYS = 'keys'
 
-const VirtualTree = (props: Props) => {
+const VirtualTree = (props: VirtualTreeProps) => {
   const {
     items,
     delimiterPattern,
@@ -73,11 +52,16 @@ const VirtualTree = (props: Props) => {
     onDeleteClicked,
     onDeleteLeaf,
     onDeleteFolder,
+    visibleColumns,
+    showFolderMetadata,
+    showDeleteAction,
+    showSelectedIndicator,
   } = props
 
   const [rerenderState, rerender] = useState({})
   const controller = useRef<Nullable<AbortController>>(null)
   const elements = useRef<any>({})
+  const searchableElements = useRef<Record<string, string>>({})
   const nodes = useRef<TreeNode[]>([])
 
   const { result, run: runWebworker } = useDisposableWebworker(webworkerFn)
@@ -88,6 +72,7 @@ const VirtualTree = (props: Props) => {
     () => () => {
       nodes.current = []
       elements.current = {}
+      searchableElements.current = {}
     },
     [],
   )
@@ -193,44 +178,98 @@ const VirtualTree = (props: Props) => {
     [commonFilterType],
   )
 
+  const onSuccessFetchedSearchable = (results: NamespaceSearchableResult[]) => {
+    results.forEach((item) => {
+      if (!item.path) return
+      const update: Record<string, any> = { searchableChecked: true }
+      if (item.key) {
+        update.firstSearchableKey = {
+          nameBuffer: stringToBuffer(item.key.name),
+          nameString: item.key.name,
+          type: item.key.type,
+        }
+      }
+      updateNodeByPath(item.path, update)
+    })
+    rerender({})
+  }
+
+  const getSearchable = useCallback((entries: [string, string][]): void => {
+    dispatch(
+      fetchNamespaceSearchable(entries, controller.current?.signal, (results) =>
+        onSuccessFetchedSearchable(results),
+      ),
+    )
+  }, [])
+
+  const getSearchableDebounced = useMemo(
+    () =>
+      debounce(() => {
+        const entries = Object.entries(searchableElements.current)
+        if (entries.length === 0) return
+
+        getSearchable(entries)
+        searchableElements.current = {}
+      }, 100),
+    [getSearchable],
+  )
+
+  const checkSearchable = useCallback(
+    (prefix: string, path: string) => {
+      searchableElements.current[path] = prefix
+      getSearchableDebounced()
+    },
+    [getSearchableDebounced],
+  )
+
   // This helper function constructs the object that will be sent back at the step
   // [2] during the treeWalker function work. Except for the mandatory `data`
   // field you can put any additional data here.
   const getNodeData = (
     node: TreeNode,
     nestingLevel: number,
-  ): TreeWalkerValue<TreeData, NodeMeta> => ({
-    data: {
-      id: node.id.toString(),
-      isLeaf: node.isLeaf,
-      keyCount: node.keyCount,
-      name: node.name,
-      nameString: node.nameString,
-      nameBuffer: node.nameBuffer,
-      ttl: node.ttl,
-      size: node.size,
-      type: node.type,
-      fullName: node.fullName,
-      shortName: node.nameString
-        ?.split(new RegExp(delimiterPattern, 'g'))
-        .pop(),
-      delimiters,
+  ): TreeWalkerValue<TreeData, NodeMeta> => {
+    return {
+      data: {
+        id: node.id.toString(),
+        isLeaf: node.isLeaf,
+        keyCount: node.keyCount,
+        name: node.name,
+        nameString: node.nameString,
+        nameBuffer: node.nameBuffer,
+        ttl: node.ttl,
+        size: node.size,
+        type: node.type,
+        fullName: node.fullName,
+        shortName: node.nameString
+          ?.split(new RegExp(delimiterPattern, 'g'))
+          .pop(),
+        delimiters,
+        nestingLevel,
+        deleting,
+        path: node.path,
+        getMetadata: getMetadataNode,
+        onDeleteClicked,
+        updateStatusSelected: handleUpdateSelected,
+        updateStatusOpen: handleUpdateOpen,
+        onDelete: onDeleteLeaf,
+        onDeleteFolder,
+        keyApproximate: node.keyApproximate,
+        hasSearchableKeys: !!node.firstSearchableKey,
+        firstSearchableKey: node.firstSearchableKey,
+        checkSearchable:
+          !node.isLeaf && !node.searchableChecked ? checkSearchable : undefined,
+        isSelected: !!node.isLeaf && statusSelected === node?.nameString,
+        isOpenByDefault: statusOpen[node.fullName],
+        visibleColumns,
+        showFolderMetadata,
+        showDeleteAction,
+        showSelectedIndicator,
+      },
       nestingLevel,
-      deleting,
-      path: node.path,
-      getMetadata: getMetadataNode,
-      onDeleteClicked,
-      updateStatusSelected: handleUpdateSelected,
-      updateStatusOpen: handleUpdateOpen,
-      onDelete: onDeleteLeaf,
-      onDeleteFolder,
-      keyApproximate: node.keyApproximate,
-      isSelected: !!node.isLeaf && statusSelected === node?.nameString,
-      isOpenByDefault: statusOpen[node.fullName],
-    },
-    nestingLevel,
-    node,
-  })
+      node,
+    }
+  }
 
   const openSingleFolderNode = useCallback(
     (treeNodes?: TreeNode[]) => {
@@ -268,7 +307,7 @@ const VirtualTree = (props: Props) => {
         }
       }
     },
-    [statusSelected, statusOpen, rerenderState],
+    [statusSelected, statusOpen, rerenderState, visibleColumns],
   )
 
   return (

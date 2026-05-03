@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Publish to Dockerhub
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download Docker images
         run: |
@@ -33,6 +33,7 @@ jobs:
         run: |
           appVersion=$(jq -r '.version' redisinsight/package.json)
 
+          # Publish desktop image
           docker login -u $DOCKER_USER -p $DOCKER_PASS
 
           ./.github/build/release-docker.sh \
@@ -40,6 +41,7 @@ jobs:
           -r $DOCKER_REPO \
           -v $appVersion
 
+          # Publish cloud image
           docker login -u $DOCKER_V1_USER -p $DOCKER_V1_PASS
 
           ./.github/build/release-docker.sh \
@@ -50,11 +52,20 @@ jobs:
   snapcraft:
     runs-on: ubuntu-latest
     name: Publish to Snapcraft
+    strategy:
+      fail-fast: false
+      matrix:
+        snapcraft_file_name:
+          - Redis-Insight-linux-amd64.snap
+          # TODO: arm64 snap disabled — no arm64 snap template in electron-builder
+          # https://github.com/electron-userland/electron-builder/issues/8167
+          # https://github.com/electron-userland/electron-builder-binaries/releases/tag/snap-template-4.0-2
+          # - Redis-Insight-linux-arm64.snap
     env:
-      SNAPCRAFT_FILE_NAME: 'Redis-Insight-linux-amd64.snap'
+      SNAPCRAFT_FILE_NAME: ${{ matrix.snapcraft_file_name }}
       SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download Snapcraft package
         id: snap

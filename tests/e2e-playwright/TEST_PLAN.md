@@ -24,32 +24,25 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 ### 0.1 Main Navigation
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Navigate to home via Redis logo |
-| 🔲 | main | Navigate to Settings page |
-| 🔲 | main | Show GitHub repo link |
-| 🔲 | main | Show Redis Cloud link |
-| 🔲 | main | Display main navigation |
-| 🔲 | main | Show Redis logo |
-| 🔲 | main | Show settings button |
+| ✅ | main | Navigate to Settings page |
+| ✅ | main | Navigate to home via Redis logo |
+| ✅ | main | Show GitHub repo link |
+| ✅ | main | Show Redis Cloud link |
 
 ### 0.2 Help Menu
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open Help Center |
-| 🔲 | main | Show Keyboard Shortcuts option |
-| 🔲 | main | Show Reset Onboarding option |
-| 🔲 | main | Show Release Notes link |
-| 🔲 | main | Show Provide Feedback link |
+| ✅ | main | should open Help Center and display all menu options |
+| ✅ | main | should have Release Notes link pointing to GitHub releases |
+| ✅ | main | should have Provide Feedback link pointing to GitHub issues |
 
 ### 0.3 Notification Center
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open Notification Center |
-| 🔲 | main | Show notification center title |
-| 🔲 | main | Close notification center |
-| 🔲 | main | View notification badge count |
-| 🔲 | main | View notification list |
-| 🔲 | main | Click notification links |
+| ✅ | main | should open Notification Center and display notifications |
+| ✅ | main | should close Notification Center |
+| ✅ | main | should display notification links that are clickable |
+| ✅ | main | should show unread badge when there are unread notifications |
 
 ### 0.4 Copilot Panel
 | Status | Group | Test Case |
@@ -60,15 +53,23 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 | 🔲 | main | View sign-in options (Google, GitHub, SSO) |
 | 🔲 | main | Accept terms checkbox |
 
-### 0.5 Insights Panel
+### 0.5 Insights Panel ✅
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open Insights panel |
-| 🔲 | main | Close Insights panel |
-| 🔲 | main | Switch to Tutorials tab |
-| 🔲 | main | Switch to Tips tab |
-| 🔲 | main | Expand/collapse tutorial folders |
-| 🔲 | main | View My tutorials section |
+| ✅ | main | Open Insights panel |
+| ✅ | main | Close Insights panel |
+| ✅ | main | Switch to Tutorials tab |
+| ✅ | main | Switch to Tips tab |
+| ✅ | main | Expand/collapse tutorial folders |
+| ✅ | main | View Tutorials section |
+| ✅ | main | Run through a tutorial with pagination |
+| ✅ | main | Run a tutorial command |
+| 🔲 | main | Upload custom tutorial |
+| 🔲 | main | Delete custom tutorial |
+| 🔲 | main | View Tips when no recommendations |
+| 🔲 | main | Vote on a tip (like/dislike) |
+| 🔲 | main | Show/hide hidden tips |
+| 🔲 | main | Navigate to database analysis from Tips |
 
 ---
 
@@ -77,112 +78,116 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 ### 1.1 Add Database
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Add standalone database |
-| 🔲 | main | Add database with no auth |
-| 🔲 | main | Add database with username only |
-| 🔲 | main | Add database with username and password |
-| 🔲 | main | Add cluster database |
-| 🔲 | main | Add database with TLS/SSL |
-| 🔲 | main | Add database with SSH tunnel |
-| 🔲 | main | Validate required fields |
-| 🔲 | main | Test connection before saving |
-| 🔲 | main | Cancel add database |
-| 🔲 | main | Add database via Connection URL |
-| 🔲 | main | Open Connection settings from URL form |
-| 🔲 | main | Configure timeout setting |
-| 🔲 | main | Select logical database |
-| 🔲 | main | Logical database index displayed in database list |
-| 🔲 | main | Logical database index displayed in database header |
-| 🔲 | main | Logical database index displayed in edit form |
-| 🔲 | main | Force standalone connection |
-| 🔲 | main | Enable automatic data decompression |
-| 🔲 | main | Configure key name format (Unicode/ASCII/etc) |
-| 🔲 | main | Add database via Redis Sentinel option |
-| 🔲 | main | Add database via Redis Software option |
-| 🔲 | main | Auto-discover databases from Redis Software |
-| 🔲 | main | Auto-discover Redis Cloud databases after signing in |
-| 🔲 | main | Add databases using Cloud API keys |
-| 🔲 | main | Check connection state persists across app restarts |
+| ✅ | main | should add standalone database |
+| ✅ | main | should add database with no auth |
+| ✅ | main | should add database with username only |
+| ✅ | main | should add database with username and password |
+| ✅ | main | should add cluster database |
+| ✅ | main | should add database with TLS/SSL |
+| ✅ | main | should validate required fields |
+| ✅ | main | should test connection before saving |
+| ✅ | main | should cancel add database |
+| ✅ | main | should add database via Connection URL |
+| ✅ | main | should open Connection settings from URL form |
+| ✅ | main | should configure timeout setting |
+| ✅ | main | should select logical database |
+| ✅ | main | should display logical database index in database list |
+| ✅ | main | should display logical database index in database header |
+| ✅ | main | should display logical database index in edit form |
+| ✅ | main | should enable force standalone connection |
+| ✅ | main | should enable automatic data decompression |
+| ✅ | main | should configure key name format |
 
 ### 1.1.1 Connection Security
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Add database using SSH tunneling |
-| 🔲 | main | Connect using SNI configuration |
-| 🔲 | main | Connect with TLS using CA, client, and private key certificates |
+| ✅ | main | Add database using SSH tunneling |
+| ✅ | main | Connect using SNI configuration |
+| ✅ | main | Connect with TLS using CA, client, and private key certificates |
+
+### 1.1.2 Add Database (Advanced)
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| 🔲 | main | should add database with SSH tunnel |
+| 🔲 | main | should add database via Redis Sentinel option |
+| 🔲 | main | should add database via Redis Software option |
+| 🔲 | main | should auto-discover databases from Redis Software |
+| 🔲 | main | should auto-discover Redis Cloud databases after signing in |
+| 🔲 | main | should add databases using Cloud API keys |
 
 ### 1.2 Database List
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Filter databases by search query |
-| 🔲 | main | Filter with partial match |
-| 🔲 | main | Case-insensitive search |
-| 🔲 | main | Filter by host:port |
-| 🔲 | main | Clear search |
-| 🔲 | main | No results message |
-| 🔲 | main | Show columns button |
-| 🔲 | main | Hide/show columns |
-| 🔲 | main | Select single database |
-| 🔲 | main | Select multiple databases |
-| 🔲 | main | Select all databases |
-| 🔲 | main | Delete multiple databases |
-| 🔲 | main | Edit database connection |
-| 🔲 | main | Clone database connection |
-| 🔲 | main | Connect to database |
+| ✅ | main | Filter databases by search query |
+| ✅ | main | Filter with partial match |
+| ✅ | main | Case-insensitive search |
+| ✅ | main | Filter by host:port |
+| ✅ | main | Clear search |
+| ✅ | main | No results message |
+| ✅ | main | Show columns button |
+| ✅ | main | Hide/show columns |
+| ✅ | main | Select single database |
+| ✅ | main | Select multiple databases |
+| ✅ | main | Select all databases |
+| ✅ | main | Delete multiple databases |
+| ✅ | main | Edit database connection |
+| ✅ | main | Clone database connection |
+| ✅ | main | Connect to database |
 | 🔲 | main | Database connection status indicator |
-| 🔲 | main | Search by database name |
-| 🔲 | main | Search by host |
-| 🔲 | main | Search by port |
+| ✅ | main | Search by database name |
+| ✅ | main | Search by host |
+| ✅ | main | Search by port |
 | 🔲 | main | Search by connection type (OSS Cluster, Sentinel) |
 | 🔲 | main | Search by last connection time |
-| 🔲 | main | Verify Redis Stack icon displayed for databases with modules |
+| ✅ | main | Verify Redis Stack icon displayed for databases with modules |
 
 ### 1.3 Clone Database
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Clone standalone database with pre-populated form |
-| 🔲 | main | Clone database with same name |
-| 🔲 | main | Clone database with new name |
-| 🔲 | main | Cancel clone operation |
-| 🔲 | main | Go back to edit dialog from clone dialog |
-| 🔲 | main | Clone OSS Cluster database |
+| ✅ | main | Clone standalone database with pre-populated form |
+| ✅ | main | Clone database with same name |
+| ✅ | main | Clone database with new name |
+| ✅ | main | Cancel clone operation |
+| ✅ | main | Go back to edit dialog from clone dialog |
+| ✅ | main | Clone OSS Cluster database |
 | 🔲 | main | Clone Sentinel database |
-| 🔲 | main | Verify "New Connection" badge on cloned database |
-| 🔲 | main | Verify cloned database appears in list after creation |
+| ✅ | main | Verify "New Connection" badge on cloned database |
+| ✅ | main | Verify cloned database appears in list after creation |
 
 ### 1.4 Pagination (when > 15 databases)
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Show pagination when > 15 databases |
-| 🔲 | main | Navigate to next page |
-| 🔲 | main | Navigate to previous page |
-| 🔲 | main | Navigate to first/last page |
-| 🔲 | main | Change items per page (10, 25, 50, 100) |
-| 🔲 | main | Select page from dropdown |
-| 🔲 | main | Show correct row count "Showing X out of Y rows" |
-| 🔲 | main | Pagination buttons disabled state (first/previous on page 1) |
+| ✅ | main | Show pagination when > 15 databases |
+| ✅ | main | Navigate to next page |
+| ✅ | main | Navigate to previous page |
+| ✅ | main | Navigate to first/last page |
+| ✅ | main | Change items per page (10, 25, 50, 100) |
+| ✅ | main | Select page from dropdown |
+| ✅ | main | Show correct row count "Showing X out of Y rows" |
+| ✅ | main | Pagination buttons disabled state (first/previous on page 1) |
 
 ### 1.5 Import/Export
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open import dialog |
-| 🔲 | main | Import single database |
-| 🔲 | main | Import multiple databases |
-| 🔲 | main | Show success count after import |
-| 🔲 | main | Cancel import dialog |
-| 🔲 | main | Export databases |
-| 🔲 | main | Import with errors (partial success) |
-| 🔲 | main | Import invalid file format |
-| 🔲 | main | Confirm database tags are exported/imported correctly |
+| ✅ | main | Open import dialog |
+| ✅ | main | Import single database |
+| ✅ | main | Import multiple databases |
+| ✅ | main | Show success count after import |
+| ✅ | main | Cancel import dialog |
+| ✅ | main | Export databases |
+| ✅ | main | Import with errors (partial success) |
+| ✅ | main | Import invalid file format |
+| ✅ | main | Confirm database tags are exported/imported correctly |
 | 🔲 | main | Confirm import summary distinguishes Fully/Partially Imported and Failed |
 
 ### 1.6 Database Tags
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Add descriptive tags to a database |
-| 🔲 | main | Remove tags from a database |
-| 🔲 | main | Open tags dialog for a database |
-| 🔲 | main | Cancel adding a tag |
+| ✅ | main | should open tags dialog for a database |
+| ✅ | main | should add descriptive tags to a database |
+| ✅ | main | should remove tags from a database |
+| ✅ | main | should cancel adding a tag without saving |
+| ✅ | main | should persist tags after saving and reopening |
 | 🔲 | main | Import tags automatically from Redis Cloud databases |
 
 ### 1.7 Certificate and Encryption Handling
@@ -191,10 +196,12 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 | 🔲 | main | Store credentials encrypted in local keychain when encryption enabled |
 | 🔲 | main | Display warning when encryption disabled and credentials stored as plaintext |
 
+> **Blocked**: Tests require `DELETE /api/settings/agreements` endpoint to reset the EULA consent popup (not yet implemented).
+
 ### 1.8 Decompression
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Confirm setting a decompression type works |
+| ✅ | main | Confirm setting a decompression type works |
 
 ---
 
@@ -503,11 +510,11 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 ### 3.5 Command Helper (Bottom Panel)
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open Command Helper panel |
-| 🔲 | main | Search for a command |
-| 🔲 | main | Filter commands by category |
-| 🔲 | main | View command details |
-| 🔲 | main | Hide/close Command Helper panel |
+| ✅ | main | Open Command Helper panel |
+| ✅ | main | Search for a command |
+| ✅ | main | Filter commands by category |
+| ✅ | main | View command details |
+| ✅ | main | Hide/close Command Helper panel |
 
 ---
 
@@ -516,17 +523,15 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 ### 4.1 CLI Panel
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Open CLI panel |
-| 🔲 | main | Execute command |
-| 🔲 | main | View command output |
-| 🔲 | main | Close CLI panel |
-| 🔲 | main | Hide CLI panel |
-| 🔲 | main | Handle command errors |
-| 🔲 | main | Execute multiple commands in sequence |
-| 🔲 | main | Command history (up/down arrows) |
-| 🔲 | main | Tab completion |
-| 🔲 | main | Multiple CLI sessions | Feature not available in current UI |
-| 🔲 | main | Run commands on Cluster databases and confirm transparent node redirection |
+| ✅ | main | Open CLI panel |
+| ✅ | main | Execute command |
+| ✅ | main | View command output |
+| ✅ | main | Close CLI panel |
+| ✅ | main | Hide CLI panel |
+| ✅ | main | Handle command errors |
+| ✅ | main | Execute multiple commands in sequence |
+| ✅ | main | Command history (up/down arrows) |
+| ✅ | main | Tab completion |
 
 ### 4.2 Command Helper Integration
 | Status | Group | Test Case |
@@ -643,13 +648,9 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | View cluster nodes |
-| 🔲 | main | View node details |
-| 🔲 | main | View slot distribution |
+| ✅ | main | Display cluster overview with all nodes (IP-based: header, version, uptime, charts, 3 nodes with host:port) |
+| ✅ | main | Display cluster overview with hostname-announced nodes (hostname-based: header, version 7.0.0, uptime, charts, 3 nodes with hostname:port) |
 | 🔲 | main | Refresh cluster info |
-| 🔲 | main | View Overview tab by default for OSS Cluster |
-| 🔲 | main | View cluster header info (Type, Version, User) |
-| 🔲 | main | View cluster uptime |
 | 🔲 | main | View primary node statistics table |
 | 🔲 | main | View columns (Commands/s, Clients, Total Keys, Network Input/Output, Total Memory) |
 | 🔲 | main | Verify dynamic values update in statistics table |
@@ -661,58 +662,181 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 ### 7.1 General Settings
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | View settings page |
-| 🔲 | main | Show theme dropdown |
-| 🔲 | main | Toggle show notifications |
-| 🔲 | main | Show date/time format options |
-| 🔲 | main | Change date/time format (custom) |
-| 🔲 | main | Show time zone dropdown |
+| ✅ | main | View settings page |
+| ✅ | main | Show theme dropdown |
+| ✅ | main | Toggle show notifications |
+| ✅ | main | Show date/time format options |
+| ✅ | main | Change date/time format (custom) |
+| ✅ | main | Show time zone dropdown |
 
 ### 7.2 Privacy Settings
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | View privacy settings |
-| 🔲 | main | Show usage data switch |
-| 🔲 | main | Show privacy policy link |
+| ✅ | main | Display privacy settings (section, usage data switch, privacy policy link) |
+| ✅ | main | No telemetry requests emitted after disabling usage data |
+| ✅ | main | Telemetry requests emitted after enabling usage data |
 
 ### 7.3 Workbench Settings
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Show editor cleanup switch |
-| 🔲 | main | Show pipeline commands setting |
+| ✅ | main | Show editor cleanup switch |
+| ✅ | main | Show pipeline commands setting |
 | 🔲 | main | Configure command timeout (N/A - per-database setting, not in settings page) |
 
 ### 7.4 Redis Cloud Settings
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | View Redis Cloud settings |
-| 🔲 | main | Configure cloud account |
+| ✅ | main | View Redis Cloud settings |
+| ✅ | main | Configure cloud account |
 
 ### 7.5 Advanced Settings
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Show keys to scan setting |
-| 🔲 | main | Show advanced settings warning |
+| ✅ | main | Show keys to scan setting |
+| ✅ | main | Show advanced settings warning |
 
 ---
 
 ## 8. Vector Search
 
-### 8.1 Index Management
-| Status | Group | Test Case |
-|--------|-------|-----------|
-| 🔲 | main | View indexes |
-| 🔲 | main | Create index |
-| 🔲 | main | Delete index |
-| 🔲 | main | View index info |
+### 8.1 Navigation and RQE Availability
 
-### 8.2 Query
+> **Spec:** `tests/main/vector-search/navigation/navigation.spec.ts`
+
 | Status | Group | Test Case |
 |--------|-------|-----------|
-| 🔲 | main | Execute vector search query |
-| 🔲 | main | View search results |
-| 🔲 | main | Save query |
-| 🔲 | main | Load saved query |
+| ✅ | main | should show welcome screen when no indexes exist |
+| ✅ | main | should show list screen when indexes exist |
+| ✅ | main | should show RQE not available screen for Redis without search module |
+
+### 8.2 Select Key Onboarding
+
+> **Spec:** `tests/main/vector-search/create-index/onboarding.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should show select key onboarding and dismiss on "Got it" |
+| ✅ | main | should not show select key onboarding on subsequent visit |
+
+### 8.3 Create Index - Onboarding
+
+> **Spec:** `tests/main/vector-search/create-index/onboarding.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should complete onboarding flow through all steps |
+| ✅ | main | should skip onboarding |
+| ✅ | main | should not show onboarding after completion |
+
+### 8.4 Create Index - Sample Data
+
+> **Spec:** `tests/main/vector-search/create-index/sample-data.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should close the sample data modal and return to list page |
+| ✅ | main | should cancel index creation from "See index definition" and return to list page |
+| ✅ | main | (E-Commerce Discovery) should create index via "Start querying" and verify query library is seeded |
+| ✅ | main | (E-Commerce Discovery) should create index via "See index definition" and verify toast |
+| ✅ | main | (Content Recommendations) should create index via "Start querying" and verify query library is seeded |
+| ✅ | main | (Content Recommendations) should create index via "See index definition" and verify toast |
+
+### 8.5 Create Index - Existing Data
+
+> **Spec:** `tests/main/vector-search/create-index/existing-data.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should create index with default settings and navigate to query page |
+| ✅ | main | should edit key prefix and create index |
+| ✅ | main | should add field and create index |
+| ✅ | main | should deselect a field row and exclude it from the index |
+| ✅ | main | should change index name and create index |
+| ✅ | main | should show duplicate index name validation and disable create button |
+| ✅ | main | should create index from JSON key and navigate to query page |
+
+### 8.6 List Indexes
+
+> **Spec:** `tests/main/vector-search/list-indexes/list-indexes.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should display indexes table with index name and create index button |
+| ✅ | main | should navigate to query page when Query button is clicked |
+| ✅ | main | should navigate to browser page when Browse dataset action is clicked |
+| ✅ | main | should open index details side panel via View index action |
+| ✅ | main | should delete index with confirmation |
+
+### 8.7 Create Index from List Page
+
+> **Spec:** `tests/main/vector-search/list-indexes/create-index.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should open sample data modal and complete "Start querying" flow |
+| ✅ | main | should open sample data modal and navigate to "See index definition" |
+| ✅ | main | should create index from existing data via list page menu |
+| ✅ | main | should disable "Use existing data" when no hash or JSON keys exist |
+
+### 8.8 Query Page
+
+> **Spec:** `tests/main/vector-search/query/query-editor.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should run query and view results |
+| ✅ | main | should expand and collapse query result card |
+| ✅ | main | should re-run query from result card |
+| ✅ | main | should delete individual result card |
+| ✅ | main | should clear all results |
+| ✅ | main | should disable explain and profile buttons when editor is empty |
+| ✅ | main | should disable explain and profile buttons for non-FT query |
+| ✅ | main | should disable save button when editor is empty |
+| ✅ | main | should execute explain query action |
+| ✅ | main | should execute profile query action |
+
+### 8.9 Query Page Onboarding
+
+> **Spec:** `tests/main/vector-search/query/query-onboarding.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should show query onboarding and dismiss on "Got it" |
+| ✅ | main | should not show query onboarding on subsequent visit |
+
+### 8.10 Save Query
+
+> **Spec:** `tests/main/vector-search/query/save-query.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should save query and verify it appears in query library |
+| ✅ | main | should navigate to query library via success toast action |
+| ✅ | main | should cancel save query modal |
+
+### 8.11 Query Library
+
+> **Spec:** `tests/main/vector-search/query/query-library.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should search and filter saved queries in the library |
+| ✅ | main | should expand and collapse a query library item |
+| ✅ | main | should run query from library |
+| ✅ | main | should load query into editor from library |
+| ✅ | main | should delete query from library and show notification |
+
+### 8.12 Browser Page Integration
+
+> **Spec:** `tests/main/vector-search/browser-integration/browser-integration.spec.ts`
+
+| Status | Group | Test Case |
+|--------|-------|-----------|
+| ✅ | main | should show "View index" button for key indexed by a single index |
+| ✅ | main | should show "View index" dropdown for key indexed by multiple indexes |
+| ✅ | main | should show "Make searchable" button for non-indexed key and create index |
+| ✅ | main | should show "Index" button on folder node and create index |
+| ✅ | main | should show RQE not available when navigating to Search tab on Redis without search module |
 
 ---
 
@@ -833,7 +957,7 @@ The test plan is organized by feature area. Tests are grouped for parallel execu
 | 🔲 | main | Trigger key events and confirm telemetry records correctly |
 | 🔲 | main | Confirm telemetry payloads contain Database ID, Timestamp, Event Type |
 | 🔲 | main | Confirm telemetry events appear in analytics console/local logs |
-| 🔲 | main | Disable telemetry in Settings and confirm no new events logged |
+| ✅ | main | Disable telemetry in Settings and confirm no new events logged |
 
 ### 12.3 EULA & Privacy Settings
 

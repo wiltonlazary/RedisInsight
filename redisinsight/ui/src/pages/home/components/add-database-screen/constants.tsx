@@ -1,5 +1,4 @@
 import { AllIconsType } from 'uiSrc/components/base/icons'
-import { FeatureFlags } from 'uiSrc/constants'
 import { AddDbType } from 'uiSrc/pages/home/constants'
 
 export interface Values {
@@ -11,12 +10,12 @@ export interface ConnectivityOptionConfig {
   title: string
   type: AddDbType
   icon: AllIconsType
-  featureFlag?: FeatureFlags
 }
 
 export interface ConnectivityOption extends ConnectivityOptionConfig {
   onClick: () => void
   loading?: boolean
+  onCancel?: () => void
 }
 
 export const CONNECTIVITY_OPTIONS_CONFIG: ConnectivityOptionConfig[] = [
@@ -37,7 +36,6 @@ export const CONNECTIVITY_OPTIONS_CONFIG: ConnectivityOptionConfig[] = [
     title: 'Azure Managed Redis',
     type: AddDbType.azure,
     icon: 'CloudIcon',
-    featureFlag: FeatureFlags.azureEntraId,
   },
   {
     id: 'import',

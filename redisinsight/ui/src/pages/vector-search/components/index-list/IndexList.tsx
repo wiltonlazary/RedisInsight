@@ -35,6 +35,8 @@ export const IndexList = memo(
         data={data}
         columns={columns}
         stripedRows
+        enableColumnResizing
+        minWidth="920px"
         emptyState={emptyMessage}
         data-testid={dataTestId}
       />

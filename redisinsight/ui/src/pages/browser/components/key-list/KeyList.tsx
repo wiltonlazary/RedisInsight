@@ -7,9 +7,8 @@ import React, {
   useState,
 } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import cx from 'classnames'
 import { useParams } from 'react-router-dom'
-import { debounce, findIndex, isUndefined, reject } from 'lodash'
+import { debounce, findIndex, isUndefined, orderBy, reject } from 'lodash'
 
 import { CellMeasurerCache } from 'react-virtualized'
 import {
@@ -34,13 +33,17 @@ import {
   appContextDbConfig,
 } from 'uiSrc/slices/app/context'
 import { SCAN_COUNT_DEFAULT } from 'uiSrc/constants/api'
-import { KeysStoreData, SearchMode } from 'uiSrc/slices/interfaces/keys'
+import { SearchMode } from 'uiSrc/slices/interfaces/keys'
 import VirtualTable from 'uiSrc/components/virtual-table/VirtualTable'
-import { ITableColumn } from 'uiSrc/components/virtual-table/interfaces'
+import {
+  ISortedColumn,
+  ITableColumn,
+} from 'uiSrc/components/virtual-table/interfaces'
 import {
   BrowserColumns,
   KeyTypes,
   ModulesKeyTypes,
+  SortOrder,
   TableCellAlignment,
   TableCellTextAlignment,
 } from 'uiSrc/constants'
@@ -54,25 +57,13 @@ import KeyRowType from 'uiSrc/pages/browser/components/key-row-type'
 
 import { GetKeyInfoResponse } from 'apiSrc/modules/browser/keys/dto'
 
+import * as S from './KeyList.styles'
+import { Props } from './KeyList.types'
+
+export type { Props }
 import NoKeysMessage from '../no-keys-message'
 import { DeleteKeyPopover } from '../delete-key-popover/DeleteKeyPopover'
 import { useKeyFormat } from '../use-key-format'
-import styles from './styles.module.scss'
-
-export interface Props {
-  keysState: KeysStoreData
-  loading: boolean
-  scrollTopPosition?: number
-  hideFooter?: boolean
-  selectKey: ({ rowData }: { rowData: any }) => void
-  loadMoreItems?: (
-    oldKeys: IKeyPropTypes[],
-    { startIndex, stopIndex }: { startIndex: number; stopIndex: number },
-  ) => void
-  onDelete: (key: RedisResponseBuffer) => void
-  commonFilterType: Nullable<KeyTypes>
-  onAddKeyPanel: (value: boolean) => void
-}
 
 const cellCache = new CellMeasurerCache({
   fixedWidth: true,
@@ -88,9 +79,11 @@ const KeyList = forwardRef((props: Props, ref) => {
     keysState,
     scrollTopPosition,
     hideFooter,
+    visibleColumns: visibleColumnsProp,
     onDelete,
     commonFilterType,
     onAddKeyPanel,
+    sortedColumn,
   } = props
 
   const { instanceId = '' } = useParams<{ instanceId: string }>()
@@ -100,6 +93,7 @@ const KeyList = forwardRef((props: Props, ref) => {
   const { nextCursor, previousResultCount } = useSelector(keysDataSelector)
   const { isSearched, isFiltered, searchMode } = useSelector(keysSelector)
   const { shownColumns } = useSelector(appContextDbConfig)
+  const visibleColumns = visibleColumnsProp ?? shownColumns
   const {
     keyList: { isNotRendered: isNotRenderedContext },
   } = useSelector(appContextBrowser)
@@ -113,7 +107,9 @@ const KeyList = forwardRef((props: Props, ref) => {
 
   const controller = useRef<Nullable<AbortController>>(null)
   const itemsRef = useRef(keysState.keys)
+  const sortedColumnRef = useRef(sortedColumn)
   const renderedRowsIndexesRef = useRef({ startIndex: 0, lastIndex: 0 })
+  const sortedColumnMountedRef = useRef(false)
 
   const dispatch = useDispatch()
 
@@ -132,6 +128,10 @@ const KeyList = forwardRef((props: Props, ref) => {
 
   useEffect(() => {
     itemsRef.current = [...keysState.keys]
+
+    if (sortedColumn) {
+      itemsRef.current = applySort(itemsRef.current, sortedColumn)
+    }
 
     if (
       (!firstDataLoaded && keysState.lastRefreshTime) ||
@@ -156,6 +156,35 @@ const KeyList = forwardRef((props: Props, ref) => {
   }, [keysState.keys])
 
   useEffect(() => {
+    sortedColumnRef.current = sortedColumn
+
+    // Skip on initial mount — the keysState.keys effect already handles the
+    // first render. Running here on mount when sortedColumn is null would
+    // cancel in-flight metadata requests and, more critically, reset the stored
+    // scroll position to 0, breaking scroll restoration on re-mount.
+    if (!sortedColumnMountedRef.current) {
+      sortedColumnMountedRef.current = true
+      return
+    }
+
+    if (itemsRef.current.length === 0) return
+
+    if (sortedColumn) {
+      itemsRef.current = applySort(itemsRef.current, sortedColumn)
+    } else {
+      itemsRef.current = [...keysState.keys]
+    }
+
+    cancelAllMetadataRequests()
+    controller.current = new AbortController()
+
+    const { startIndex, lastIndex } = renderedRowsIndexesRef.current
+    onRowsRendered(startIndex, lastIndex)
+    setScrollTopPosition(0)
+    rerender({})
+  }, [sortedColumn])
+
+  useEffect(() => {
     const isSizeReenabled =
       !prevIncludeSize.current && shownColumns.includes(BrowserColumns.Size)
     const isTtlReenabled =
@@ -170,19 +199,49 @@ const KeyList = forwardRef((props: Props, ref) => {
       controller.current = new AbortController()
 
       const { startIndex, lastIndex } = renderedRowsIndexesRef.current
-      const visibleItems = bufferFormatRangeItems(
-        itemsRef.current,
-        startIndex,
-        lastIndex,
-        formatItem,
-      )
+      // bufferFormatRows both formats items and splices them into itemsRef.current,
+      // ensuring the references passed to getMetadata exist in itemsRef.current so
+      // onSuccessFetchedMetadata can locate them via indexOf.
+      const visibleItems = bufferFormatRows(startIndex, lastIndex)
 
-      getMetadata(startIndex, visibleItems, true)
+      getMetadata(visibleItems, true)
     }
 
     prevIncludeSize.current = shownColumns.includes(BrowserColumns.Size)
     prevIncludeTTL.current = shownColumns.includes(BrowserColumns.TTL)
   }, [shownColumns])
+
+  const applySort = useCallback(
+    (items: GetKeyInfoResponse[], col: ISortedColumn): GetKeyInfoResponse[] => {
+      const dir = col.order === SortOrder.ASC ? 'asc' : 'desc'
+      type SortableKey = GetKeyInfoResponse & { nameString?: string }
+      const sortableItems = items as SortableKey[]
+
+      if (col.column === 'nameString') {
+        return orderBy(
+          sortableItems,
+          [
+            (item) =>
+              (
+                item.nameString ??
+                bufferToString(item.name as unknown as string)
+              ).toLowerCase(),
+          ],
+          [dir],
+        )
+      }
+
+      const field = col.column as 'ttl' | 'size'
+      // ttl === -1 means "No limit" (no expiry). Treat it as no-value so it
+      // always sorts to the end, the same as keys whose metadata hasn't loaded yet.
+      const isNoValue = (i: SortableKey) =>
+        i[field] === undefined || (field === 'ttl' && i[field] === -1)
+      const withValue = sortableItems.filter((i) => !isNoValue(i))
+      const withoutValue = sortableItems.filter((i) => isNoValue(i))
+      return [...orderBy(withValue, [field], [dir]), ...withoutValue]
+    },
+    [],
+  )
 
   const cancelAllMetadataRequests = () => {
     controller.current?.abort()
@@ -278,7 +337,7 @@ const KeyList = forwardRef((props: Props, ref) => {
 
     const newItems = bufferFormatRows(startIndex, lastIndex)
 
-    getMetadata(startIndex, newItems)
+    getMetadata(newItems)
     rerender({})
   }
 
@@ -307,17 +366,12 @@ const KeyList = forwardRef((props: Props, ref) => {
   }
 
   const getMetadata = useCallback(
-    (
-      initialStartIndex: number,
-      itemsInit: IKeyPropTypes[] = [],
-      forceRefresh?: boolean,
-    ): void => {
+    (itemsInit: IKeyPropTypes[] = [], forceRefresh?: boolean): void => {
       const isSomeNotUndefined = ({ type, size, length }: IKeyPropTypes) =>
         (!commonFilterType && !isUndefined(type)) ||
         !isUndefined(size) ||
         !isUndefined(length)
 
-      let startIndex = initialStartIndex
       let itemsToProcess = itemsInit
 
       if (!forceRefresh) {
@@ -327,7 +381,6 @@ const KeyList = forwardRef((props: Props, ref) => {
         )
         if (firstEmptyItemIndex === -1) return
 
-        startIndex = initialStartIndex + firstEmptyItemIndex
         itemsToProcess = itemsInit.slice(firstEmptyItemIndex)
       }
 
@@ -340,7 +393,7 @@ const KeyList = forwardRef((props: Props, ref) => {
           itemsToFetch.map(({ name }) => name),
           commonFilterType,
           controller.current?.signal,
-          (loadedItems) => onSuccessFetchedMetadata(startIndex, loadedItems),
+          (loadedItems) => onSuccessFetchedMetadata(itemsToFetch, loadedItems),
           () => {
             rerender({})
           },
@@ -351,16 +404,28 @@ const KeyList = forwardRef((props: Props, ref) => {
   )
 
   const onSuccessFetchedMetadata = (
-    startIndex: number,
+    sentItems: IKeyPropTypes[],
     loadedItems: GetKeyInfoResponse[],
   ) => {
-    const items = loadedItems.map(formatItem)
-    itemsRef.current.splice(startIndex, items.length, ...items)
+    // Locate each sent item in the current list by reference and replace it
+    // in-place. A positional splice would corrupt the array when some items in
+    // the visible range already had metadata (and were excluded from the fetch
+    // via `reject`), because the loaded items are a non-contiguous subset.
+    loadedItems.forEach((loadedItem, i) => {
+      const idx = itemsRef.current.indexOf(sentItems[i] as GetKeyInfoResponse)
+      if (idx !== -1) {
+        itemsRef.current[idx] = formatItem(loadedItem)
+      }
+    })
+
+    if (sortedColumnRef.current) {
+      itemsRef.current = applySort(itemsRef.current, sortedColumnRef.current)
+    }
 
     rerender({})
   }
 
-  const isTtlTheLastColumn = !shownColumns.includes(BrowserColumns.Size)
+  const isTtlTheLastColumn = !visibleColumns.includes(BrowserColumns.Size)
   const ttlColumnSize = isTtlTheLastColumn ? 146 : 86
 
   const columns: ITableColumn[] = [
@@ -381,8 +446,8 @@ const KeyList = forwardRef((props: Props, ref) => {
       render: (
         _cellData: string,
         { name, type }: IKeyPropTypes,
-        _expanded,
-        rowIndex,
+        _expanded?: boolean,
+        rowIndex?: number,
       ) => {
         const nameString = keyFormatConvertor(name)
         return (
@@ -403,79 +468,81 @@ const KeyList = forwardRef((props: Props, ref) => {
         )
       },
     },
-    shownColumns.includes(BrowserColumns.TTL)
-      ? {
-          id: 'ttl',
-          label: 'TTL',
-          absoluteWidth: ttlColumnSize,
-          minWidth: ttlColumnSize,
-          truncateText: true,
-          alignment: TableCellAlignment.Right,
-          render: (
-            cellData: number,
-            { nameString, name, type }: IKeyPropTypes,
-            _expanded,
-            rowIndex,
-          ) => (
-            <>
-              <KeyRowTTL
-                ttl={cellData}
-                nameString={nameString}
-                deletePopoverId={deletePopoverIndex}
-                rowId={rowIndex || 0}
-              />
-              {isTtlTheLastColumn && (
-                <DeleteKeyPopover
-                  deletePopoverId={deletePopoverIndex}
-                  nameString={nameString}
-                  name={name}
-                  type={type}
-                  rowId={rowIndex || 0}
-                  onDelete={handleRemoveKey}
-                  onOpenPopover={handleDeletePopoverOpen}
-                />
-              )}
-            </>
-          ),
-        }
-      : null,
-    shownColumns.includes(BrowserColumns.Size)
-      ? {
-          id: 'size',
-          label: 'Size',
-          absoluteWidth: 90,
-          minWidth: 90,
-          alignment: TableCellAlignment.Right,
-          textAlignment: TableCellTextAlignment.Right,
-          render: (
-            cellData: number,
-            { nameString, name, type }: IKeyPropTypes,
-            _expanded,
-            rowIndex,
-          ) => (
-            <>
-              <KeyRowSize
-                size={cellData}
-                nameString={nameString}
-                deletePopoverId={deletePopoverIndex}
-                rowId={rowIndex || 0}
-              />
-              {columns[columns.length - 1].id === 'size' && (
-                <DeleteKeyPopover
-                  deletePopoverId={deletePopoverIndex}
-                  nameString={nameString}
-                  name={name}
-                  type={type}
-                  rowId={rowIndex || 0}
-                  onDelete={handleRemoveKey}
-                  onOpenPopover={handleDeletePopoverOpen}
-                />
-              )}
-            </>
-          ),
-        }
-      : null,
-  ].filter((el) => !!el)
+  ]
+
+  if (visibleColumns.includes(BrowserColumns.TTL)) {
+    columns.push({
+      id: 'ttl',
+      label: 'TTL',
+      absoluteWidth: ttlColumnSize,
+      minWidth: ttlColumnSize,
+      truncateText: true,
+      alignment: TableCellAlignment.Right,
+      render: (
+        cellData: number,
+        { nameString, name, type }: IKeyPropTypes,
+        _expanded?: boolean,
+        rowIndex?: number,
+      ) => (
+        <>
+          <KeyRowTTL
+            ttl={cellData}
+            nameString={nameString}
+            deletePopoverId={deletePopoverIndex}
+            rowId={rowIndex || 0}
+          />
+          {isTtlTheLastColumn && (
+            <DeleteKeyPopover
+              deletePopoverId={deletePopoverIndex}
+              nameString={nameString}
+              name={name}
+              type={type}
+              rowId={rowIndex || 0}
+              onDelete={handleRemoveKey}
+              onOpenPopover={handleDeletePopoverOpen}
+            />
+          )}
+        </>
+      ),
+    })
+  }
+
+  if (visibleColumns.includes(BrowserColumns.Size)) {
+    columns.push({
+      id: 'size',
+      label: 'Size',
+      absoluteWidth: 90,
+      minWidth: 90,
+      alignment: TableCellAlignment.Right,
+      textAlignment: TableCellTextAlignment.Right,
+      render: (
+        cellData: number,
+        { nameString, name, type }: IKeyPropTypes,
+        _expanded?: boolean,
+        rowIndex?: number,
+      ) => (
+        <>
+          <KeyRowSize
+            size={cellData}
+            nameString={nameString}
+            deletePopoverId={deletePopoverIndex}
+            rowId={rowIndex || 0}
+          />
+          {columns[columns.length - 1].id === 'size' && (
+            <DeleteKeyPopover
+              deletePopoverId={deletePopoverIndex}
+              nameString={nameString}
+              name={name}
+              type={type}
+              rowId={rowIndex || 0}
+              onDelete={handleRemoveKey}
+              onOpenPopover={handleDeletePopoverOpen}
+            />
+          )}
+        </>
+      ),
+    })
+  }
 
   const noItemsMessage = NoItemsMessage()
 
@@ -506,20 +573,16 @@ const KeyList = forwardRef((props: Props, ref) => {
   )
 
   return (
-    <div className={styles.page}>
-      <div className={styles.content}>
-        <div
-          className={cx(styles.table, {
-            [styles.table__withoutFooter]: hideFooter,
-          })}
-        >
-          <div className="key-list-table" data-testid="keyList-table">
+    <S.Page>
+      <S.Content>
+        <S.Table $withoutFooter={hideFooter}>
+          <S.KeyListTable data-testid="keyList-table">
             {searchMode === SearchMode.Pattern && VirtualizeTable()}
             {searchMode !== SearchMode.Pattern && VirtualizeTable()}
-          </div>
-        </div>
-      </div>
-    </div>
+          </S.KeyListTable>
+        </S.Table>
+      </S.Content>
+    </S.Page>
   )
 })
 
